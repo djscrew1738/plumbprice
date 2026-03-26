@@ -1,0 +1,252 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
+import structlog
+
+from app.database import get_db
+from app.models.estimates import Estimate, EstimateLineItem
+from app.schemas.estimates import (
+    ServiceEstimateRequest, ConstructionEstimateRequest,
+    EstimateResponse, EstimateListItem
+)
+from app.services.pricing_engine import pricing_engine
+from app.services.supplier_service import supplier_service
+from app.services.estimate_service import persist_estimate
+
+logger = structlog.get_logger()
+router = APIRouter()
+
+
+@router.post("/service", response_model=EstimateResponse)
+async def create_service_estimate(
+    request: ServiceEstimateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a deterministic service estimate from a labor template."""
+    try:
+        materials = []
+        if request.assembly_code:
+            materials = await supplier_service.get_assembly_costs(
+                request.assembly_code,
+                preferred_supplier=request.preferred_supplier,
+                db=db,
+            )
+
+        result = pricing_engine.calculate_service_estimate(
+            task_code=request.task_code,
+            materials=materials,
+            assembly_code=request.assembly_code,
+            access=request.access_type,
+            urgency=request.urgency,
+            county=request.county,
+            preferred_supplier=request.preferred_supplier,
+        )
+
+        estimate = await persist_estimate(
+            db=db,
+            result=result,
+            title=f"{request.task_code} — {request.county}",
+            county=request.county,
+            preferred_supplier=request.preferred_supplier,
+            project_id=request.project_id,
+        )
+
+        return EstimateResponse(
+            id=estimate.id,
+            title=estimate.title,
+            job_type=estimate.job_type,
+            status=estimate.status,
+            labor_total=result.labor_total,
+            materials_total=result.materials_total,
+            tax_total=result.tax_total,
+            markup_total=result.markup_total,
+            misc_total=result.misc_total,
+            subtotal=result.subtotal,
+            grand_total=result.grand_total,
+            confidence_score=result.confidence_score,
+            confidence_label=result.confidence_label,
+            assumptions=result.assumptions,
+            county=request.county,
+            tax_rate=result.tax_rate,
+            preferred_supplier=request.preferred_supplier,
+            line_items=[
+                {
+                    "line_type": li.line_type,
+                    "description": li.description,
+                    "quantity": li.quantity,
+                    "unit": li.unit,
+                    "unit_cost": li.unit_cost,
+                    "total_cost": li.total_cost,
+                    "supplier": li.supplier,
+                }
+                for li in result.line_items
+            ],
+            created_at=estimate.created_at,
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error("Service estimate error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/construction", response_model=EstimateResponse)
+async def create_construction_estimate(
+    request: ConstructionEstimateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new construction estimate."""
+    try:
+        result = pricing_engine.calculate_construction_estimate(
+            bath_groups=request.bath_groups,
+            fixture_count=request.fixture_count,
+            underground_lf=request.underground_lf,
+            county=request.county,
+            preferred_supplier=request.preferred_supplier,
+        )
+
+        estimate = await persist_estimate(
+            db=db,
+            result=result,
+            title=f"New Construction — {request.bath_groups} Bath Groups — {request.county}",
+            county=request.county,
+            preferred_supplier=request.preferred_supplier,
+            project_id=request.project_id,
+            source="construction",
+        )
+
+        return EstimateResponse(
+            id=estimate.id,
+            title=estimate.title,
+            job_type="construction",
+            status="draft",
+            labor_total=result.labor_total,
+            materials_total=result.materials_total,
+            tax_total=result.tax_total,
+            markup_total=result.markup_total,
+            misc_total=result.misc_total,
+            subtotal=result.subtotal,
+            grand_total=result.grand_total,
+            confidence_score=result.confidence_score,
+            confidence_label=result.confidence_label,
+            assumptions=result.assumptions,
+            county=request.county,
+            tax_rate=result.tax_rate,
+            preferred_supplier=request.preferred_supplier,
+            line_items=[
+                {
+                    "line_type": li.line_type,
+                    "description": li.description,
+                    "quantity": li.quantity,
+                    "unit": li.unit,
+                    "unit_cost": li.unit_cost,
+                    "total_cost": li.total_cost,
+                }
+                for li in result.line_items
+            ],
+            created_at=estimate.created_at,
+        )
+
+    except Exception as e:
+        logger.error("Construction estimate error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("", response_model=list[EstimateListItem])
+async def list_estimates(
+    status: str = Query(None),
+    job_type: str = Query(None),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0),
+    db: AsyncSession = Depends(get_db),
+):
+    """List estimates with optional filters."""
+    query = select(Estimate).order_by(desc(Estimate.created_at)).limit(limit).offset(offset)
+    if status:
+        query = query.where(Estimate.status == status)
+    if job_type:
+        query = query.where(Estimate.job_type == job_type)
+
+    result = await db.execute(query)
+    estimates = result.scalars().all()
+
+    return [
+        EstimateListItem(
+            id=e.id,
+            title=e.title,
+            job_type=e.job_type,
+            status=e.status,
+            grand_total=e.grand_total,
+            confidence_label=e.confidence_label or "HIGH",
+            county=e.county or "Dallas",
+            created_at=e.created_at,
+        )
+        for e in estimates
+    ]
+
+
+@router.get("/{estimate_id}")
+async def get_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
+    """Get a single estimate with line items."""
+    result = await db.execute(
+        select(Estimate).where(Estimate.id == estimate_id)
+    )
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+
+    li_result = await db.execute(
+        select(EstimateLineItem)
+        .where(EstimateLineItem.estimate_id == estimate_id)
+        .order_by(EstimateLineItem.sort_order)
+    )
+    line_items = li_result.scalars().all()
+
+    return {
+        "id": estimate.id,
+        "title": estimate.title,
+        "job_type": estimate.job_type,
+        "status": estimate.status,
+        "labor_total": estimate.labor_total,
+        "materials_total": estimate.materials_total,
+        "tax_total": estimate.tax_total,
+        "markup_total": estimate.markup_total,
+        "misc_total": estimate.misc_total,
+        "subtotal": estimate.subtotal,
+        "grand_total": estimate.grand_total,
+        "confidence_score": estimate.confidence_score,
+        "confidence_label": estimate.confidence_label,
+        "assumptions": estimate.assumptions,
+        "sources": estimate.sources,
+        "county": estimate.county,
+        "tax_rate": estimate.tax_rate,
+        "preferred_supplier": estimate.preferred_supplier,
+        "created_at": estimate.created_at,
+        "line_items": [
+            {
+                "id": li.id,
+                "line_type": li.line_type,
+                "description": li.description,
+                "quantity": li.quantity,
+                "unit": li.unit,
+                "unit_cost": li.unit_cost,
+                "total_cost": li.total_cost,
+                "supplier": li.supplier,
+                "sku": li.sku,
+                "canonical_item": li.canonical_item,
+            }
+            for li in line_items
+        ],
+    }
+
+
+@router.delete("/{estimate_id}")
+async def delete_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
+    """Delete an estimate."""
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    await db.delete(estimate)
+    return {"status": "deleted", "id": estimate_id}

@@ -1,0 +1,129 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: plumbprice_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-plumbprice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-plumbprice_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-plumbprice}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-plumbprice}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: plumbprice_redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: plumbprice_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: plumbprice_api
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-plumbprice}:${POSTGRES_PASSWORD:-plumbprice_dev}@postgres:5432/${POSTGRES_DB:-plumbprice}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      - ./api:/app
+    ports:
+      - "8200:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: plumbprice_web
+    environment:
+      - NEXT_PUBLIC_API_URL=http://100.83.120.32:8200
+    volumes:
+      - ./web/src:/app/src
+      - ./web/public:/app/public
+    ports:
+      - "3200:3000"
+    depends_on:
+      - api
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: plumbprice_worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-plumbprice}:${POSTGRES_PASSWORD:-plumbprice_dev}@postgres:5432/${POSTGRES_DB:-plumbprice}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./worker:/app
+      - ./api/app:/shared/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A worker worker --loglevel=info --concurrency=4
+
+  flower:
+    image: mher/flower:latest
+    container_name: plumbprice_flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+  minio_data:
