@@ -91,7 +91,7 @@ export function AdminPage() {
       ))
       setSaveOk(true)
       setTimeout(() => setSaveOk(false), 3000)
-    } catch { alert('Save failed') }
+    } catch { setError('Failed to save markup rules. Please try again.') }
     finally { setSaving(false) }
   }
 

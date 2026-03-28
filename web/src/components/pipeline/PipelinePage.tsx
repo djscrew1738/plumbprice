@@ -40,10 +40,6 @@ export function PipelinePage() {
     .filter(p => p.status !== 'lost')
     .reduce((s, p) => s + (p.latest_estimate_total ?? 0), 0)
 
-  const wonValue = projects
-    .filter(p => p.status === 'won')
-    .reduce((s, p) => s + (p.latest_estimate_total ?? 0), 0)
-
   const closedCount = (summary['won'] ?? 0) + (summary['lost'] ?? 0)
   const winRate = closedCount > 0 ? Math.round(((summary['won'] ?? 0) / closedCount) * 100) : null
 

@@ -4,7 +4,7 @@ import { FileOutput } from 'lucide-react'
 
 export default function Proposals() {
   return (
-    <div className="p-8 bg-[#0a0a0a] min-h-full">
+    <div className="p-8 bg-[#080808] min-h-full">
       <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Proposals</h1>
       <p className="text-zinc-400">Phase 2 -- Generate professional PDF proposals for customers.</p>
       <div className="mt-8 glass-card p-12 text-center">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, Trash2, ExternalLink, FileText, Calendar, MapPin, RefreshCw, TrendingUp } from 'lucide-react'
+import { Plus, Trash2, FileText, Calendar, MapPin, RefreshCw, TrendingUp } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api'
@@ -222,9 +222,6 @@ export function EstimatesListPage() {
                       <span className="flex items-center gap-1"><Calendar size={10} />{formatDate(est.created_at)}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button className="p-2 rounded-xl hover:bg-white/[0.06] text-zinc-600 hover:text-blue-400 transition-colors">
-                        <ExternalLink size={14} />
-                      </button>
                       <button
                         onClick={() => handleDelete(est.id)}
                         disabled={deleting === est.id}
@@ -268,13 +265,13 @@ export function EstimatesListPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={cn('badge', STATUS_CLASS[est.status])}>
+                        <span className={cn('badge', STATUS_CLASS[est.status] ?? 'bg-white/[0.04] text-zinc-500 border border-white/[0.08]')}>
                           {est.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={cn('badge', 'badge-' + est.confidence_label?.toLowerCase())}>
-                          {est.confidence_label}
+                        <span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>
+                          {est.confidence_label ?? 'HIGH'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-zinc-500 text-xs">{est.county}</td>
@@ -286,9 +283,6 @@ export function EstimatesListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 rounded-lg hover:bg-white/[0.07] text-zinc-600 hover:text-blue-400 transition-colors">
-                            <ExternalLink size={13} />
-                          </button>
                           <button
                             onClick={() => handleDelete(est.id)}
                             disabled={deleting === est.id}

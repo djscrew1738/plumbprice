@@ -24,7 +24,7 @@ interface CatalogItem {
   }
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL + '/api/v1'
+const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') + '/api/v1'
 const SUPPLIER_LABELS: Record<string, string> = {
   ferguson: 'Ferguson',
   moore_supply: 'Moore Supply',

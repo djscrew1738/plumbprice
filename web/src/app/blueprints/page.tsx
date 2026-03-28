@@ -4,7 +4,7 @@ import { Layers } from 'lucide-react'
 
 export default function Blueprints() {
   return (
-    <div className="p-8 bg-[#0a0a0a] min-h-full">
+    <div className="p-8 bg-[#080808] min-h-full">
       <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Blueprint Analysis</h1>
       <p className="text-zinc-400">Phase 4 -- Upload PDFs for AI fixture detection and takeoff generation.</p>
       <div className="mt-8 glass-card p-12 text-center">

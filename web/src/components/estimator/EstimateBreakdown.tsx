@@ -23,8 +23,9 @@ const CONFIDENCE: Record<string, { icon: typeof CheckCircle2; color: string; bg:
 export function EstimateBreakdown({
   estimate, confidenceLabel, confidenceScore, assumptions, county, compact = false,
 }: Props) {
-  const label = (confidenceLabel?.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW') ?? 'HIGH'
-  const conf  = CONFIDENCE[label] ?? CONFIDENCE.HIGH
+  const rawLabel = confidenceLabel?.toUpperCase()
+  const label = (rawLabel === 'HIGH' || rawLabel === 'MEDIUM' || rawLabel === 'LOW') ? rawLabel : 'HIGH'
+  const conf  = CONFIDENCE[label]
   const ConfIcon = conf.icon
 
   const total = estimate.grand_total || 1
@@ -99,7 +100,7 @@ export function EstimateBreakdown({
               </div>
               <div className="divide-y divide-white/[0.05]">
                 {estimate.line_items.map((item, i) => (
-                  <div key={i} className="px-4 py-2.5 flex justify-between items-start gap-3">
+                  <div key={`${item.description}-${i}`} className="px-4 py-2.5 flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-zinc-200 leading-snug">{item.description}</div>
                       <div className="text-[10px] text-zinc-600 mt-0.5 flex items-center gap-1.5 flex-wrap">
@@ -126,7 +127,7 @@ export function EstimateBreakdown({
               <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Assumptions</h3>
               <ul className="space-y-2">
                 {assumptions.map((a, i) => (
-                  <li key={i} className="text-xs text-zinc-500 flex gap-2 leading-relaxed">
+                  <li key={`assumption-${i}-${a.slice(0, 20)}`} className="text-xs text-zinc-500 flex gap-2 leading-relaxed">
                     <CheckCircle2 size={12} className="text-zinc-700 shrink-0 mt-0.5" />
                     {a}
                   </li>

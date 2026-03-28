@@ -108,7 +108,7 @@ export function EstimatorPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-54px)]">
+    <div className="flex h-[calc(100dvh-54px)]">
       {/* ── Left: Chat panel ── */}
       <div className="flex flex-col flex-1 min-w-0">
 
