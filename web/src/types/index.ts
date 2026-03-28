@@ -42,5 +42,18 @@ export interface EstimateListItem {
   created_at: string
 }
 
+export interface ProjectPipelineItem {
+  id: number
+  name: string
+  job_type: string
+  status: string
+  customer_name?: string
+  county: string
+  city: string
+  estimate_count: number
+  latest_estimate_total?: number | null
+  created_at: string
+}
+
 export type JobType = 'service' | 'construction' | 'commercial'
 export type County = 'Dallas' | 'Tarrant' | 'Collin' | 'Denton' | 'Rockwall' | 'Parker'

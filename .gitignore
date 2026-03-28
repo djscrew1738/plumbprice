@@ -68,3 +68,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.build-artifacts/
+
+# Deploy secrets
+deploy/runtime.env
+deploy/*.pem
+deploy/*.key

@@ -3,21 +3,24 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { MessageSquare, FileText, Package, Settings } from 'lucide-react'
+import { MessageSquare, FileText, Package, Settings, BriefcaseBusiness } from 'lucide-react'
 
 const tabs = [
-  { href: '/estimator', icon: MessageSquare, label: 'Estimator' },
-  { href: '/estimates', icon: FileText, label: 'Estimates' },
-  { href: '/suppliers', icon: Package, label: 'Suppliers' },
-  { href: '/admin', icon: Settings, label: 'Admin' },
+  { href: '/estimator', icon: MessageSquare,      label: 'Estimate' },
+  { href: '/estimates', icon: FileText,           label: 'Saved' },
+  { href: '/pipeline',  icon: BriefcaseBusiness,  label: 'Pipeline' },
+  { href: '/suppliers', icon: Package,            label: 'Suppliers' },
+  { href: '/admin',     icon: Settings,           label: 'Admin' },
 ]
 
 export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-black/70 backdrop-blur-2xl border-t border-white/5 z-40 lg:hidden"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+    <nav
+      className="fixed bottom-0 inset-x-0 bg-[#080808]/90 backdrop-blur-2xl border-t border-white/[0.06] z-40 lg:hidden"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}
+    >
       <div className="flex">
         {tabs.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
@@ -25,26 +28,25 @@ export function MobileNav() {
             <Link
               key={href}
               href={href}
-              className={`relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors duration-150 min-h-[56px] ${
-                active ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
+              className="relative flex-1 flex flex-col items-center justify-center pt-2 pb-1.5 gap-1 transition-colors duration-150 min-h-[52px]"
             >
-              <div className="relative">
-                <Icon size={22} strokeWidth={active ? 2.5 : 1.75} />
-                {active && (
-                  <div className="absolute -inset-1.5 bg-blue-500/20 rounded-xl blur-sm" />
-                )}
-              </div>
-              <span className={`text-[10px] font-semibold tracking-wide ${active ? 'text-blue-400' : 'text-zinc-500'}`}>
-                {label}
-              </span>
               {active && (
                 <motion.div
-                  layoutId="activeTab"
-                  className="absolute bottom-1.5 w-4 h-[2px] bg-blue-500 rounded-full"
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  layoutId="mobileActiveTab"
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-blue-500 rounded-full"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
+              <div className={`flex items-center justify-center w-6 h-6 rounded-lg transition-all ${
+                active ? 'text-blue-400' : 'text-zinc-600'
+              }`}>
+                <Icon size={21} strokeWidth={active ? 2.25 : 1.75} />
+              </div>
+              <span className={`text-[9px] font-semibold tracking-wide leading-none ${
+                active ? 'text-blue-400' : 'text-zinc-600'
+              }`}>
+                {label}
+              </span>
             </Link>
           )
         })}

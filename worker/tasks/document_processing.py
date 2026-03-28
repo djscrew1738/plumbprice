@@ -21,6 +21,7 @@ def process_document(self, document_id: int, storage_path: str, doc_type: str):
         # 3. Chunk text (512 tokens, 50 overlap)
         # 4. Embed chunks (OpenAI text-embedding-3-small)
         # 5. Store in document_chunks table with vectors
+        raise NotImplementedError("Document processing pipeline is not yet implemented.")
         logger.info("Document processing complete (Phase 3 stub)", document_id=document_id)
         return {"document_id": document_id, "status": "complete", "chunks": 0}
 

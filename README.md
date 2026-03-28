@@ -82,6 +82,16 @@ docker compose --profile dev up -d
 open http://localhost:5555
 ```
 
+### Clean Frontend Rebuild
+
+If the frontend install gets into a bad state, use the repo helper instead of manually patching `node_modules`:
+
+```bash
+./scripts/rebuild-web-clean.sh
+```
+
+That script archives the current `web/node_modules` and `web/.next` into `.build-artifacts/`, runs a fresh `npm ci`, and rebuilds the production standalone output with the current remote API host.
+
 ---
 
 ## Environment Setup

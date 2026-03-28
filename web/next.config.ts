@@ -1,5 +1,10 @@
 import type { NextConfig } from 'next'
 
+const apiOrigin =
+  process.env.API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:8000'
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {},
@@ -7,7 +12,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/:path*`,
+        destination: `${apiOrigin.replace(/\/$/, '')}/api/:path*`,
       },
     ]
   },

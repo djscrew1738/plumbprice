@@ -24,34 +24,12 @@ class County(str, Enum):
 
 
 # Texas tax rates — labor is non-taxable in TX
-TAX_RATES: dict[str, float] = {
-    "dallas": 0.0825,
-    "tarrant": 0.0825,
-    "collin": 0.0825,
-    "denton": 0.0825,
-    "rockwall": 0.0825,
-    "parker": 0.0825,
-    "kaufman": 0.0825,
-}
+# This map is now loaded from the database via the seed script.
+TAX_RATES: dict[str, float] = {}
 
 # Default markup rules by job type
-MARKUP_RULES: dict[str, dict] = {
-    "service": {
-        "materials_markup_pct": 0.30,   # 30% on materials
-        "labor_markup_pct": 0.0,         # labor already at retail rate
-        "misc_flat": 45.0,               # misc / disposal
-    },
-    "construction": {
-        "materials_markup_pct": 0.20,
-        "labor_markup_pct": 0.0,
-        "misc_flat": 0.0,
-    },
-    "commercial": {
-        "materials_markup_pct": 0.25,
-        "labor_markup_pct": 0.0,
-        "misc_flat": 0.0,
-    },
-}
+# This map is now loaded from the database via the seed script.
+MARKUP_RULES: dict[str, dict] = {}
 
 
 @dataclass

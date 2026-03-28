@@ -11,6 +11,36 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
+def build_estimate_breakdown(estimate_result):
+    if estimate_result is None:
+        return None
+
+    return {
+        "labor_total": estimate_result.labor_total,
+        "materials_total": estimate_result.materials_total,
+        "tax_total": estimate_result.tax_total,
+        "markup_total": estimate_result.markup_total,
+        "misc_total": estimate_result.misc_total,
+        "subtotal": estimate_result.subtotal,
+        "grand_total": estimate_result.grand_total,
+        "line_items": [
+            {
+                "line_type": item.line_type,
+                "description": item.description,
+                "quantity": item.quantity,
+                "unit": item.unit,
+                "unit_cost": item.unit_cost,
+                "total_cost": item.total_cost,
+                "supplier": item.supplier,
+                "sku": item.sku,
+                "canonical_item": item.canonical_item,
+                "trace_json": item.trace_json,
+            }
+            for item in estimate_result.line_items
+        ],
+    }
+
+
 @router.post("/price", response_model=ChatPriceResponse)
 async def chat_price(
     request: ChatPriceRequest,
@@ -43,10 +73,15 @@ async def chat_price(
                 source="chat",
             )
             estimate_id = estimate.id
+            await db.commit()
+
+        estimate_payload = result.get("estimate")
+        if estimate_result is not None:
+            estimate_payload = build_estimate_breakdown(estimate_result)
 
         return ChatPriceResponse(
             answer=result["answer"],
-            estimate=result.get("estimate"),
+            estimate=estimate_payload,
             estimate_id=estimate_id,
             confidence=result["confidence"],
             confidence_label=result["confidence_label"],

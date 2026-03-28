@@ -4,10 +4,10 @@ from sqlalchemy import select, desc
 import structlog
 
 from app.database import get_db
-from app.models.estimates import Estimate, EstimateLineItem
+from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion
 from app.schemas.estimates import (
     ServiceEstimateRequest, ConstructionEstimateRequest,
-    EstimateResponse, EstimateListItem
+    EstimateResponse, EstimateListItem, EstimateVersionItem, EstimateVersionListResponse
 )
 from app.services.pricing_engine import pricing_engine
 from app.services.supplier_service import supplier_service
@@ -239,6 +239,35 @@ async def get_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
             for li in line_items
         ],
     }
+
+
+@router.get("/{estimate_id}/versions", response_model=EstimateVersionListResponse)
+async def list_estimate_versions(estimate_id: int, db: AsyncSession = Depends(get_db)):
+    estimate_result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = estimate_result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+
+    versions_result = await db.execute(
+        select(EstimateVersion)
+        .where(EstimateVersion.estimate_id == estimate_id)
+        .order_by(desc(EstimateVersion.version_number))
+    )
+    versions = versions_result.scalars().all()
+
+    return EstimateVersionListResponse(
+        estimate_id=estimate_id,
+        versions=[
+            EstimateVersionItem(
+                id=version.id,
+                version_number=version.version_number,
+                snapshot=version.snapshot_json,
+                change_summary=version.change_summary,
+                created_at=version.created_at,
+            )
+            for version in versions
+        ],
+    )
 
 
 @router.delete("/{estimate_id}")

@@ -72,3 +72,16 @@ class EstimateListItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class EstimateVersionItem(BaseModel):
+    id: int
+    version_number: int
+    snapshot: dict
+    change_summary: Optional[str] = None
+    created_at: datetime
+
+
+class EstimateVersionListResponse(BaseModel):
+    estimate_id: int
+    versions: list[EstimateVersionItem]

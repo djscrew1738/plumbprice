@@ -22,6 +22,7 @@ def analyze_blueprint(self, job_id: int, storage_path: str):
         # 4. Run fixture detection on plumbing sheets
         # 5. Generate takeoff quantities
         # 6. Update DB with results
+        raise NotImplementedError("Blueprint analysis pipeline is not yet implemented.")
         logger.info("Blueprint analysis complete (Phase 4 stub)", job_id=job_id)
         return {"job_id": job_id, "status": "complete", "fixtures": []}
 

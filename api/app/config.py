@@ -1,7 +1,9 @@
-from pydantic_settings import BaseSettings
-from pydantic import Field
-from typing import Optional
+import json
 import os
+from typing import Optional
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -31,7 +33,7 @@ class Settings(BaseSettings):
     minio_bucket_proposals: str = "proposals"
 
     # Auth
-    secret_key: str = Field(default="dev-secret-key-change-in-production-min-32-chars", env="SECRET_KEY")
+    secret_key: str = Field(..., env="SECRET_KEY")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = Field(default=60, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=30, env="REFRESH_TOKEN_EXPIRE_DAYS")
@@ -44,7 +46,7 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:3001", "http://localhost:3200", "http://100.83.120.32:3200"],
+        default=["http://localhost:3000"],
         env="CORS_ORIGINS"
     )
 
@@ -52,7 +54,35 @@ class Settings(BaseSettings):
     celery_broker_url: str = Field(default="redis://localhost:6379/0", env="CELERY_BROKER_URL")
     celery_result_backend: str = Field(default="redis://localhost:6379/1", env="CELERY_RESULT_BACKEND")
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {
+        "env_file": ".env" if os.getenv("ENVIRONMENT") != "test" else None,
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        if isinstance(value, list):
+            return value
+
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return []
+
+            if value.startswith("["):
+                try:
+                    parsed = json.loads(value)
+                except json.JSONDecodeError:
+                    pass
+                else:
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+        return value
 
 
 settings = Settings()

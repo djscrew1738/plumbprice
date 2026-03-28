@@ -5,7 +5,7 @@ import structlog
 
 from app.config import settings
 from app.database import init_db
-from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin
+from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects
 
 logger = structlog.get_logger()
 
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(estimates.router, prefix="/api/v1/estimates", tags=["estimates"])
+app.include_router(projects.router, prefix="/api/v1/projects", tags=["projects"])
 app.include_router(suppliers.router, prefix="/api/v1/suppliers", tags=["suppliers"])
 app.include_router(blueprints.router, prefix="/api/v1/blueprints", tags=["blueprints"])
 app.include_router(proposals.router, prefix="/api/v1/proposals", tags=["proposals"])
