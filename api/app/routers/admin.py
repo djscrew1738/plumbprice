@@ -111,6 +111,14 @@ async def update_markup_rules(
         )
         db.add(rule)
 
+    # Immediately reflect change in the in-memory pricing dict
+    from app.services.pricing_engine import MARKUP_RULES
+    MARKUP_RULES[job_type] = {
+        "labor_markup_pct":    rule.labor_markup_pct if hasattr(rule, "labor_markup_pct") else 0.0,
+        "materials_markup_pct": materials_markup_pct,
+        "misc_flat":           misc_flat,
+    }
+
     return {"job_type": job_type, "materials_markup_pct": materials_markup_pct, "misc_flat": misc_flat}
 
 

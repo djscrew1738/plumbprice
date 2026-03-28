@@ -335,8 +335,8 @@ async def process_chat_message(
             db=db,
         )
 
-    # Step 3: Deterministic pricing
-    result = await pricing_engine.calculate_service_estimate(
+    # Step 3: Deterministic pricing (sync — no LLM, no I/O)
+    result = pricing_engine.calculate_service_estimate(
         task_code=task_code,
         materials=materials,
         assembly_code=assembly_code,
@@ -344,7 +344,6 @@ async def process_chat_message(
         urgency=classification["urgency"],
         county=classification["county"],
         preferred_supplier=classification.get("preferred_supplier"),
-        db=db,
     )
 
     # Step 4: Format

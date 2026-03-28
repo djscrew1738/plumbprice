@@ -23,13 +23,26 @@ class County(str, Enum):
     KAUFMAN = "Kaufman"
 
 
-# Texas tax rates — labor is non-taxable in TX
-# This map is now loaded from the database via the seed script.
-TAX_RATES: dict[str, float] = {}
+# Texas combined sales tax rates by county (state 6.25% + local).
+# Loaded from DB on startup; these hardcoded values are the authoritative fallback.
+_DEFAULT_TAX_RATES: dict[str, float] = {
+    "dallas":   0.0825,
+    "tarrant":  0.0825,
+    "collin":   0.0825,
+    "denton":   0.0825,
+    "rockwall": 0.0825,
+    "parker":   0.0825,
+    "kaufman":  0.0825,
+}
+TAX_RATES: dict[str, float] = dict(_DEFAULT_TAX_RATES)
 
-# Default markup rules by job type
-# This map is now loaded from the database via the seed script.
-MARKUP_RULES: dict[str, dict] = {}
+# Markup rules by job type — loaded from DB on startup; hardcoded values are fallback.
+_DEFAULT_MARKUP_RULES: dict[str, dict] = {
+    "service":      {"labor_markup_pct": 0.0, "materials_markup_pct": 0.30, "misc_flat": 45.0},
+    "construction": {"labor_markup_pct": 0.0, "materials_markup_pct": 0.25, "misc_flat": 65.0},
+    "commercial":   {"labor_markup_pct": 0.0, "materials_markup_pct": 0.20, "misc_flat": 85.0},
+}
+MARKUP_RULES: dict[str, dict] = {k: dict(v) for k, v in _DEFAULT_MARKUP_RULES.items()}
 
 
 @dataclass
@@ -121,7 +134,7 @@ class PricingEngine:
         tax_amount = round(materials_cost * tax_rate, 2)
 
         # 4. Markup
-        markup_rules = MARKUP_RULES.get("service", MARKUP_RULES["service"])
+        markup_rules = MARKUP_RULES.get("service", _DEFAULT_MARKUP_RULES["service"])
         materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
         misc_flat = markup_rules["misc_flat"]
 
@@ -337,7 +350,7 @@ class PricingEngine:
         materials_cost = 0.0
         tax_rate = self._get_tax_rate(county)
         tax_amount = round(materials_cost * tax_rate, 2)
-        markup_rules = MARKUP_RULES.get("construction", MARKUP_RULES["construction"])
+        markup_rules = MARKUP_RULES.get("construction", _DEFAULT_MARKUP_RULES["construction"])
         materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
         misc_flat = markup_rules["misc_flat"]
 

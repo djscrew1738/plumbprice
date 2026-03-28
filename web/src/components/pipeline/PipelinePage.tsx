@@ -135,7 +135,14 @@ export function PipelinePage() {
                   className={cn('card p-4 min-h-[360px]', stage.colClass)}
                 >
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <h2 className="text-xs font-bold text-white uppercase tracking-wider">{stage.label}</h2>
+                    <div>
+                      <h2 className="text-xs font-bold text-white uppercase tracking-wider">{stage.label}</h2>
+                      {stageProjects.some(p => p.latest_estimate_total) && (
+                        <p className="text-[10px] text-zinc-600 mt-0.5 tabular-nums">
+                          {formatCurrency(stageProjects.reduce((s, p) => s + (p.latest_estimate_total ?? 0), 0))}
+                        </p>
+                      )}
+                    </div>
                     <span className={cn(
                       'text-xs font-bold tabular-nums px-2 py-0.5 rounded-full',
                       stage.key === 'won'  && 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',

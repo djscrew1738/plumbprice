@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Save, RefreshCw, Wrench, DollarSign, BarChart3, AlertCircle, CheckCircle2, Package } from 'lucide-react'
+import { Save, RefreshCw, Wrench, DollarSign, BarChart3, AlertCircle, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
+import { useToast } from '@/components/ui/Toast'
 
 interface LaborTemplate {
   code: string; name: string; category: string; base_hours: number
@@ -27,6 +28,7 @@ const CAT_CLASS: Record<string, string> = {
 }
 
 export function AdminPage() {
+  const toast = useToast()
   const [tab,         setTab]         = useState('labor')
   const [templates,   setTemplates]   = useState<LaborTemplate[]>([])
   const [markupRules, setMarkupRules] = useState<MarkupRule[]>([])
@@ -89,6 +91,7 @@ export function AdminPage() {
           misc_flat: r.misc_disposal_flat,
         })
       ))
+      toast.success('Markup rules saved')
       setSaveOk(true)
       setTimeout(() => setSaveOk(false), 3000)
     } catch { setError('Failed to save markup rules. Please try again.') }
@@ -219,7 +222,6 @@ export function AdminPage() {
             : <div className="space-y-3">
                 {saveOk && (
                   <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-sm text-emerald-400">
-                    <CheckCircle2 size={15} className="shrink-0" />
                     Markup rules saved successfully
                   </div>
                 )}
