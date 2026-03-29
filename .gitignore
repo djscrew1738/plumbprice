@@ -69,6 +69,7 @@ Thumbs.db
 *.swp
 *.swo
 .build-artifacts/
+.worktrees/
 
 # Deploy secrets
 deploy/runtime.env
