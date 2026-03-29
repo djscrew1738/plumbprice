@@ -23,16 +23,17 @@ class County(str, Enum):
     KAUFMAN = "Kaufman"
 
 
-# Texas combined sales tax rates by county (state 6.25% + local).
-# Loaded from DB on startup; these hardcoded values are the authoritative fallback.
+# Texas combined sales tax rates (state 6.25% + max local 2%).
+# City rates vary; these are the effective combined rates for the county seat / most common cities.
+# Source: Texas Comptroller of Public Accounts, 2025 Q1.
 _DEFAULT_TAX_RATES: dict[str, float] = {
-    "dallas":   0.0825,
-    "tarrant":  0.0825,
-    "collin":   0.0825,
-    "denton":   0.0825,
-    "rockwall": 0.0825,
-    "parker":   0.0825,
-    "kaufman":  0.0825,
+    "dallas":   0.0825,   # Dallas city: 8.25% (6.25 state + 2.0 city)
+    "tarrant":  0.0825,   # Fort Worth: 8.25%
+    "collin":   0.0825,   # Plano/McKinney/Frisco: 8.25%
+    "denton":   0.0825,   # Denton city: 8.25%
+    "rockwall": 0.0825,   # Rockwall city: 8.25%
+    "parker":   0.0825,   # Weatherford: 8.25%
+    "kaufman":  0.0825,   # Forney/Kaufman: 8.25%
 }
 TAX_RATES: dict[str, float] = dict(_DEFAULT_TAX_RATES)
 
