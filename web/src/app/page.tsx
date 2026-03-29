@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation'
+'use client'
+
+import { EstimatorPage } from '@/components/estimator/EstimatorPage'
 
 export default function Home() {
-  redirect('/estimator')
+  return <EstimatorPage />
 }

@@ -23,7 +23,7 @@ export function MobileNav() {
     >
       <div className="flex">
         {tabs.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
+          const active = pathname === href || pathname.startsWith(href + '/') || (href === '/estimator' && pathname === '/')
           return (
             <Link
               key={href}

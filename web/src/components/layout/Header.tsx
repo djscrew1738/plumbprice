@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, MessageSquare, FileText, Package, Layers, FileOutput, Settings, BriefcaseBusiness } from 'lucide-react'
 
 const pages: Record<string, { title: string; icon: typeof MessageSquare }> = {
-  '/pipeline':  { title: 'Revenue Pipeline', icon: BriefcaseBusiness },
+  '/':          { title: 'Chat Estimator',   icon: MessageSquare },
   '/estimator': { title: 'Chat Estimator',   icon: MessageSquare },
+  '/pipeline':  { title: 'Revenue Pipeline', icon: BriefcaseBusiness },
   '/estimates': { title: 'Estimates',        icon: FileText },
   '/suppliers': { title: 'Suppliers',        icon: Package },
   '/blueprints':{ title: 'Blueprints',       icon: Layers },
@@ -16,7 +17,7 @@ const pages: Record<string, { title: string; icon: typeof MessageSquare }> = {
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname()
-  const page = pages[pathname] ?? { title: 'PlumbPrice AI', icon: MessageSquare }
+  const page = pages[pathname] ?? { title: 'Chat Estimator', icon: MessageSquare }
   const PageIcon = page.icon
 
   return (

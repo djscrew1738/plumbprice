@@ -31,7 +31,7 @@ function NavItem({
   href: string; icon: typeof MessageSquare; label: string; onClick?: () => void
 }) {
   const pathname = usePathname()
-  const active = pathname === href || pathname.startsWith(href + '/')
+  const active = pathname === href || pathname.startsWith(href + '/') || (href === '/estimator' && pathname === '/')
 
   return (
     <Link
