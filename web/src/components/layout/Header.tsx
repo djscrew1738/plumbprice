@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { Menu, MapPin } from 'lucide-react'
 import { getPageMeta } from './nav'
+import { ThemeToggle } from './ThemeToggle'
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname()
@@ -31,8 +32,11 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <MapPin size={12} className="text-[color:var(--accent-strong)]" />
           <span className="text-xs font-medium text-[color:var(--muted-ink)]">DFW</span>
         </div>
-        <div className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)]">
-          E
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <div className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)]">
+            E
+          </div>
         </div>
       </div>
     </header>

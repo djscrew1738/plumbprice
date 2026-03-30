@@ -3,6 +3,7 @@
 import { FileUp, Sparkles } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 export function LauncherHome() {
   return (
@@ -34,6 +35,34 @@ export function LauncherHome() {
 
       <section className="mt-5">
         <RecentJobsList heading="Recent jobs" />
+      </section>
+    </div>
+  )
+}
+
+export function LauncherHomeSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+      <div className="shell-panel p-5 sm:p-6">
+        <div className="mb-3 h-3 w-32 skeleton rounded" />
+        <div className="mb-4 h-8 w-2/3 skeleton rounded" />
+        <div className="h-4 w-3/4 skeleton rounded" />
+      </div>
+
+      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="skeleton rounded-2xl p-4" />
+        <div className="skeleton rounded-2xl p-4" />
+      </section>
+
+      <section className="mt-5">
+        <div className="shell-panel space-y-3 p-4">
+          <div className="h-5 w-24 skeleton rounded" />
+          <div className="space-y-2">
+            <div className="h-16 skeleton rounded-xl" />
+            <div className="h-16 skeleton rounded-xl" />
+            <div className="h-16 skeleton rounded-xl" />
+          </div>
+        </div>
       </section>
     </div>
   )

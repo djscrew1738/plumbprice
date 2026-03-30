@@ -39,6 +39,37 @@
     --stage-won: 160 55% 38%;
     --stage-lost: 0 68% 50%;
   }
+
+  .dark {
+    color-scheme: dark;
+    --background: 24 16% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 55%;
+    --border: 0 0% 12%;
+    --ring: 217 91% 60%;
+    --radius: 0.95rem;
+    --sidebar-width: 248px;
+
+    --panel: hsl(24 16% 10%);
+    --panel-strong: hsl(24 16% 13%);
+    --line: hsl(0 0% 18%);
+    --ink: hsl(0 0% 95%);
+    --muted-ink: hsl(0 0% 60%);
+    --accent: hsl(217 91% 60%);
+    --accent-hsl: 217 91% 60%;
+    --accent-strong: hsl(217 91% 70%);
+    --accent-soft: hsl(217 91% 25%);
+
+    --stage-lead: 0 0% 50%;
+    --stage-sent: 217 91% 60%;
+    --stage-won: 160 84% 39%;
+    --stage-lost: 0 72% 51%;
+  }
 }
 
 html {

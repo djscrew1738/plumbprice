@@ -75,3 +75,4 @@ Thumbs.db
 deploy/runtime.env
 deploy/*.pem
 deploy/*.key
+.aider*

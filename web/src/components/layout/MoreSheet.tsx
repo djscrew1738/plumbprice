@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { ChevronRight, X } from 'lucide-react'
 import { MORE_LINKS } from './nav'
+import { useFocusTrap, useTrapFocusOutside } from '@/lib/useFocusTrap'
 
 type MoreSheetProps = {
   open: boolean
@@ -11,6 +12,9 @@ type MoreSheetProps = {
 }
 
 export function MoreSheet({ open, onClose }: MoreSheetProps) {
+  const containerRef = useFocusTrap(open)
+  useTrapFocusOutside(open, onClose)
+
   useEffect(() => {
     if (!open) {
       return
@@ -36,6 +40,7 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
     open ? (
       <>
         <div
+          data-focus-trap
           aria-hidden="true"
           data-testid="more-sheet-overlay"
           className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm animate-fade-in lg:hidden"
@@ -43,17 +48,17 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
         />
 
         <div
+          ref={containerRef}
+          data-focus-trap
           role="dialog"
           aria-modal="true"
           aria-labelledby="more-sheet-title"
           className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-6 lg:hidden"
           style={{ maxHeight: '87dvh' }}
-          onClick={onClose}
         >
           <div
             className="bottom-sheet flex w-full max-w-md flex-col overflow-hidden animate-slide-up"
             style={{ maxHeight: '87dvh' }}
-            onClick={event => event.stopPropagation()}
           >
             <div className="flex items-center justify-center pt-3 pb-1">
               <div className="h-1.5 w-11 rounded-full bg-[color:var(--line)]" />

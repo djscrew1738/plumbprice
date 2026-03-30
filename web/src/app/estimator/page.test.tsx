@@ -14,9 +14,10 @@ vi.mock('@/components/estimator/EstimatorPage', () => ({
 }))
 
 describe('Estimator route', () => {
-  it('shows a loading fallback while the pricing workspace suspends', () => {
+  it('shows skeleton loaders while the pricing workspace suspends', () => {
     render(<EstimatorRoute />)
 
-    expect(screen.getByText(/loading pricing workspace/i)).toBeInTheDocument()
+    // Check for skeleton elements that indicate loading state
+    expect(document.querySelector('.skeleton')).toBeInTheDocument()
   })
 })
