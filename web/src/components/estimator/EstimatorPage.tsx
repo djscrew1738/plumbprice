@@ -1,26 +1,25 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Send, RotateCcw, MapPin, ChevronDown, DollarSign, X,
-  Zap, Copy, Check,
-} from 'lucide-react'
-import { chatApi } from '@/lib/api'
-import { EstimateBreakdown } from './EstimateBreakdown'
+import { Send, RotateCcw, Zap, Copy, Check, FileUp } from 'lucide-react'
+import { chatApi, estimatesApi, type EstimateDetailResponse } from '@/lib/api'
 import { ConfidenceBadge } from './ConfidenceBadge'
 import { useToast } from '@/components/ui/Toast'
-import { cn, formatCurrency } from '@/lib/utils'
-import type { ChatMessage } from '@/types'
+import { cn } from '@/lib/utils'
+import type { ChatMessage, EstimateBreakdown as EstimateBreakdownType, LineItem } from '@/types'
 import ReactMarkdown from 'react-markdown'
+import { WorkspaceEntryBar, type WorkspaceEntryMode } from '@/components/workspace/WorkspaceEntryBar'
+import { WorkspaceSummaryRail } from '@/components/workspace/WorkspaceSummaryRail'
 
 const SUGGESTIONS = [
-  { short: 'Toilet replace',   full: 'How much to replace a toilet first floor Dallas?',  hint: '$285–$485' },
-  { short: 'WH attic 50G',    full: 'Price to replace 50G gas water heater in attic?',    hint: '$980–$1,400' },
-  { short: 'Kitchen faucet',  full: 'Cost for kitchen faucet replacement?',                hint: '$180–$320' },
-  { short: 'PRV valve',       full: 'Replace PRV valve -- how much?',                      hint: '$380–$580' },
-  { short: 'Disposal install', full: 'Garbage disposal install cost?',                     hint: '$220–$380' },
-  { short: 'Shower valve',    full: 'Replace shower valve and trim -- price?',             hint: '$420–$680' },
+  { short: 'Toilet replace', full: 'How much to replace a toilet first floor Dallas?', hint: '$285–$485' },
+  { short: 'WH attic 50G', full: 'Price to replace 50G gas water heater in attic?', hint: '$980–$1,400' },
+  { short: 'Kitchen faucet', full: 'Cost for kitchen faucet replacement?', hint: '$180–$320' },
+  { short: 'PRV valve', full: 'Replace PRV valve -- how much?', hint: '$380–$580' },
+  { short: 'Disposal install', full: 'Garbage disposal install cost?', hint: '$220–$380' },
+  { short: 'Shower valve', full: 'Replace shower valve and trim -- price?', hint: '$420–$680' },
 ]
 
 const COUNTIES = ['Dallas', 'Tarrant', 'Collin', 'Denton', 'Rockwall', 'Parker']
@@ -29,49 +28,166 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-export function EstimatorPage() {
-  const { success } = useToast()
+function normalizeCounty(county?: string) {
+  if (!county) {
+    return 'Dallas'
+  }
 
-  const [messages,         setMessages]         = useState<ChatMessage[]>([])
-  const [input,            setInput]            = useState('')
-  const [loading,          setLoading]          = useState(false)
-  const [county,           setCounty]           = useState('Dallas')
-  const [countyOpen,       setCountyOpen]       = useState(false)
+  const match = COUNTIES.find(candidate => candidate.toLowerCase() === county.toLowerCase())
+  return match ?? county
+}
+
+function normalizeEntryMode(value?: string | null): WorkspaceEntryMode {
+  if (value === 'upload-job-files') {
+    return 'upload-job-files'
+  }
+  return 'quick-quote'
+}
+
+function normalizeConfidenceLabel(label?: string) {
+  const upper = label?.toUpperCase()
+  if (upper === 'HIGH' || upper === 'MEDIUM' || upper === 'LOW') {
+    return upper
+  }
+  return 'HIGH'
+}
+
+function normalizeLineItems(lineItems: EstimateDetailResponse['line_items']): LineItem[] {
+  if (!Array.isArray(lineItems)) {
+    return []
+  }
+
+  return lineItems.map(item => ({
+    line_type: item.line_type,
+    description: item.description,
+    quantity: item.quantity,
+    unit: item.unit,
+    unit_cost: item.unit_cost,
+    total_cost: item.total_cost,
+    supplier: item.supplier,
+    sku: item.sku,
+  }))
+}
+
+function toEstimateBreakdown(payload: EstimateDetailResponse): EstimateBreakdownType {
+  return {
+    labor_total: payload.labor_total ?? 0,
+    materials_total: payload.materials_total ?? 0,
+    tax_total: payload.tax_total ?? 0,
+    markup_total: payload.markup_total ?? 0,
+    misc_total: payload.misc_total ?? 0,
+    subtotal: payload.subtotal ?? 0,
+    grand_total: payload.grand_total ?? 0,
+    line_items: normalizeLineItems(payload.line_items),
+  }
+}
+
+export function EstimatorPage() {
+  const { success, error } = useToast()
+  const searchParams = useSearchParams()
+  const estimateId = searchParams.get('estimateId')
+  const entryParam = searchParams.get('entry')
+
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [county, setCounty] = useState('Dallas')
+  const [entryMode, setEntryMode] = useState<WorkspaceEntryMode>(() => normalizeEntryMode(entryParam))
   const [selectedEstimate, setSelectedEstimate] = useState<ChatMessage | null>(null)
-  const [sheetOpen,        setSheetOpen]        = useState(false)
-  const [copiedId,         setCopiedId]         = useState<string | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeSuggestion, setActiveSuggestion] = useState(0)
 
-  const bottomRef  = useRef<HTMLDivElement>(null)
-  const inputRef   = useRef<HTMLTextAreaElement>(null)
-  const countyRef  = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const resumeErrorRef = useRef(error)
 
-  // Scroll to latest message
+  const uploadMode = entryMode === 'upload-job-files'
+  const showUploadPlaceholder = uploadMode && messages.length === 0
+
+  useEffect(() => {
+    setEntryMode(normalizeEntryMode(entryParam))
+  }, [entryParam])
+
+  useEffect(() => {
+    resumeErrorRef.current = error
+  }, [error])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // Rotate suggestion in empty state
   useEffect(() => {
-    if (messages.length > 0) return
-    const id = setInterval(() => setActiveSuggestion(p => (p + 1) % SUGGESTIONS.length), 3000)
-    return () => clearInterval(id)
-  }, [messages.length])
-
-  // Close county dropdown on outside click
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      if (countyRef.current && !countyRef.current.contains(e.target as Node)) setCountyOpen(false)
+    if (!estimateId) {
+      return
     }
-    document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
-  }, [])
+    const estimateIdToResume = estimateId
 
-  // Auto-grow textarea
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value)
-    e.target.style.height = 'auto'
-    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+    let isMounted = true
+
+    async function resumeEstimateFromQuery() {
+      try {
+        setLoading(true)
+        const { data } = await estimatesApi.get(estimateIdToResume)
+        if (!isMounted) {
+          return
+        }
+
+        const resumedMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `Loaded estimate #${data.id} — ${data.title || 'Saved estimate'}\n\nStatus: ${data.status}`,
+          estimate: toEstimateBreakdown(data),
+          confidence: data.confidence_score ?? 0,
+          confidence_label: normalizeConfidenceLabel(data.confidence_label),
+          assumptions: data.assumptions ?? [],
+          timestamp: data.created_at ? new Date(data.created_at) : new Date(),
+        }
+
+        setCounty(normalizeCounty(data.county))
+        setMessages([resumedMessage])
+        setSelectedEstimate(resumedMessage)
+        setSheetOpen(false)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        resumeErrorRef.current('Could not load estimate', `Estimate #${estimateIdToResume} was unavailable.`)
+        setSelectedEstimate(null)
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: `Could not load estimate #${estimateIdToResume}.`,
+            timestamp: new Date(),
+          },
+        ])
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void resumeEstimateFromQuery()
+    return () => {
+      isMounted = false
+    }
+  }, [estimateId])
+
+  useEffect(() => {
+    if (messages.length > 0 || uploadMode) {
+      return
+    }
+    const id = setInterval(() => setActiveSuggestion(previous => (previous + 1) % SUGGESTIONS.length), 3000)
+    return () => clearInterval(id)
+  }, [messages.length, uploadMode])
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(event.target.value)
+    event.target.style.height = 'auto'
+    event.target.style.height = `${Math.min(event.target.scrollHeight, 120)}px`
   }
 
   const copyMessage = (id: string, content: string) => {
@@ -83,23 +199,27 @@ export function EstimatorPage() {
   }
 
   const sendMessage = useCallback(async (text?: string) => {
-    const msg = (text ?? input).trim()
-    if (!msg || loading) return
+    const message = (text ?? input).trim()
+    if (!message || loading || uploadMode) {
+      return
+    }
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: msg,
+      content: message,
       timestamp: new Date(),
     }
 
     setMessages(prev => [...prev, userMsg])
     setInput('')
-    if (inputRef.current) inputRef.current.style.height = 'auto'
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
     setLoading(true)
 
     try {
-      const { data } = await chatApi.price({ message: msg, county })
+      const { data } = await chatApi.price({ message, county })
       const aiMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -125,10 +245,13 @@ export function EstimatorPage() {
     } finally {
       setLoading(false)
     }
-  }, [input, loading, county])
+  }, [input, loading, county, uploadMode])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      void sendMessage()
+    }
   }
 
   const handleReset = () => {
@@ -139,329 +262,238 @@ export function EstimatorPage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-54px)]">
+    <div className="flex h-[calc(100dvh-54px)] flex-col">
+      <WorkspaceEntryBar
+        county={county}
+        counties={COUNTIES}
+        entryMode={entryMode}
+        onCountyChange={setCounty}
+        onEntryModeChange={setEntryMode}
+      />
 
-      {/* ── Chat panel ── */}
-      <div className="flex flex-col flex-1 min-w-0">
-
-        {/* Top bar */}
-        <div className="bg-[#080808]/90 backdrop-blur-xl border-b border-white/[0.06] px-3 py-2 flex items-center gap-2 shrink-0">
-          {/* County dropdown */}
-          <div ref={countyRef} className="relative shrink-0">
-            <button
-              onClick={() => setCountyOpen(o => !o)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
-            >
-              <MapPin size={12} className="text-blue-400" />
-              <span className="text-xs font-semibold text-zinc-300">{county} Co.</span>
-              <ChevronDown size={11} className={cn('text-zinc-500 transition-transform duration-200', countyOpen && 'rotate-180')} />
-            </button>
-            <AnimatePresence>
-              {countyOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0,  scale: 1    }}
-                  exit={{   opacity: 0, y: -6,  scale: 0.96 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute top-full left-0 mt-1.5 bg-[#111] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden z-20 min-w-[148px]"
-                >
-                  {COUNTIES.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => { setCounty(c); setCountyOpen(false) }}
-                      className={cn(
-                        'w-full text-left px-3.5 py-2 text-xs font-medium transition-colors',
-                        c === county ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]',
-                      )}
-                    >
-                      {c} County
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Suggestion pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
-            {SUGGESTIONS.map(s => (
-              <button
-                key={s.short}
-                onClick={() => sendMessage(s.full)}
-                disabled={loading}
-                className="shrink-0 px-2.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-blue-500/15 hover:text-blue-400 text-zinc-500 text-[11px] font-medium whitespace-nowrap border border-white/[0.06] hover:border-blue-500/20 transition-all disabled:opacity-30"
-              >
-                {s.short}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 bg-[#080808]">
-
-          {/* ── Empty state ── */}
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full pb-8 text-center px-4">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5">
-                <Zap size={26} className="text-blue-400" />
+      <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 sm:gap-4 sm:px-4 sm:pb-4">
+        <section className="shell-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-2.5">
+            {uploadMode ? (
+              <div className="shell-chip">
+                <FileUp size={13} />
+                Upload workflow coming next.
               </div>
-
-              <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">DFW Plumbing Estimator</h2>
-              <p className="text-zinc-500 text-sm max-w-[280px] mb-1 leading-relaxed">
-                Real pricing with full labor, materials &amp; tax — every line item traceable.
-              </p>
-
-              {/* Animated current suggestion */}
-              <div className="h-6 mb-8 overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={activeSuggestion}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{   opacity: 0, y: -8 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-xs text-blue-400/70 font-medium"
+            ) : (
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+                {SUGGESTIONS.map(suggestion => (
+                  <button
+                    key={suggestion.short}
+                    type="button"
+                    onClick={() => void sendMessage(suggestion.full)}
+                    disabled={loading}
+                    className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--accent-soft)] hover:text-[color:var(--accent-strong)] disabled:opacity-40"
                   >
-                    Try: &ldquo;{SUGGESTIONS[activeSuggestion].full}&rdquo;
-                  </motion.p>
-                </AnimatePresence>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5 w-full max-w-sm">
-                {SUGGESTIONS.map((s, i) => (
-                  <motion.button
-                    key={s.short}
-                    onClick={() => sendMessage(s.full)}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: i * 0.05 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="text-left px-3.5 py-3 rounded-2xl bg-[#0f0f0f] border border-white/[0.07] hover:border-blue-500/25 hover:bg-blue-500/[0.04] transition-all"
-                  >
-                    <div className="font-semibold text-zinc-200 text-xs mb-0.5">{s.short}</div>
-                    <div className="text-[10px] text-zinc-600 leading-tight mb-1.5 line-clamp-1">{s.full}</div>
-                    <div className="text-[11px] font-bold text-blue-400">{s.hint}</div>
-                  </motion.button>
+                    {suggestion.short}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* ── Message list ── */}
-          {messages.map((msg, i) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18, delay: i > messages.length - 3 ? 0.04 : 0 }}
-              className={cn('flex gap-2.5 group', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-            >
-              {msg.role === 'assistant' && (
-                <div className="w-[26px] h-[26px] rounded-full bg-blue-600/20 border border-blue-500/25 flex items-center justify-center text-blue-400 text-[9px] font-bold shrink-0 mt-1">
+          <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
+            {showUploadPlaceholder && (
+              <div className="flex h-full items-center justify-center px-4 py-8">
+                <div className="max-w-sm text-center">
+                  <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                    <FileUp size={24} />
+                  </div>
+                  <h2 className="text-xl font-semibold text-[color:var(--ink)]">Upload Job Files</h2>
+                  <p className="mt-2 text-sm text-[color:var(--muted-ink)]">
+                    File-first intake is not wired yet. Switch to Quick Quote to keep pricing in chat.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!showUploadPlaceholder && messages.length === 0 && (
+              <div className="flex h-full flex-col items-center justify-center px-4 pb-8 text-center">
+                <div className="mb-5 flex size-14 items-center justify-center rounded-2xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                  <Zap size={26} />
+                </div>
+
+                <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">DFW Plumbing Estimator</h2>
+                <p className="mt-2 max-w-[320px] text-sm text-[color:var(--muted-ink)]">
+                  Real pricing with labor, materials, tax, and assumptions surfaced in one workspace.
+                </p>
+
+                <div className="mb-8 mt-3 h-6 overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={activeSuggestion}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-xs font-medium text-[color:var(--accent-strong)]"
+                    >
+                      Try: &ldquo;{SUGGESTIONS[activeSuggestion].full}&rdquo;
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+
+                <div className="grid w-full max-w-sm grid-cols-2 gap-2.5">
+                  {SUGGESTIONS.map((suggestion, index) => (
+                    <motion.button
+                      key={suggestion.short}
+                      type="button"
+                      onClick={() => void sendMessage(suggestion.full)}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="card text-left p-3"
+                    >
+                      <div className="text-xs font-semibold text-[color:var(--ink)]">{suggestion.short}</div>
+                      <div className="mt-1 line-clamp-1 text-[10px] text-[color:var(--muted-ink)]">{suggestion.full}</div>
+                      <div className="mt-1.5 text-[11px] font-bold text-[color:var(--accent-strong)]">{suggestion.hint}</div>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!showUploadPlaceholder && messages.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, delay: index > messages.length - 3 ? 0.04 : 0 }}
+                className={cn('mb-5 flex gap-2.5 group', message.role === 'user' ? 'justify-end' : 'justify-start')}
+              >
+                {message.role === 'assistant' && (
+                  <div className="mt-1 flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[9px] font-bold text-[color:var(--accent-strong)]">
+                    AI
+                  </div>
+                )}
+
+                <div className="flex max-w-[88%] flex-col gap-1">
+                  <div className={cn('relative text-sm leading-relaxed', message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant')}>
+                    {message.role === 'assistant' ? (
+                      <>
+                        <div className="chat-prose pr-6">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyMessage(message.id, message.content)}
+                          className="absolute right-2 top-2 rounded-lg p-1 text-[color:var(--muted-ink)] opacity-0 transition-all hover:bg-[color:var(--panel-strong)] group-hover:opacity-100"
+                          title="Copy"
+                        >
+                          {copiedId === message.id ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        </button>
+                      </>
+                    ) : (
+                      message.content
+                    )}
+
+                    {message.estimate && message.confidence_label && (
+                      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[color:var(--line)] pt-2.5">
+                        <ConfidenceBadge label={message.confidence_label} score={message.confidence || 0} size="sm" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedEstimate(message)
+                            setSheetOpen(true)
+                          }}
+                          className="text-xs font-semibold text-[color:var(--accent-strong)] transition-colors hover:text-[color:var(--accent)]"
+                        >
+                          View summary
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className={cn('text-[10px] text-[color:var(--muted-ink)] opacity-0 transition-opacity group-hover:opacity-100', message.role === 'user' ? 'text-right' : 'text-left')}>
+                    {formatTime(message.timestamp)}
+                  </span>
+                </div>
+
+                {message.role === 'user' && (
+                  <div className="mt-1 flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[9px] font-bold text-[color:var(--muted-ink)]">
+                    U
+                  </div>
+                )}
+              </motion.div>
+            ))}
+
+            {!showUploadPlaceholder && loading && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2.5">
+                <div className="flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[9px] font-bold text-[color:var(--accent-strong)]">
                   AI
                 </div>
-              )}
-
-              <div className="flex flex-col gap-1 max-w-[88%]">
-                <div className={cn(
-                  'text-sm leading-relaxed relative',
-                  msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant',
-                )}>
-                  {msg.role === 'assistant' ? (
-                    <>
-                      <div className="chat-prose pr-6">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                      {/* Copy button */}
-                      <button
-                        onClick={() => copyMessage(msg.id, msg.content)}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-white/10 text-zinc-600 hover:text-zinc-300 transition-all"
-                        title="Copy"
-                      >
-                        {copiedId === msg.id ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                      </button>
-                    </>
-                  ) : msg.content}
-
-                  {msg.estimate && msg.confidence_label && (
-                    <div className="mt-2.5 pt-2.5 border-t border-white/[0.08] flex items-center justify-between gap-2">
-                      <ConfidenceBadge label={msg.confidence_label} score={msg.confidence || 0} size="sm" />
-                      <button
-                        onClick={() => { setSelectedEstimate(msg); setSheetOpen(true) }}
-                        className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        Breakdown →
-                      </button>
-                    </div>
-                  )}
+                <div className="chat-bubble-assistant px-4 py-3.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                  </div>
                 </div>
-
-                {/* Timestamp */}
-                <span className={cn(
-                  'text-[10px] text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity',
-                  msg.role === 'user' ? 'text-right' : 'text-left',
-                )}>
-                  {formatTime(msg.timestamp)}
-                </span>
-              </div>
-
-              {msg.role === 'user' && (
-                <div className="w-[26px] h-[26px] rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-[9px] font-bold shrink-0 mt-1">
-                  U
-                </div>
-              )}
-            </motion.div>
-          ))}
-
-          {/* Typing */}
-          {loading && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2.5">
-              <div className="w-[26px] h-[26px] rounded-full bg-blue-600/20 border border-blue-500/25 flex items-center justify-center text-blue-400 text-[9px] font-bold shrink-0">
-                AI
-              </div>
-              <div className="chat-bubble-assistant py-3.5 px-4">
-                <div className="flex gap-1.5 items-center">
-                  <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
-
-        {/* ── Input bar ── */}
-        <div className="bg-[#080808]/90 backdrop-blur-xl border-t border-white/[0.06] px-3 pt-2.5 pb-20 lg:pb-3 shrink-0">
-          <div className="flex gap-2 items-end">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a pricing question…"
-              rows={1}
-              className="flex-1 resize-none px-4 py-3 border border-white/[0.08] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500/40 max-h-[120px] overflow-auto bg-white/[0.04] text-white placeholder-zinc-600 transition-all leading-relaxed"
-              style={{ minHeight: '46px' }}
-            />
-            <motion.button
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}
-              whileTap={{ scale: 0.9 }}
-              className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-500 active:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
-            >
-              <Send size={16} />
-            </motion.button>
-          </div>
-          <div className="flex items-center justify-between mt-1.5 px-0.5">
-            {messages.length > 0 ? (
-              <button onClick={handleReset} className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
-                <RotateCcw size={11} /> New conversation
-              </button>
-            ) : (
-              <span className="text-[11px] text-zinc-700">Enter to send · Shift+Enter for newline</span>
+              </motion.div>
             )}
-            {input.length > 0 && (
-              <span className="text-[10px] text-zinc-700 tabular-nums">{input.length}</span>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* ── Desktop breakdown panel ── */}
-      <div className="hidden lg:flex w-[380px] shrink-0 bg-[#0a0a0a] border-l border-white/[0.06] flex-col">
-        {selectedEstimate?.estimate ? (
-          <motion.div
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="flex-1 flex flex-col overflow-hidden"
-          >
-            <EstimateBreakdown
-              estimate={selectedEstimate.estimate}
-              confidenceLabel={selectedEstimate.confidence_label || 'HIGH'}
-              confidenceScore={selectedEstimate.confidence || 0}
-              assumptions={selectedEstimate.assumptions || []}
-              county={county}
-            />
-          </motion.div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center p-8 text-center">
-            <div>
-              <div className="w-12 h-12 bg-white/[0.03] border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <DollarSign size={20} className="text-zinc-700" />
-              </div>
-              <p className="text-sm font-medium text-zinc-600 mb-1">Estimate panel</p>
-              <p className="text-xs text-zinc-700 max-w-[160px] mx-auto leading-relaxed">
-                Ask a pricing question to see the full cost breakdown here.
-              </p>
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="border-t border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 pb-20 pt-2.5 lg:pb-3">
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={uploadMode ? 'Switch to Quick Quote to ask pricing questions' : 'Ask a pricing question…'}
+                rows={1}
+                disabled={uploadMode}
+                className="input max-h-[120px] resize-none overflow-auto py-2.5 disabled:cursor-not-allowed disabled:opacity-65"
+                style={{ minHeight: '46px' }}
+              />
+              <motion.button
+                type="button"
+                onClick={() => void sendMessage()}
+                disabled={!input.trim() || loading || uploadMode}
+                whileTap={{ scale: 0.9 }}
+                className="btn-primary h-11 w-11 shrink-0 rounded-2xl p-0 disabled:opacity-40"
+                aria-label="Send message"
+              >
+                <Send size={16} />
+              </motion.button>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between px-0.5">
+              {uploadMode ? (
+                <span className="text-[11px] text-[color:var(--muted-ink)]">Upload intake placeholder is active.</span>
+              ) : messages.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-1.5 text-[11px] text-[color:var(--muted-ink)] transition-colors hover:text-[color:var(--ink)]"
+                >
+                  <RotateCcw size={11} />
+                  New conversation
+                </button>
+              ) : (
+                <span className="text-[11px] text-[color:var(--muted-ink)]">Enter to send · Shift+Enter for newline</span>
+              )}
+              {input.length > 0 && (
+                <span className="text-[10px] tabular-nums text-[color:var(--muted-ink)]">{input.length}</span>
+              )}
             </div>
           </div>
-        )}
+        </section>
+
+        <WorkspaceSummaryRail
+          county={county}
+          selectedEstimate={selectedEstimate}
+          sheetOpen={sheetOpen}
+          onSheetOpenChange={setSheetOpen}
+        />
       </div>
-
-      {/* ── Mobile bottom sheet ── */}
-      <AnimatePresence>
-        {sheetOpen && selectedEstimate?.estimate && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
-              onClick={() => setSheetOpen(false)}
-            />
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="fixed inset-x-0 bottom-0 z-50 lg:hidden"
-              style={{ maxHeight: '87dvh' }}
-            >
-              <div
-                className="bg-[#0f0f0f] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden border-t border-white/[0.07]"
-                style={{ maxHeight: '87dvh', paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}
-              >
-                <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
-                  <div className="w-9 h-1 bg-white/15 rounded-full" />
-                </div>
-                <div className="flex items-center justify-between px-5 py-2.5 shrink-0 border-b border-white/[0.06]">
-                  <span className="text-sm font-bold text-white">Estimate Breakdown</span>
-                  <button onClick={() => setSheetOpen(false)} className="p-1.5 rounded-xl hover:bg-white/10 text-zinc-500 transition-colors">
-                    <X size={17} />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  <EstimateBreakdown
-                    estimate={selectedEstimate.estimate}
-                    confidenceLabel={selectedEstimate.confidence_label || 'HIGH'}
-                    confidenceScore={selectedEstimate.confidence || 0}
-                    assumptions={selectedEstimate.assumptions || []}
-                    county={county}
-                    compact
-                  />
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Mobile FAB ── */}
-      <AnimatePresence>
-        {selectedEstimate?.estimate && !sheetOpen && (
-          <motion.button
-            initial={{ opacity: 0, y: 12, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0,  scale: 1    }}
-            exit={{   opacity: 0, y: 12,  scale: 0.9  }}
-            whileTap={{ scale: 0.94 }}
-            onClick={() => setSheetOpen(true)}
-            className="fixed bottom-[76px] right-4 z-30 lg:hidden flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-2xl shadow-xl shadow-blue-600/25 font-bold text-sm"
-          >
-            <DollarSign size={15} />
-            {formatCurrency(selectedEstimate.estimate.grand_total)}
-            <ChevronDown size={13} className="opacity-60" />
-          </motion.button>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

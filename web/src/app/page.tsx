@@ -1,7 +1,7 @@
 'use client'
 
-import { EstimatorPage } from '@/components/estimator/EstimatorPage'
+import { LauncherHome } from '@/components/workspace/LauncherHome'
 
 export default function Home() {
-  return <EstimatorPage />
+  return <LauncherHome />
 }

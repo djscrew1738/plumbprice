@@ -1,21 +1,26 @@
 'use client'
 
 import { Layers } from 'lucide-react'
+import { PageIntro } from '@/components/layout/PageIntro'
 
 export default function Blueprints() {
   return (
-    <div className="p-8 bg-[#080808] min-h-full">
-      <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Blueprint Analysis</h1>
-      <p className="text-zinc-400">Phase 4 -- Upload PDFs for AI fixture detection and takeoff generation.</p>
-      <div className="mt-8 glass-card p-12 text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-violet-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/[0.06]">
-          <Layers size={32} className="text-blue-400" />
-        </div>
-        <h2 className="text-xl font-semibold text-zinc-200 mb-2">Coming in Phase 4</h2>
-        <p className="text-zinc-500 max-w-md mx-auto">
-          Upload plumbing blueprints (PDFs) and AI will detect fixtures, count items,
-          and generate a complete material takeoff automatically.
-        </p>
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+        <PageIntro
+          eyebrow="Blueprints"
+          title="Blueprint takeoffs are not available yet."
+          description="This route is a planned entry point for PDF-based fixture detection and quantity extraction."
+        />
+        <section className="shell-panel-strong mt-4 p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10">
+            <Layers size={32} className="text-blue-700" />
+          </div>
+          <h2 className="mb-2 text-xl font-semibold text-[color:var(--ink)]">Placeholder destination</h2>
+          <p className="mx-auto max-w-md text-[color:var(--muted-ink)]">
+            No upload workflow is wired yet. When this feature is built, it will open a blueprint-first flow instead of mock content.
+          </p>
+        </section>
       </div>
     </div>
   )

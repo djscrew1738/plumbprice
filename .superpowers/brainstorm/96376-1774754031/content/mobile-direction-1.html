@@ -1,0 +1,131 @@
+<h2>Choose the mobile direction for PlumbPrice AI</h2>
+<p class="subtitle">These are tailored to the current estimator, county picker, quick prompts, breakdown sheet, and bottom nav.</p>
+
+<div class="cards">
+  <div class="card" data-choice="chat-first" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. Chat First</div>
+        <div class="mockup-body" style="background:#0b0f14;padding:12px;border-radius:18px;min-height:420px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="width:34px;height:34px;border-radius:12px;background:#152235;border:1px solid #23446c;"></div>
+              <div>
+                <div style="font-size:13px;font-weight:700;">DFW Estimator</div>
+                <div style="font-size:11px;color:#89a1bf;">Dallas County live pricing</div>
+              </div>
+            </div>
+            <div style="padding:6px 10px;border-radius:999px;background:#101825;border:1px solid #21324c;font-size:11px;">County</div>
+          </div>
+          <div style="display:flex;gap:8px;overflow:hidden;margin-bottom:14px;">
+            <div style="padding:7px 10px;border-radius:999px;background:#111827;border:1px solid #1f2937;font-size:11px;">Toilet replace</div>
+            <div style="padding:7px 10px;border-radius:999px;background:#111827;border:1px solid #1f2937;font-size:11px;">WH attic 50G</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="margin-left:auto;max-width:75%;background:#1d4ed8;color:white;padding:12px 14px;border-radius:18px 18px 6px 18px;font-size:12px;">Price to replace a 50G gas water heater in attic?</div>
+            <div style="max-width:86%;background:#111827;border:1px solid #202936;padding:12px 14px;border-radius:18px 18px 18px 6px;">
+              <div style="font-size:12px;line-height:1.45;">Typical range <strong>$980-$1,400</strong> including haul-off, pan, and reconnection.</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #202936;">
+                <div style="font-size:11px;color:#8ad9aa;">High confidence</div>
+                <div style="font-size:11px;color:#7ab4ff;">Breakdown</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:18px;border:1px solid #223047;background:#0f1724;border-radius:18px;padding:10px 12px;">
+            <div style="font-size:11px;color:#89a1bf;margin-bottom:6px;">Ask anything</div>
+            <div style="height:28px;border-radius:10px;background:#121b2a;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Chat First</h3>
+      <p>The current experience, tightened for mobile. Focus stays on conversation, quick prompts, and a bottom-sheet breakdown after each answer.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="quote-first" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. Quote First</div>
+        <div class="mockup-body" style="background:#0f1010;padding:12px;border-radius:18px;min-height:420px;">
+          <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#9aa0a6;margin-bottom:8px;">Quick Estimate</div>
+          <div style="font-size:22px;font-weight:800;margin-bottom:6px;">Build a quote fast</div>
+          <div style="font-size:12px;color:#b2b7bd;margin-bottom:14px;">Type of job, county, urgency, and scope first. AI explanation comes after the number.</div>
+          <div style="display:grid;gap:10px;">
+            <div style="border:1px solid #26292d;border-radius:14px;padding:12px;background:#141618;">
+              <div style="font-size:11px;color:#9aa0a6;margin-bottom:6px;">Service</div>
+              <div style="font-size:13px;font-weight:700;">Water heater replacement</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div style="border:1px solid #26292d;border-radius:14px;padding:12px;background:#141618;">
+                <div style="font-size:11px;color:#9aa0a6;margin-bottom:6px;">County</div>
+                <div style="font-size:13px;font-weight:700;">Dallas</div>
+              </div>
+              <div style="border:1px solid #26292d;border-radius:14px;padding:12px;background:#141618;">
+                <div style="font-size:11px;color:#9aa0a6;margin-bottom:6px;">Urgency</div>
+                <div style="font-size:13px;font-weight:700;">Standard</div>
+              </div>
+            </div>
+            <div style="border:1px solid #1f3b2e;border-radius:18px;padding:14px;background:#102218;">
+              <div style="font-size:11px;color:#8bc79e;margin-bottom:6px;">Estimated Total</div>
+              <div style="font-size:28px;font-weight:800;">$1,180</div>
+              <div style="font-size:11px;color:#97a09d;margin-top:4px;">Tap for materials, labor, tax, and assumptions</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;height:42px;border-radius:14px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">Generate Quote</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Quote First</h3>
+      <p>Mobile turns into a fast-entry estimating tool. Better for techs in the field who want the price first and rationale second.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. Hybrid</div>
+        <div class="mockup-body" style="background:linear-gradient(180deg,#0c1117 0%,#0f0f10 100%);padding:12px;border-radius:18px;min-height:420px;">
+          <div style="border:1px solid #1f2a37;background:#0f1721;border-radius:18px;padding:12px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:11px;color:#89a1bf;">Today</div>
+                <div style="font-size:18px;font-weight:800;">Need a number or need guidance?</div>
+              </div>
+              <div style="width:36px;height:36px;border-radius:14px;background:#152235;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+              <div style="border:1px solid #244a79;background:#11233a;border-radius:14px;padding:12px;">
+                <div style="font-size:12px;font-weight:700;">Quick Quote</div>
+                <div style="font-size:11px;color:#8fb7e6;margin-top:4px;">Form-first path</div>
+              </div>
+              <div style="border:1px solid #2c333c;background:#121418;border-radius:14px;padding:12px;">
+                <div style="font-size:12px;font-weight:700;">Ask AI</div>
+                <div style="font-size:11px;color:#9fa8b3;margin-top:4px;">Chat-first path</div>
+              </div>
+            </div>
+          </div>
+          <div style="border:1px solid #252b33;background:#121418;border-radius:18px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:11px;color:#9aa0a6;margin-bottom:8px;">Recent quote</div>
+            <div style="font-size:20px;font-weight:800;">$485 toilet reset</div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <div style="padding:7px 10px;border-radius:999px;background:#1a1f25;font-size:11px;">Labor</div>
+              <div style="padding:7px 10px;border-radius:999px;background:#1a1f25;font-size:11px;">Materials</div>
+              <div style="padding:7px 10px;border-radius:999px;background:#1a1f25;font-size:11px;">Markup</div>
+            </div>
+          </div>
+          <div style="border:1px solid #1d2733;background:#0f1721;border-radius:18px;padding:12px;">
+            <div style="font-size:11px;color:#89a1bf;margin-bottom:8px;">Ask a follow-up</div>
+            <div style="height:30px;border-radius:10px;background:#162131;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Hybrid</h3>
+      <p>Split the home screen into two clear entry points: fast quote or chat. More flexible, but denser and harder to keep clean on a phone.</p>
+    </div>
+  </div>
+</div>

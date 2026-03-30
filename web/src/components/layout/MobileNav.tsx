@@ -1,52 +1,50 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { MessageSquare, FileText, Package, Settings, BriefcaseBusiness } from 'lucide-react'
+import { MOBILE_TABS, matchesPathname } from './nav'
 
-const tabs = [
-  { href: '/estimator', icon: MessageSquare,      label: 'Estimate' },
-  { href: '/estimates', icon: FileText,           label: 'Saved' },
-  { href: '/pipeline',  icon: BriefcaseBusiness,  label: 'Pipeline' },
-  { href: '/suppliers', icon: Package,            label: 'Suppliers' },
-  { href: '/admin',     icon: Settings,           label: 'Admin' },
-]
-
-export function MobileNav() {
+export function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
   const pathname = usePathname()
 
   return (
-    <nav
-      className="fixed bottom-0 inset-x-0 bg-[#080808]/90 backdrop-blur-2xl border-t border-white/[0.06] z-40 lg:hidden"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}
-    >
-      <div className="flex">
-        {tabs.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || pathname.startsWith(href + '/') || (href === '/estimator' && pathname === '/')
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--line)] bg-[color:var(--panel)]/95 backdrop-blur-xl lg:hidden">
+      <div className="grid grid-cols-4 px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-2">
+        {MOBILE_TABS.map(({ href, icon: Icon, label }) => {
+          if (href === '#more') {
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={onOpenMore}
+                className="relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.25rem] text-[11px] font-semibold text-[color:var(--muted-ink)]"
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </button>
+            )
+          }
+
+          const active = matchesPathname(pathname, href)
+
           return (
             <Link
               key={href}
               href={href}
-              className="relative flex-1 flex flex-col items-center justify-center pt-2 pb-1.5 gap-1 transition-colors duration-150 min-h-[52px]"
+              className="relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.25rem] text-[11px] font-semibold"
             >
               {active && (
-                <motion.div
-                  layoutId="mobileActiveTab"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-blue-500 rounded-full"
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                <motion.span
+                  layoutId="mobile-tab-indicator"
+                  className="absolute inset-x-3 top-0 h-[3px] rounded-full bg-[color:var(--accent)]"
                 />
               )}
-              <div className={`flex items-center justify-center w-6 h-6 rounded-lg transition-all ${
-                active ? 'text-blue-400' : 'text-zinc-600'
-              }`}>
-                <Icon size={21} strokeWidth={active ? 2.25 : 1.75} />
-              </div>
-              <span className={`text-[9px] font-semibold tracking-wide leading-none ${
-                active ? 'text-blue-400' : 'text-zinc-600'
-              }`}>
-                {label}
-              </span>
+              <Icon
+                size={18}
+                className={active ? 'text-[color:var(--accent-strong)]' : 'text-[color:var(--muted-ink)]'}
+              />
+              <span className={active ? 'text-[color:var(--ink)]' : 'text-[color:var(--muted-ink)]'}>{label}</span>
             </Link>
           )
         })}

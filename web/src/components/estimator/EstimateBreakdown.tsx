@@ -1,9 +1,10 @@
 'use client'
 
-import { CheckCircle2, AlertCircle, XCircle, ExternalLink, CheckCheck } from 'lucide-react'
+import Link from 'next/link'
+import { CheckCheck, CheckCircle2, ExternalLink } from 'lucide-react'
 import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
 import type { EstimateBreakdown as EstimateBreakdownType } from '@/types'
-import Link from 'next/link'
+import { ConfidenceBadge } from './ConfidenceBadge'
 
 interface Props {
   estimate: EstimateBreakdownType
@@ -14,105 +15,84 @@ interface Props {
   compact?: boolean
 }
 
-const CONFIDENCE: Record<string, { icon: typeof CheckCircle2; color: string; bg: string }> = {
-  HIGH:   { icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  MEDIUM: { icon: AlertCircle,  color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
-  LOW:    { icon: XCircle,      color: 'text-red-400',      bg: 'bg-red-500/10 border-red-500/20' },
-}
-
 export function EstimateBreakdown({
-  estimate, confidenceLabel, confidenceScore, assumptions, county, compact = false,
+  estimate,
+  confidenceLabel,
+  confidenceScore,
+  assumptions,
+  county,
+  compact = false,
 }: Props) {
-  const rawLabel = confidenceLabel?.toUpperCase()
-  const label = (rawLabel === 'HIGH' || rawLabel === 'MEDIUM' || rawLabel === 'LOW') ? rawLabel : 'HIGH'
-  const conf  = CONFIDENCE[label]
-  const ConfIcon = conf.icon
-
   const total = estimate.grand_total || 1
   const costRows = [
-    { label: 'Labor',       value: estimate.labor_total,     color: 'bg-blue-500',    pct: estimate.labor_total / total },
-    { label: 'Materials',   value: estimate.materials_total, color: 'bg-violet-500',  pct: estimate.materials_total / total },
-    { label: 'Markup',      value: estimate.markup_total,    color: 'bg-amber-500',   pct: estimate.markup_total / total },
-    { label: 'Misc',        value: estimate.misc_total,      color: 'bg-orange-500',  pct: estimate.misc_total / total },
-    { label: `Tax (${county})`, value: estimate.tax_total,  color: 'bg-zinc-500',    pct: estimate.tax_total / total },
-  ].filter(r => r.value > 0)
+    { label: 'Labor', value: estimate.labor_total, color: 'bg-[color:var(--accent)]', pct: estimate.labor_total / total },
+    { label: 'Materials', value: estimate.materials_total, color: 'bg-amber-500', pct: estimate.materials_total / total },
+    { label: 'Markup', value: estimate.markup_total, color: 'bg-emerald-500', pct: estimate.markup_total / total },
+    { label: 'Misc', value: estimate.misc_total, color: 'bg-orange-500', pct: estimate.misc_total / total },
+    { label: `Tax (${county})`, value: estimate.tax_total, color: 'bg-zinc-500', pct: estimate.tax_total / total },
+  ].filter(row => row.value > 0)
 
   const pad = compact ? 'px-4 py-3.5' : 'px-5 py-4'
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-
-      {/* ── Hero ── */}
-      <div className={cn('shrink-0 bg-[#0c0c0c] border-b border-white/[0.06]', pad)}>
-        <div className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600 mb-2">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className={cn('shrink-0 border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]', pad)}>
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
           Recommended Price
         </div>
-        <div className={cn('font-extrabold text-white leading-none mb-3', compact ? 'text-4xl' : 'text-5xl')}>
+        <div className={cn('mb-3 font-extrabold leading-none text-[color:var(--ink)]', compact ? 'text-4xl' : 'text-5xl')}>
           {formatCurrency(estimate.grand_total)}
         </div>
-        <div className={cn(
-          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border',
-          conf.bg, conf.color,
-        )}>
-          <ConfIcon size={11} />
-          {label} · {Math.round((confidenceScore || 0) * 100)}% confidence
-        </div>
+        <ConfidenceBadge label={confidenceLabel} score={confidenceScore || 0} size="md" />
       </div>
 
-      {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className={cn('space-y-3', compact ? 'p-4' : 'p-5')}>
-
-          {/* Cost breakdown */}
           <div className="card-sm overflow-hidden">
-            <div className="px-4 pt-4 pb-3">
-              <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Cost Breakdown</h3>
+            <div className="px-4 pb-3 pt-4">
+              <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">Cost Breakdown</h3>
               <div className="space-y-2.5">
                 {costRows.map(row => (
                   <div key={row.label}>
-                    <div className="flex justify-between items-center text-xs mb-1">
-                      <span className="text-zinc-500">{row.label}</span>
-                      <span className="font-semibold text-zinc-200">{formatCurrencyDecimal(row.value)}</span>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-[color:var(--muted-ink)]">{row.label}</span>
+                      <span className="font-semibold text-[color:var(--ink)]">{formatCurrencyDecimal(row.value)}</span>
                     </div>
-                    <div className="h-1 bg-white/[0.05] rounded-full overflow-hidden">
-                      <div
-                        className={cn('cost-bar', row.color)}
-                        style={{ width: `${Math.max(row.pct * 100, 2)}%` }}
-                      />
+                    <div className="h-1 rounded-full bg-[color:var(--panel-strong)]">
+                      <div className={cn('cost-bar', row.color)} style={{ width: `${Math.max(row.pct * 100, 2)}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-3.5 pt-3 border-t border-white/[0.06] flex justify-between items-center">
-                <span className="text-xs font-bold text-white">Total</span>
-                <span className="text-base font-extrabold text-white">{formatCurrency(estimate.grand_total)}</span>
+              <div className="mt-3.5 flex items-center justify-between border-t border-[color:var(--line)] pt-3">
+                <span className="text-xs font-bold text-[color:var(--ink)]">Total</span>
+                <span className="text-base font-extrabold text-[color:var(--ink)]">{formatCurrency(estimate.grand_total)}</span>
               </div>
             </div>
           </div>
 
-          {/* Line items */}
           {estimate.line_items.length > 0 && (
             <div className="card-sm overflow-hidden">
-              <div className="px-4 pt-3.5 pb-1">
-                <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
-                  Line Items <span className="text-zinc-700 normal-case">({estimate.line_items.length})</span>
+              <div className="px-4 pb-1 pt-3.5">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
+                  Line Items <span className="normal-case text-[color:var(--muted-ink)]">({estimate.line_items.length})</span>
                 </h3>
               </div>
-              <div className="divide-y divide-white/[0.05]">
-                {estimate.line_items.map((item, i) => (
-                  <div key={`${item.description}-${i}`} className="px-4 py-2.5 flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-zinc-200 leading-snug">{item.description}</div>
-                      <div className="text-[10px] text-zinc-600 mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <div className="divide-y divide-[color:var(--line)]">
+                {estimate.line_items.map((item, index) => (
+                  <div key={`${item.description}-${index}`} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium leading-snug text-[color:var(--ink)]">{item.description}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-[color:var(--muted-ink)]">
                         <span>{item.quantity} {item.unit} × {formatCurrencyDecimal(item.unit_cost)}</span>
                         {item.supplier && (
-                          <span className="px-1.5 py-px bg-white/[0.04] border border-white/[0.06] rounded font-mono text-zinc-500">
+                          <span className="rounded border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-1.5 py-px font-mono text-[color:var(--muted-ink)]">
                             {item.supplier}
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-zinc-300 shrink-0">
+                    <span className="shrink-0 text-xs font-bold text-[color:var(--ink)]">
                       {formatCurrencyDecimal(item.total_cost)}
                     </span>
                   </div>
@@ -121,36 +101,30 @@ export function EstimateBreakdown({
             </div>
           )}
 
-          {/* Assumptions */}
           {assumptions.length > 0 && (
             <div className="card-sm p-4">
-              <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Assumptions</h3>
+              <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">Assumptions</h3>
               <ul className="space-y-2">
-                {assumptions.map((a, i) => (
-                  <li key={`assumption-${i}-${a.slice(0, 20)}`} className="text-xs text-zinc-500 flex gap-2 leading-relaxed">
-                    <CheckCircle2 size={12} className="text-zinc-700 shrink-0 mt-0.5" />
-                    {a}
+                {assumptions.map((assumption, index) => (
+                  <li key={`assumption-${index}-${assumption.slice(0, 24)}`} className="flex gap-2 text-xs leading-relaxed text-[color:var(--muted-ink)]">
+                    <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-600" />
+                    {assumption}
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          {/* Actions */}
           <div className="space-y-2 pt-1">
-            <div className="btn-secondary w-full opacity-60 cursor-default pointer-events-none gap-2 text-xs">
-              <CheckCheck size={14} className="text-emerald-400" />
-              <span className="text-zinc-300">Saved to Estimates</span>
+            <div className="btn-secondary pointer-events-none w-full cursor-default gap-2 text-xs opacity-65">
+              <CheckCheck size={14} className="text-emerald-600" />
+              <span>Saved to Estimates</span>
             </div>
-            <Link
-              href="/estimates"
-              className="btn-ghost w-full text-xs gap-2 border border-white/[0.06]"
-            >
+            <Link href="/estimates" className="btn-ghost w-full gap-2 border border-[color:var(--line)] text-xs">
               <ExternalLink size={13} />
               View All Estimates
             </Link>
           </div>
-
         </div>
       </div>
     </div>

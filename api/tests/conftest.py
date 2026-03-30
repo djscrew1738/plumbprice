@@ -60,5 +60,6 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture(scope="function")
 async def test_client() -> AsyncGenerator[AsyncClient, None]:
     """Yield an AsyncClient for making requests to the app."""
+    from httpx import ASGITransport
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client

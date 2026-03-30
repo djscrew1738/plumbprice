@@ -1,33 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { MobileNav } from '@/components/layout/MobileNav'
+import { MoreSheet } from '@/components/layout/MoreSheet'
 import { ToastProvider } from '@/components/ui/Toast'
 import './globals.css'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const pathname = usePathname()
 
+  useEffect(() => {
+    setSidebarOpen(false)
+    setMoreOpen(false)
+  }, [pathname])
+
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#080808" />
+        <meta name="theme-color" content="#f2ebe1" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="description" content="AI-powered plumbing estimator for DFW contractors" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <title>PlumbPrice AI</title>
       </head>
-      <body>
+      <body className="bg-[hsl(var(--background))] text-[color:var(--ink)] antialiased">
         <ToastProvider>
-          <div className="flex h-dvh bg-[#080808]">
+          <div className="flex min-h-dvh">
             <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             {/* Mobile overlay */}
@@ -64,7 +71,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </main>
             </div>
 
-            <MobileNav />
+            <MobileNav onOpenMore={() => setMoreOpen(true)} />
+            <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
           </div>
         </ToastProvider>
       </body>

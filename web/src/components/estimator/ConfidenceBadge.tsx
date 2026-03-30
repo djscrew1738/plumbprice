@@ -8,15 +8,21 @@ interface Props {
 }
 
 export function ConfidenceBadge({ label, score, size = 'sm' }: Props) {
-  const Icon = label === 'HIGH' ? CheckCircle2 : label === 'MEDIUM' ? AlertCircle : XCircle
+  const normalizedLabel = label?.toUpperCase()
+  const safeLabel = normalizedLabel === 'HIGH' || normalizedLabel === 'MEDIUM' || normalizedLabel === 'LOW'
+    ? normalizedLabel
+    : 'HIGH'
+  const Icon = safeLabel === 'HIGH' ? CheckCircle2 : safeLabel === 'MEDIUM' ? AlertCircle : XCircle
+  const scorePercent = Math.round(Math.max(0, score) * 100)
+
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded-full font-medium',
-      size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-3 py-1',
-      getConfidenceColor(label)
+      'inline-flex items-center gap-1.5 rounded-full border font-semibold',
+      size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs',
+      getConfidenceColor(safeLabel)
     )}>
       <Icon className={size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'} />
-      {label} . {Math.round(score * 100)}%
+      {safeLabel} · {scorePercent}%
     </span>
   )
 }

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, TrendingDown, Package, DollarSign, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { cn, formatCurrencyDecimal } from '@/lib/utils'
 import axios from 'axios'
+import { PageIntro } from '@/components/layout/PageIntro'
 
 interface SupplierPrice { name: string; sku: string; cost: number }
 interface CatalogItem {
@@ -88,96 +89,102 @@ export function SuppliersPage() {
   const suppliers = ['ferguson', 'moore_supply', 'apex']
 
   return (
-    <div className="min-h-full bg-[#080808] flex flex-col">
-
-      {/* ── Stats + search bar ── */}
-      <div className="bg-[#080808]/80 backdrop-blur-xl border-b border-white/[0.06] px-4 py-3 shrink-0 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto space-y-3">
-          {/* Stats row */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide">
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
-                  <Package size={14} className="text-blue-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-zinc-600 leading-none font-medium uppercase tracking-wider">Showing</div>
-                  <div className="text-sm font-bold text-white">{filtered.length} <span className="text-zinc-600 font-normal text-xs">of {items.length}</span></div>
-                </div>
-              </div>
-              <div className="w-px h-8 bg-white/[0.06] shrink-0" />
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
-                  <DollarSign size={14} className="text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-zinc-600 leading-none font-medium uppercase tracking-wider">Avg Best</div>
-                  <div className="text-sm font-bold text-white">{formatCurrencyDecimal(avgBest)}</div>
-                </div>
-              </div>
-              <div className="w-px h-8 bg-white/[0.06] shrink-0" />
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-center">
-                  <TrendingDown size={14} className="text-violet-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-zinc-600 leading-none font-medium uppercase tracking-wider">Suppliers</div>
-                  <div className="text-sm font-bold text-white">Ferguson · Moore · Apex</div>
-                </div>
-              </div>
-            </div>
-            <button onClick={fetchCatalog} disabled={loading} className="shrink-0 p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+        <PageIntro
+          eyebrow="Supplier Matrix"
+          title="Compare catalog pricing side by side."
+          description="Check the lowest supplier cost per item without leaving the workspace shell."
+          actions={(
+            <button
+              onClick={fetchCatalog}
+              disabled={loading}
+              className="btn-secondary min-h-0 px-3 py-2"
+              aria-label="Refresh supplier catalog"
+            >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
-          </div>
+          )}
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+              <div className="card-inset flex items-center gap-2.5 p-3">
+                <div className="w-8 h-8 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
+                  <Package size={14} className="text-blue-700" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-[color:var(--muted-ink)] leading-none font-medium uppercase tracking-wider">Showing</div>
+                  <div className="text-sm font-bold text-[color:var(--ink)]">{filtered.length} <span className="text-[color:var(--muted-ink)] font-normal text-xs">of {items.length}</span></div>
+                </div>
+              </div>
+              <div className="card-inset flex items-center gap-2.5 p-3">
+                <div className="w-8 h-8 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
+                  <DollarSign size={14} className="text-emerald-700" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-[color:var(--muted-ink)] leading-none font-medium uppercase tracking-wider">Avg Best</div>
+                  <div className="text-sm font-bold text-[color:var(--ink)]">{formatCurrencyDecimal(avgBest)}</div>
+                </div>
+              </div>
+              <div className="card-inset flex items-center gap-2.5 p-3">
+                <div className="w-8 h-8 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-center">
+                  <TrendingDown size={14} className="text-violet-700" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-[color:var(--muted-ink)] leading-none font-medium uppercase tracking-wider">Suppliers</div>
+                  <div className="text-sm font-bold text-[color:var(--ink)]">Ferguson · Moore · Apex</div>
+                </div>
+              </div>
+            </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search items…"
-              className="w-full pl-9 pr-9 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500/40 transition-all"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
-                <X size={14} />
-              </button>
-            )}
-          </div>
+            <div className="relative">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] pointer-events-none" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search items…"
+                className="input py-2.5 pl-9 pr-9"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
 
-          {/* Category tabs */}
-          {categories.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
-              <button
-                onClick={() => setActiveCategory('all')}
-                className={cn(
-                  'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all',
-                  activeCategory === 'all' ? 'bg-blue-600 text-white' : 'bg-white/[0.04] text-zinc-500 hover:text-zinc-200 border border-white/[0.06]',
-                )}
-              >
-                All
-              </button>
-              {categories.map(cat => (
+            {categories.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  onClick={() => setActiveCategory('all')}
                   className={cn(
-                    'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all',
-                    activeCategory === cat ? 'bg-blue-600 text-white' : 'bg-white/[0.04] text-zinc-500 hover:text-zinc-200 border border-white/[0.06]',
+                    'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border',
+                    activeCategory === 'all'
+                      ? 'border-[color:var(--accent)] bg-[color:var(--accent)] text-white'
+                      : 'border-[color:var(--line)] bg-[color:var(--panel)] text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]',
                   )}
                 >
-                  {prettyCat(cat)}
+                  All
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={cn(
+                      'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all border',
+                      activeCategory === cat
+                        ? 'border-[color:var(--accent)] bg-[color:var(--accent)] text-white'
+                        : 'border-[color:var(--line)] bg-[color:var(--panel)] text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]',
+                    )}
+                  >
+                    {prettyCat(cat)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </PageIntro>
 
-      {/* ── Content ── */}
-      <div className="max-w-5xl mx-auto px-4 py-4 w-full flex-1">
+        <div className="mt-4">
 
         {loading && (
           <div className="space-y-2">
@@ -192,15 +199,15 @@ export function SuppliersPage() {
 
         {error && !loading && (
           <div className="card p-10 text-center">
-            <p className="text-red-400 font-medium text-sm mb-3">{error}</p>
+            <p className="text-red-700 font-medium text-sm mb-3">{error}</p>
             <button onClick={fetchCatalog} className="btn-primary mx-auto">Retry</button>
           </div>
         )}
 
         {!loading && !error && filtered.length === 0 && (
           <div className="card p-12 text-center">
-            <Package size={28} className="text-zinc-700 mx-auto mb-3" />
-            <p className="text-zinc-500 font-medium text-sm">
+            <Package size={28} className="text-[color:var(--muted-ink)] mx-auto mb-3" />
+            <p className="text-[color:var(--muted-ink)] font-medium text-sm">
               {search || activeCategory !== 'all' ? 'No items match your filter' : 'No catalog data available'}
             </p>
             {(search || activeCategory !== 'all') && (
@@ -232,16 +239,16 @@ export function SuppliersPage() {
                         onClick={() => setExpanded(isOpen ? null : item.canonical_id)}
                       >
                         <div className="flex-1 min-w-0 mr-3">
-                          <div className="text-sm font-semibold text-zinc-200 truncate">{item.display_name}</div>
+                          <div className="text-sm font-semibold text-[color:var(--ink)] truncate">{item.display_name}</div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-0.5">
+                            <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-0.5">
                               <TrendingDown size={11} />
                               {formatCurrencyDecimal(item.best_price)}
                             </span>
-                            <span className="text-[11px] text-zinc-600">{SUPPLIER_LABELS[item.best_supplier] ?? item.best_supplier}</span>
+                            <span className="text-[11px] text-[color:var(--muted-ink)]">{SUPPLIER_LABELS[item.best_supplier] ?? item.best_supplier}</span>
                           </div>
                         </div>
-                        {isOpen ? <ChevronUp size={15} className="text-zinc-600 shrink-0" /> : <ChevronDown size={15} className="text-zinc-600 shrink-0" />}
+                        {isOpen ? <ChevronUp size={15} className="text-[color:var(--muted-ink)] shrink-0" /> : <ChevronDown size={15} className="text-[color:var(--muted-ink)] shrink-0" />}
                       </button>
 
                       <AnimatePresence initial={false}>
@@ -253,7 +260,7 @@ export function SuppliersPage() {
                             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                             className="overflow-hidden"
                           >
-                            <div className="border-t border-white/[0.06] divide-y divide-white/[0.05]">
+                            <div className="border-t border-[color:var(--line)] divide-y divide-[color:var(--line)]">
                               {suppliers.map(sup => {
                                 const p = item.prices?.[sup as keyof typeof item.prices]
                                 if (!p) return null
@@ -261,13 +268,13 @@ export function SuppliersPage() {
                                 return (
                                   <div key={sup} className={cn('flex items-center justify-between px-4 py-3', isBest && 'bg-emerald-500/[0.04]')}>
                                     <div>
-                                      <div className={cn('text-xs font-semibold flex items-center gap-1.5', isBest ? 'text-emerald-400' : 'text-zinc-300')}>
+                                      <div className={cn('text-xs font-semibold flex items-center gap-1.5', isBest ? 'text-emerald-700' : 'text-[color:var(--ink)]')}>
                                         {SUPPLIER_LABELS[sup]}
-                                        {isBest && <span className="px-1.5 py-px bg-emerald-500/10 text-emerald-400 text-[9px] rounded-full border border-emerald-500/20 font-bold">BEST</span>}
+                                        {isBest && <span className="px-1.5 py-px bg-emerald-500/10 text-emerald-700 text-[9px] rounded-full border border-emerald-500/20 font-bold">BEST</span>}
                                       </div>
-                                      <div className="text-[11px] text-zinc-600 font-mono mt-0.5">{p.sku}</div>
+                                      <div className="text-[11px] text-[color:var(--muted-ink)] font-mono mt-0.5">{p.sku}</div>
                                     </div>
-                                    <div className={cn('text-sm font-bold tabular-nums', isBest ? 'text-emerald-400' : 'text-zinc-400')}>
+                                    <div className={cn('text-sm font-bold tabular-nums', isBest ? 'text-emerald-700' : 'text-[color:var(--muted-ink)]')}>
                                       {formatCurrencyDecimal(p.cost)}
                                     </div>
                                   </div>
@@ -287,15 +294,15 @@ export function SuppliersPage() {
             <div className="hidden lg:block card overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="sticky top-0">
-                  <tr className="border-b border-white/[0.06] bg-[#0f0f0f]">
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Item</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Ferguson</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Moore Supply</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Apex</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Best Price</th>
+                  <tr className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Item</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Ferguson</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Moore Supply</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Apex</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Best Price</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.05]">
+                <tbody className="divide-y divide-[color:var(--line)]">
                   <AnimatePresence initial={false}>
                     {filtered.map(item => (
                       <motion.tr
@@ -303,20 +310,20 @@ export function SuppliersPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="hover:bg-white/[0.025] transition-colors"
+                        className="hover:bg-[color:var(--panel-strong)] transition-colors"
                       >
-                        <td className="px-4 py-3 font-medium text-zinc-200">{item.display_name}</td>
+                        <td className="px-4 py-3 font-medium text-[color:var(--ink)]">{item.display_name}</td>
                         {suppliers.map(sup => {
                           const p = item.prices?.[sup as keyof typeof item.prices]
                           const isBest = sup === item.best_supplier
                           return (
-                            <td key={sup} className={cn('px-4 py-3 text-right tabular-nums', isBest ? 'text-emerald-400 font-semibold' : 'text-zinc-500')}>
-                              {p ? formatCurrencyDecimal(p.cost) : <span className="text-zinc-700">—</span>}
+                            <td key={sup} className={cn('px-4 py-3 text-right tabular-nums', isBest ? 'text-emerald-700 font-semibold' : 'text-[color:var(--muted-ink)]')}>
+                              {p ? formatCurrencyDecimal(p.cost) : <span className="text-[color:var(--muted-ink)]">—</span>}
                             </td>
                           )
                         })}
                         <td className="px-4 py-3 text-right">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-lg border border-emerald-500/20 tabular-nums">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-500/20 tabular-nums">
                             <TrendingDown size={10} />
                             {formatCurrencyDecimal(item.best_price)}
                           </span>
@@ -329,6 +336,7 @@ export function SuppliersPage() {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   )

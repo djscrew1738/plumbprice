@@ -1,0 +1,118 @@
+<h2>Which quote-first mobile flow should drive the estimator?</h2>
+<p class="subtitle">All three keep AI explanations and breakdowns, but they change how fast a tech can get to a number.</p>
+
+<div class="cards">
+  <div class="card" data-choice="single-form" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. Single Form</div>
+        <div class="mockup-body" style="background:#111315;padding:12px;border-radius:18px;min-height:430px;">
+          <div style="font-size:22px;font-weight:800;margin-bottom:4px;">Build quote</div>
+          <div style="font-size:12px;color:#a8afb7;margin-bottom:14px;">Everything visible in one scroll.</div>
+          <div style="display:grid;gap:10px;">
+            <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+              <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">Service</div>
+              <div style="font-size:13px;font-weight:700;">Toilet replacement</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+                <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">County</div>
+                <div style="font-size:13px;font-weight:700;">Dallas</div>
+              </div>
+              <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+                <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">Urgency</div>
+                <div style="font-size:13px;font-weight:700;">Same day</div>
+              </div>
+            </div>
+            <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+              <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">Notes</div>
+              <div style="height:48px;border-radius:10px;background:#1f2328;"></div>
+            </div>
+          </div>
+          <div style="margin-top:18px;border:1px solid #1d3f31;border-radius:18px;background:#102119;padding:14px;">
+            <div style="font-size:11px;color:#8cc4a0;">Projected total</div>
+            <div style="font-size:28px;font-weight:800;">$485</div>
+          </div>
+          <div style="margin-top:14px;height:44px;border-radius:14px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">Generate quote</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Single Form</h3>
+      <p>Fastest to implement and easiest to scan. Best if most quotes only need a few fields and a quick note.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="guided-steps" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. Guided Steps</div>
+        <div class="mockup-body" style="background:#0d1016;padding:12px;border-radius:18px;min-height:430px;">
+          <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <div style="height:6px;flex:1;border-radius:999px;background:#3b82f6;"></div>
+            <div style="height:6px;flex:1;border-radius:999px;background:#1b2330;"></div>
+            <div style="height:6px;flex:1;border-radius:999px;background:#1b2330;"></div>
+          </div>
+          <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#89a1bf;margin-bottom:6px;">Step 1 of 3</div>
+          <div style="font-size:24px;font-weight:800;margin-bottom:6px;">What are you pricing?</div>
+          <div style="font-size:12px;color:#a3afbd;margin-bottom:14px;">Reduce mistakes by asking one thing at a time.</div>
+          <div style="display:grid;gap:10px;">
+            <div style="border:1px solid #294566;background:#11243a;border-radius:16px;padding:13px;font-size:13px;font-weight:700;">Toilet replacement</div>
+            <div style="border:1px solid #263242;background:#111722;border-radius:16px;padding:13px;font-size:13px;font-weight:700;">Water heater replacement</div>
+            <div style="border:1px solid #263242;background:#111722;border-radius:16px;padding:13px;font-size:13px;font-weight:700;">PRV valve</div>
+            <div style="border:1px solid #263242;background:#111722;border-radius:16px;padding:13px;font-size:13px;font-weight:700;">Custom request</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:18px;">
+            <div style="height:42px;flex:1;border-radius:14px;background:#171d27;display:flex;align-items:center;justify-content:center;font-size:13px;">Back</div>
+            <div style="height:42px;flex:1.2;border-radius:14px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">Next</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Guided Steps</h3>
+      <p>Better for consistency and data quality. Slower, but stronger if the app will be used by multiple techs with different habits.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="result-led" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. Result-Led</div>
+        <div class="mockup-body" style="background:linear-gradient(180deg,#101823 0%, #121416 100%);padding:12px;border-radius:18px;min-height:430px;">
+          <div style="border:1px solid #244261;border-radius:20px;background:#112338;padding:14px;margin-bottom:14px;">
+            <div style="font-size:11px;color:#9ac3ef;margin-bottom:6px;">Live estimate</div>
+            <div style="font-size:30px;font-weight:900;">$1,180</div>
+            <div style="font-size:11px;color:#adc1d5;margin-top:4px;">Updates as details change</div>
+          </div>
+          <div style="display:grid;gap:10px;">
+            <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+              <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">Service</div>
+              <div style="font-size:13px;font-weight:700;">50G attic gas water heater</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+                <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">County</div>
+                <div style="font-size:13px;font-weight:700;">Dallas</div>
+              </div>
+              <div style="border:1px solid #2a2f35;border-radius:14px;padding:12px;background:#171a1d;">
+                <div style="font-size:11px;color:#8e959d;margin-bottom:6px;">Access</div>
+                <div style="font-size:13px;font-weight:700;">Attic</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;">
+            <div style="padding:8px 10px;border-radius:999px;background:#1b2026;font-size:11px;">Labor</div>
+            <div style="padding:8px 10px;border-radius:999px;background:#1b2026;font-size:11px;">Materials</div>
+            <div style="padding:8px 10px;border-radius:999px;background:#1b2026;font-size:11px;">Assumptions</div>
+          </div>
+          <div style="margin-top:18px;height:42px;border-radius:14px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">Lock quote</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Result-Led</h3>
+      <p>The number stays visible while inputs change. Strongest sales feel, but more dynamic UI work and more room for noisy updates.</p>
+    </div>
+  </div>
+</div>
