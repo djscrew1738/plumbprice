@@ -50,6 +50,7 @@ async def test_chat_price_success(
         "sources": ["Test source"],
         "job_type_detected": "service",
         "template_used": "TOILET_REPLACE_STANDARD",
+        "classification": {"classified_by": "keyword"},
         "_estimate_result": mock_estimate_result,  # Include the raw result for persistence
     }
 

@@ -48,6 +48,7 @@ async def test_list_estimate_versions_returns_snapshot_history(
         "sources": ["Test source"],
         "job_type_detected": "service",
         "template_used": "TOILET_REPLACE_STANDARD",
+        "classification": {"classified_by": "keyword"},
         "_estimate_result": mock_estimate_result,
     }
 

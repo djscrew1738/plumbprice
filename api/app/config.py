@@ -38,11 +38,21 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=60, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=30, env="REFRESH_TOKEN_EXPIRE_DAYS")
 
-    # AI
+    # AI — cloud providers
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
     default_llm_provider: str = Field(default="openai", env="DEFAULT_LLM_PROVIDER")
     default_llm_model: str = Field(default="gpt-4o-mini", env="DEFAULT_LLM_MODEL")
+
+    # AI — Hermes / Ollama (OpenAI-compatible local inference)
+    hermes_endpoint_url: str = Field(
+        default="http://localhost:11434/v1",
+        env="HERMES_ENDPOINT_URL",
+    )
+    hermes_model: str = Field(default="hermes3", env="HERMES_MODEL")
+    hermes_api_key: str = Field(default="ollama", env="HERMES_API_KEY")
+    llm_timeout: float = Field(default=12.0, env="LLM_TIMEOUT")
+    llm_classify_threshold: float = Field(default=0.75, env="LLM_CLASSIFY_THRESHOLD")
 
     # CORS
     cors_origins: list[str] = Field(

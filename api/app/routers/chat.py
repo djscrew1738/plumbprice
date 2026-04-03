@@ -79,6 +79,8 @@ async def chat_price(
         if estimate_result is not None:
             estimate_payload = build_estimate_breakdown(estimate_result)
 
+        classified_by = result.get("classification", {}).get("classified_by")
+
         return ChatPriceResponse(
             answer=result["answer"],
             estimate=estimate_payload,
@@ -89,6 +91,7 @@ async def chat_price(
             sources=result.get("sources", []),
             job_type_detected=result.get("job_type_detected"),
             template_used=result.get("template_used"),
+            classified_by=classified_by,
         )
 
     except Exception as e:

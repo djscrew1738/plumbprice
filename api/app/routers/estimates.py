@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
+from pydantic import BaseModel
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 import structlog
@@ -15,6 +17,12 @@ from app.services.estimate_service import persist_estimate
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+VALID_ESTIMATE_STATUSES = {"draft", "sent", "accepted", "rejected"}
+
+
+class EstimateStatusUpdate(BaseModel):
+    status: str
 
 
 @router.post("/service", response_model=EstimateResponse)
@@ -270,7 +278,29 @@ async def list_estimate_versions(estimate_id: int, db: AsyncSession = Depends(ge
     )
 
 
-@router.delete("/{estimate_id}")
+@router.patch("/{estimate_id}/status")
+async def update_estimate_status(
+    estimate_id: int,
+    body: EstimateStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update estimate status (draft → sent → accepted/rejected)."""
+    if body.status not in VALID_ESTIMATE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {', '.join(sorted(VALID_ESTIMATE_STATUSES))}",
+        )
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    estimate.status = body.status
+    await db.commit()
+    await db.refresh(estimate)
+    return {"id": estimate.id, "status": estimate.status}
+
+
+@router.delete("/{estimate_id}", status_code=http_status.HTTP_204_NO_CONTENT)
 async def delete_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
     """Delete an estimate."""
     result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
@@ -278,4 +308,4 @@ async def delete_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
     await db.delete(estimate)
-    return {"status": "deleted", "id": estimate_id}
+    await db.commit()

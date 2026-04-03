@@ -12,7 +12,9 @@ celery
 pgvector
 pydantic[email]
 python-multipart
+openai
 pytest
 pytest-asyncio
 httpx
+aiosqlite
 ipdb

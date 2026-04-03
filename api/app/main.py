@@ -6,6 +6,7 @@ import structlog
 from app.config import settings
 from app.database import init_db, AsyncSessionLocal
 from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects
+from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 
 logger = structlog.get_logger()
 
@@ -149,7 +150,23 @@ async def lifespan(app: FastAPI):
     await init_db()
     await _ensure_seeded()
     await _sync_runtime_config()
-    logger.info("Startup complete")
+    logger.info("Database ready")
+
+    # Probe Hermes / Ollama availability — non-blocking, just logs the result
+    from app.services.llm_service import llm_service
+    llm_ok = await llm_service.check_available()
+    if llm_ok:
+        logger.info(
+            "Hermes LLM ready",
+            endpoint=settings.hermes_endpoint_url,
+            model=settings.hermes_model,
+        )
+    else:
+        logger.warning(
+            "Hermes LLM not available — keyword-only classification active",
+            endpoint=settings.hermes_endpoint_url,
+        )
+
     yield
     logger.info("Shutting down PlumbPrice AI API")
 
@@ -171,19 +188,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router,      prefix="/api/v1/auth",      tags=["auth"])
-app.include_router(chat.router,      prefix="/api/v1/chat",       tags=["chat"])
-app.include_router(estimates.router, prefix="/api/v1/estimates",  tags=["estimates"])
-app.include_router(projects.router,  prefix="/api/v1/projects",   tags=["projects"])
-app.include_router(suppliers.router, prefix="/api/v1/suppliers",  tags=["suppliers"])
-app.include_router(blueprints.router,prefix="/api/v1/blueprints", tags=["blueprints"])
-app.include_router(proposals.router, prefix="/api/v1/proposals",  tags=["proposals"])
-app.include_router(admin.router,     prefix="/api/v1/admin",      tags=["admin"])
+app.add_exception_handler(PricingError, pricing_error_handler)
+app.add_exception_handler(SupplierError, supplier_error_handler)
+app.add_exception_handler(BlueprintError, blueprint_error_handler)
+
+app.include_router(auth.router,      prefix="/api/v1/auth",       tags=["auth"])
+app.include_router(chat.router,      prefix="/api/v1/chat",        tags=["chat"])
+app.include_router(estimates.router, prefix="/api/v1/estimates",   tags=["estimates"])
+app.include_router(projects.router,  prefix="/api/v1/projects",    tags=["projects"])
+app.include_router(suppliers.router, prefix="/api/v1/suppliers",   tags=["suppliers"])
+app.include_router(blueprints.router,prefix="/api/v1/blueprints",  tags=["blueprints"])
+app.include_router(proposals.router, prefix="/api/v1/proposals",   tags=["proposals"])
+app.include_router(admin.router,     prefix="/api/v1/admin",       tags=["admin"])
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "version": settings.version, "environment": settings.environment}
+    from app.services.llm_service import llm_service
+    return {
+        "status": "ok",
+        "version": settings.version,
+        "environment": settings.environment,
+        "llm": {
+            "provider": "hermes3/ollama",
+            "endpoint": settings.hermes_endpoint_url,
+            "model": settings.hermes_model,
+            "available": llm_service._available,
+        },
+    }
 
 
 @app.get("/")

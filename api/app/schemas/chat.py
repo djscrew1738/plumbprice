@@ -41,3 +41,4 @@ class ChatPriceResponse(BaseModel):
     conversation_id: Optional[str] = None
     job_type_detected: Optional[str] = None
     template_used: Optional[str] = None
+    classified_by: Optional[str] = None  # "keyword" | "llm"

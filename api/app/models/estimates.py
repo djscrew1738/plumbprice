@@ -45,7 +45,7 @@ class Estimate(Base):
 
     project = relationship("Project", back_populates="estimates")
     line_items = relationship("EstimateLineItem", back_populates="estimate", cascade="all, delete-orphan")
-    versions = relationship("EstimateVersion", back_populates="estimate")
+    versions = relationship("EstimateVersion", back_populates="estimate", cascade="all, delete-orphan")
 
 
 class EstimateLineItem(Base):
