@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..900;1,14..32,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -83,7 +83,7 @@ body {
     radial-gradient(circle at top, hsl(var(--accent-hsl) / 0.11), transparent 32%),
     linear-gradient(180deg, hsl(36 40% 98%) 0%, hsl(var(--background)) 50%, hsl(34 34% 95%) 100%);
   color: var(--ink);
-  font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Helvetica Neue', system-ui, sans-serif;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   min-height: 100dvh;
   overscroll-behavior: none;
@@ -142,7 +142,18 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[color:var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[color:var(--accent-strong)] active:bg-[color:var(--accent-strong)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
+    background: linear-gradient(135deg, hsl(var(--accent-hsl)) 0%, color-mix(in hsl, hsl(var(--accent-hsl)), hsl(24 66% 33%) 30%) 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.12) inset, 0 4px 12px hsl(var(--accent-hsl) / 0.28);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, hsl(var(--accent-hsl)) 20%, color-mix(in hsl, hsl(var(--accent-hsl)), hsl(24 66% 33%) 50%) 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.12) inset, 0 6px 18px hsl(var(--accent-hsl) / 0.36);
+  }
+
+  .data-value {
+    @apply font-bold;
+    color: hsl(var(--accent-hsl));
   }
 
   .btn-secondary {

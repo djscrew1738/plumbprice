@@ -179,11 +179,13 @@ export function ProjectDrawer({
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
             className="fixed inset-y-0 right-0 w-full max-w-sm bg-[#0a0a0a] border-l border-white/[0.08] z-50 flex flex-col shadow-2xl"
             style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}
+            aria-label="Project details drawer"
+            role="complementary"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/[0.07] shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center" aria-hidden="true">
                   <BriefcaseBusiness size={14} className="text-blue-400" />
                 </div>
                 <span className="text-sm font-bold text-white">Project Details</span>
@@ -191,6 +193,7 @@ export function ProjectDrawer({
               <button
                 onClick={onClose}
                 className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+                aria-label="Close drawer"
               >
                 <X size={16} />
               </button>
@@ -231,12 +234,14 @@ export function ProjectDrawer({
                   <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden">
                     <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.05]">
                       <div className="flex items-center gap-2">
-                        <UserRound size={13} className="text-zinc-500" />
+                        <UserRound size={13} className="text-zinc-500" aria-hidden="true" />
                         <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Customer</span>
                       </div>
                       <button
                         onClick={() => setEditing(e => !e)}
                         className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                        aria-label={editing ? 'Cancel editing' : 'Edit customer info'}
+                        aria-expanded={editing}
                       >
                         {editing ? 'Cancel' : 'Edit'}
                       </button>
@@ -270,13 +275,13 @@ export function ProjectDrawer({
                     ) : (
                       <div className="p-3.5 space-y-2.5">
                         {[
-                          { icon: UserRound, label: project.customer_name || '—' },
-                          { icon: Phone,    label: project.customer_phone || '—' },
-                          { icon: Mail,     label: project.customer_email || '—' },
-                          { icon: MapPin,   label: [project.city, project.county + ' Co.', project.state].filter(Boolean).join(', ') || '—' },
-                        ].map(({ icon: Icon, label }, i) => (
-                          <div key={i} className="flex items-center gap-2.5">
-                            <Icon size={12} className="text-zinc-600 shrink-0" />
+                          { icon: UserRound, label: project.customer_name || '—', aria: 'Customer name' },
+                          { icon: Phone,    label: project.customer_phone || '—', aria: 'Phone number' },
+                          { icon: Mail,     label: project.customer_email || '—', aria: 'Email address' },
+                          { icon: MapPin,   label: [project.city, project.county + ' Co.', project.state].filter(Boolean).join(', ') || '—', aria: 'Address' },
+                        ].map(({ icon: Icon, label, aria }, i) => (
+                          <div key={i} className="flex items-center gap-2.5" aria-label={`${aria}: ${label}`}>
+                            <Icon size={12} className="text-zinc-600 shrink-0" aria-hidden="true" />
                             <span className="text-xs text-zinc-300 truncate">{label}</span>
                           </div>
                         ))}
@@ -366,7 +371,7 @@ export function ProjectDrawer({
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className="text-sm font-bold text-white tabular-nums">{formatCurrency(est.grand_total)}</div>
+                                <div className="text-sm font-extrabold tabular-nums" style={{ color: 'hsl(38 90% 62%)' }}>{formatCurrency(est.grand_total)}</div>
                                 <ChevronRight size={12} className="text-zinc-700 group-hover:text-zinc-400 transition-colors ml-auto mt-0.5" />
                               </div>
                             </div>

@@ -7,6 +7,7 @@ export interface ChatMessage {
   confidence_label?: string
   assumptions?: string[]
   timestamp: Date
+  classified_by?: 'keyword' | 'llm' | null
 }
 
 export interface EstimateBreakdown {
@@ -53,6 +54,11 @@ export interface ProjectPipelineItem {
   estimate_count: number
   latest_estimate_total?: number | null
   created_at: string
+}
+
+export interface ProjectPipelineResponse {
+  projects: ProjectPipelineItem[]
+  summary: Record<string, number>
 }
 
 export type JobType = 'service' | 'construction' | 'commercial'
