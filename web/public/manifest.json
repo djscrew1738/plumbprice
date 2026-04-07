@@ -1,0 +1,24 @@
+{
+  "name": "PlumbPrice AI",
+  "short_name": "PlumbPrice",
+  "description": "AI-powered plumbing estimator for DFW contractors",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2ebe1",
+  "theme_color": "#f2ebe1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
