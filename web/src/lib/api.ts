@@ -17,6 +17,32 @@ export const api = axios.create({
   timeout: 30_000,
 })
 
+// Attach stored JWT on every request
+api.interceptors.request.use(config => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('pp_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+  }
+  return config
+})
+
+// On 401, clear session and redirect to login
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error?.response?.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('pp_token')
+      localStorage.removeItem('pp_user')
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
 export interface ChatPriceRequest {

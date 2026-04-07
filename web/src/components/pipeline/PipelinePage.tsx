@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { BriefcaseBusiness, CircleDollarSign, MapPin, RefreshCw, UserRound, TrendingUp } from 'lucide-react'
+import { BriefcaseBusiness, CircleDollarSign, MapPin, RefreshCw, UserRound, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { projectsApi, type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
+import { api } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
 
@@ -34,6 +35,32 @@ export function PipelinePage() {
 
   useEffect(() => { void load() }, [load])
 
+  const moveProject = useCallback(async (projectId: number, newStatus: string) => {
+    try {
+      await api.patch(`/projects/${projectId}/status`, { status: newStatus })
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          projects: prev.projects.map(p =>
+            p.id === projectId ? { ...p, status: newStatus } : p
+          ),
+          summary: (() => {
+            const old = prev.projects.find(p => p.id === projectId)
+            if (!old) return prev.summary
+            const s = { ...prev.summary }
+            s[old.status] = Math.max(0, (s[old.status] ?? 1) - 1)
+            s[newStatus] = (s[newStatus] ?? 0) + 1
+            return s
+          })(),
+        }
+      })
+    } catch {
+      // Silent — user still sees the current state
+    }
+  }, [])
+
+  const stageKeys = STAGES.map(s => s.key)
   const projects = data?.projects ?? []
   const summary  = data?.summary  ?? {}
 
@@ -164,6 +191,8 @@ export function PipelinePage() {
                         key={project.id}
                         project={project}
                         delay={stageIndex * 0.04 + projectIndex * 0.04}
+                        stageKeys={stageKeys}
+                        onMove={moveProject}
                       />
                     ))}
                   </div>
@@ -178,7 +207,33 @@ export function PipelinePage() {
   )
 }
 
-function ProjectCard({ project, delay }: { project: ProjectPipelineItem; delay: number }) {
+function ProjectCard({
+  project,
+  delay,
+  stageKeys,
+  onMove,
+}: {
+  project: ProjectPipelineItem
+  delay: number
+  stageKeys: readonly string[]
+  onMove: (id: number, newStatus: string) => Promise<void>
+}) {
+  const [moving, setMoving] = useState(false)
+  const currentIdx = stageKeys.indexOf(project.status)
+  const canForward = currentIdx < stageKeys.length - 1
+  const canBack    = currentIdx > 0
+
+  const move = async (direction: 'forward' | 'back') => {
+    const nextStatus = stageKeys[direction === 'forward' ? currentIdx + 1 : currentIdx - 1]
+    if (!nextStatus) return
+    setMoving(true)
+    try {
+      await onMove(project.id, nextStatus)
+    } finally {
+      setMoving(false)
+    }
+  }
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 8 }}
@@ -235,12 +290,36 @@ function ProjectCard({ project, delay }: { project: ProjectPipelineItem; delay: 
         <span className="text-[color:var(--muted-ink)]">
           {project.estimate_count} {project.estimate_count === 1 ? 'estimate' : 'estimates'}
         </span>
-        {project.status === 'won' && (
-          <span className="text-emerald-700 font-bold">Won ✓</span>
-        )}
-        {project.status === 'lost' && (
-          <span className="text-red-700 font-bold">Lost</span>
-        )}
+        <div className="flex items-center gap-1">
+          {project.status === 'won' && (
+            <span className="text-emerald-700 font-bold mr-1">Won ✓</span>
+          )}
+          {project.status === 'lost' && (
+            <span className="text-red-700 font-bold mr-1">Lost</span>
+          )}
+          {canBack && (
+            <button
+              onClick={() => void move('back')}
+              disabled={moving}
+              className="p-1 rounded-lg text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors disabled:opacity-40"
+              aria-label="Move to previous stage"
+              title="Move back"
+            >
+              <ChevronLeft size={13} />
+            </button>
+          )}
+          {canForward && (
+            <button
+              onClick={() => void move('forward')}
+              disabled={moving}
+              className="p-1 rounded-lg text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors disabled:opacity-40"
+              aria-label="Move to next stage"
+              title="Advance stage"
+            >
+              <ChevronRight size={13} />
+            </button>
+          )}
+        </div>
       </div>
     </motion.article>
   )

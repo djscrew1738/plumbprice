@@ -11,6 +11,8 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { ErrorFallback } from '@/components/ui/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ShortcutsDialog } from '@/components/ui/ShortcutsDialog'
+import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import './globals.css'
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -18,6 +20,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  useKeyboardShortcuts()
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -114,6 +118,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
             </div>
           </ToastProvider>
+          <ShortcutsDialog />
           </AuthProvider>
         </ErrorBoundary>
       </body>

@@ -98,9 +98,12 @@ export function EstimatorPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeSuggestion, setActiveSuggestion] = useState(0)
 
+  const MAX_INPUT = 2000
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const resumeErrorRef = useRef(error)
+  const abortRef = useRef<AbortController | null>(null)
 
   const uploadMode = entryMode === 'upload-job-files'
   const showUploadPlaceholder = uploadMode && messages.length === 0
@@ -122,7 +125,7 @@ export function EstimatorPage() {
       return
     }
     const estimateIdToResume = estimateId
-
+    const controller = new AbortController()
     let isMounted = true
 
     async function resumeEstimateFromQuery() {
@@ -173,6 +176,7 @@ export function EstimatorPage() {
     void resumeEstimateFromQuery()
     return () => {
       isMounted = false
+      controller.abort()
     }
   }, [estimateId])
 
@@ -203,6 +207,13 @@ export function EstimatorPage() {
     if (!message || loading || uploadMode) {
       return
     }
+    if (message.length > MAX_INPUT) {
+      return
+    }
+
+    // Cancel any previous in-flight request
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
@@ -457,6 +468,7 @@ export function EstimatorPage() {
                 onKeyDown={handleKeyDown}
                 placeholder={uploadMode ? 'Switch to Quick Quote to ask pricing questions' : 'Ask a pricing question…'}
                 rows={1}
+                maxLength={MAX_INPUT}
                 disabled={uploadMode}
                 className="input max-h-[120px] resize-none overflow-auto py-2.5 disabled:cursor-not-allowed disabled:opacity-65"
                 style={{ minHeight: '46px' }}
@@ -487,8 +499,13 @@ export function EstimatorPage() {
               ) : (
                 <span className="text-[11px] text-[color:var(--muted-ink)]">Enter to send · Shift+Enter for newline</span>
               )}
-              {input.length > 0 && (
-                <span className="text-[10px] tabular-nums text-[color:var(--muted-ink)]">{input.length}</span>
+              {input.length > MAX_INPUT * 0.8 && (
+                <span className={cn(
+                  'text-[10px] tabular-nums',
+                  input.length >= MAX_INPUT ? 'text-red-500 font-semibold' : 'text-[color:var(--muted-ink)]'
+                )}>
+                  {input.length}/{MAX_INPUT}
+                </span>
               )}
             </div>
           </div>

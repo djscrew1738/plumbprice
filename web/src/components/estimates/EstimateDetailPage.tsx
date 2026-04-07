@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, MapPin, Layers, CircleDollarSign,
-  FileText, TrendingUp, Tag, AlertCircle,
+  FileText, TrendingUp, Tag, AlertCircle, Printer, Download,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api } from '@/lib/api'
@@ -81,6 +81,25 @@ export function EstimateDetailPage() {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)
 
+  const exportCSV = useCallback(() => {
+    if (!estimate) return
+    const rows = [
+      ['Type', 'Description', 'Qty', 'Unit', 'Unit Cost', 'Total', 'Supplier', 'SKU'],
+      ...estimate.line_items.map(l => [
+        l.line_type, l.description, String(l.quantity), l.unit,
+        String(l.unit_cost), String(l.total_cost), l.supplier ?? '', l.sku ?? '',
+      ]),
+    ]
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `estimate-${estimate.id}-line-items.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [estimate])
+
   useEffect(() => {
     if (!id) return
     const load = async () => {
@@ -155,11 +174,29 @@ export function EstimateDetailPage() {
               <span className="text-[11px] text-zinc-600">{estimate.county} County</span>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <div className="text-lg font-extrabold text-white tabular-nums">
-              {formatCurrency(estimate.grand_total)}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={exportCSV}
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Export line items as CSV"
+              title="Export CSV"
+            >
+              <Download size={16} />
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Print estimate"
+              title="Print / Save as PDF"
+            >
+              <Printer size={16} />
+            </button>
+            <div className="text-right">
+              <div className="text-lg font-extrabold text-white tabular-nums">
+                {formatCurrency(estimate.grand_total)}
+              </div>
+              <div className="text-[10px] text-zinc-600">grand total</div>
             </div>
-            <div className="text-[10px] text-zinc-600">grand total</div>
           </div>
         </div>
       </div>

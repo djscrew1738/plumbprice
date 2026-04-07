@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
-  TrendingUp, Search, X, ChevronDown, ArrowUpDown, Check,
+  TrendingUp, Search, X, ChevronDown, ArrowUpDown, Check, Download,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -217,6 +217,29 @@ export function EstimatesListPage() {
               ))}
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  const rows = [
+                    ['ID', 'Title', 'Job Type', 'Status', 'County', 'Grand Total', 'Confidence', 'Created'],
+                    ...visible.map(e => [
+                      String(e.id), e.title, e.job_type, e.status, e.county,
+                      String(e.grand_total), e.confidence_label,
+                      new Date(e.created_at).toLocaleDateString(),
+                    ]),
+                  ]
+                  const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
+                  const a = Object.assign(document.createElement('a'), {
+                    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+                    download: 'estimates.csv',
+                  })
+                  a.click()
+                }}
+                className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors"
+                title="Export visible estimates as CSV"
+                aria-label="Export CSV"
+              >
+                <Download size={15} />
+              </button>
               <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
