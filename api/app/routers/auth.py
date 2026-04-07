@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import timedelta
@@ -12,6 +13,12 @@ from app.config import settings
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str = ""
 
 
 @router.post("/login")
@@ -50,26 +57,26 @@ async def login(
 
 @router.post("/register")
 async def register(
-    email: str,
-    password: str,
-    full_name: str = "",
+    request: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new user."""
-    result = await db.execute(select(User).where(User.email == email))
+    result = await db.execute(select(User).where(User.email == request.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user = User(
-        email=email,
-        hashed_password=get_password_hash(password),
-        full_name=full_name,
+        email=request.email,
+        hashed_password=get_password_hash(request.password),
+        full_name=request.full_name,
         role="estimator",
         is_active=True,
         is_admin=False,
     )
     db.add(user)
     await db.flush()
+    await db.commit()
+    await db.refresh(user)
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {

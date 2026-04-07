@@ -207,6 +207,135 @@ CANONICAL_MAP: dict[str, dict[str, dict]] = {
         "moore_supply":{"sku": "EXT-12",    "name": "12\" Chrome Extension Tube",   "cost": 6.25},
         "apex":        {"sku": "ET12A",     "name": "12\" Chrome Extension Tube",   "cost": 7.25},
     },
+    # ── Expansion Tank (standalone) ───────────────────────────────────────────
+    "exp_tank.2gal_thermal": {
+        "ferguson":    {"sku": "ST-2",      "name": "2-Gal Thermal Expansion Tank","cost": 42.80},
+        "moore_supply":{"sku": "XT-2GAL",   "name": "2-Gal Thermal Expansion Tank","cost": 40.25},
+        "apex":        {"sku": "ET-2A",     "name": "2-Gal Thermal Expansion Tank","cost": 44.95},
+    },
+    "exp_tank.nipple_34": {
+        "ferguson":    {"sku": "NIP-34x4",  "name": "3/4\" NPT Nipple 4\"",          "cost": 3.25},
+        "moore_supply":{"sku": "N34-4",     "name": "3/4\" NPT Nipple 4\"",          "cost": 2.95},
+        "apex":        {"sku": "NP34A",     "name": "3/4\" NPT Nipple 4\"",          "cost": 3.75},
+    },
+    # ── Water Softener ────────────────────────────────────────────────────────
+    "softener.unit_48k_grain": {
+        "ferguson":    {"sku": "WS48K-FRG", "name": "48K Grain Water Softener",    "cost": 695.00},
+        "moore_supply":{"sku": "WS48K-MRS", "name": "48K Grain Water Softener",    "cost": 649.00},
+        "apex":        {"sku": "WS48K-APX", "name": "48K Grain Water Softener",    "cost": 725.00},
+    },
+    "softener.bypass_valve_1in": {
+        "ferguson":    {"sku": "BV-1NPT",   "name": "1\" Bypass Valve Assembly",    "cost": 28.50},
+        "moore_supply":{"sku": "BVA-1",     "name": "1\" Bypass Valve Assembly",    "cost": 26.95},
+        "apex":        {"sku": "BV1A",      "name": "1\" Bypass Valve Assembly",    "cost": 30.25},
+    },
+    "softener.brine_line_kit": {
+        "ferguson":    {"sku": "BLK-STD",   "name": "Brine Line & Fittings Kit",   "cost": 14.95},
+        "moore_supply":{"sku": "BLK-MRS",   "name": "Brine Line & Fittings Kit",   "cost": 13.50},
+        "apex":        {"sku": "BLK-APX",   "name": "Brine Line & Fittings Kit",   "cost": 15.95},
+    },
+    "softener.supply_line_pair_1in": {
+        "ferguson":    {"sku": "SLP-1-24",  "name": "1\" SS Supply Lines (pair, 24\")", "cost": 32.95},
+        "moore_supply":{"sku": "SLP1-24",   "name": "1\" SS Supply Lines (pair, 24\")", "cost": 30.50},
+        "apex":        {"sku": "SL1PA24",   "name": "1\" SS Supply Lines (pair, 24\")", "cost": 34.95},
+    },
+    # ── Tub / Shower Combo Valve ──────────────────────────────────────────────
+    "tub_shower.moen_posi_temp_valve": {
+        "ferguson":    {"sku": "M82606",    "name": "Moen Posi-Temp Tub/Shower Valve","cost": 58.95},
+        "moore_supply":{"sku": "MN-M82606", "name": "Moen Posi-Temp Tub/Shower Valve","cost": 55.50},
+        "apex":        {"sku": "M82606-APX","name": "Moen Posi-Temp Tub/Shower Valve","cost": 62.50},
+    },
+    "tub_shower.diverter_tee": {
+        "ferguson":    {"sku": "DT-12",     "name": "Tub Spout Diverter Tee",       "cost": 12.95},
+        "moore_supply":{"sku": "DTT-STD",   "name": "Tub Spout Diverter Tee",       "cost": 11.95},
+        "apex":        {"sku": "DT12A",     "name": "Tub Spout Diverter Tee",       "cost": 13.95},
+    },
+    "tub_shower.tub_spout_chrome": {
+        "ferguson":    {"sku": "TS-CHR",    "name": "Tub Spout w/ Diverter (Chrome)","cost": 22.95},
+        "moore_supply":{"sku": "TSP-CHR",   "name": "Tub Spout w/ Diverter (Chrome)","cost": 21.25},
+        "apex":        {"sku": "TSC-APX",   "name": "Tub Spout w/ Diverter (Chrome)","cost": 24.95},
+    },
+    "tub_shower.trim_kit_chrome": {
+        "ferguson":    {"sku": "TK-CHR",    "name": "Tub/Shower Trim Kit (Chrome)",  "cost": 48.95},
+        "moore_supply":{"sku": "STK-CHR",   "name": "Tub/Shower Trim Kit (Chrome)",  "cost": 45.50},
+        "apex":        {"sku": "TK-CHRA",   "name": "Tub/Shower Trim Kit (Chrome)",  "cost": 52.50},
+    },
+    # ── Toilet Repair Parts ───────────────────────────────────────────────────
+    "toilet.flapper_korky": {
+        "ferguson":    {"sku": "K-4010BP",  "name": "Korky Universal Flapper",       "cost": 7.25},
+        "moore_supply":{"sku": "FLP-UNI",   "name": "Korky Universal Flapper",       "cost": 6.75},
+        "apex":        {"sku": "KRK-4010",  "name": "Korky Universal Flapper",       "cost": 7.95},
+    },
+    "toilet.fill_valve_400a": {
+        "ferguson":    {"sku": "FM-400A",   "name": "Fluidmaster 400A Fill Valve",   "cost": 12.95},
+        "moore_supply":{"sku": "FM400A",    "name": "Fluidmaster 400A Fill Valve",   "cost": 11.95},
+        "apex":        {"sku": "400A-APX",  "name": "Fluidmaster 400A Fill Valve",   "cost": 13.95},
+    },
+    "toilet.comfort_height_unit": {
+        "ferguson":    {"sku": "K-3999",    "name": "Kohler Cimarron Comfort Height WC","cost": 285.00},
+        "moore_supply":{"sku": "AMS-2887",  "name": "American Standard CH Toilet",   "cost": 268.00},
+        "apex":        {"sku": "ELG-3817",  "name": "Elongated Comfort Height WC",   "cost": 298.00},
+    },
+    # ── Tub Spout ─────────────────────────────────────────────────────────────
+    "tub_spout.diverter_chrome": {
+        "ferguson":    {"sku": "TS-DCH",    "name": "Tub Spout w/ Diverter (Chrome)", "cost": 18.95},
+        "moore_supply":{"sku": "TSP-DCH",   "name": "Tub Spout w/ Diverter (Chrome)", "cost": 17.50},
+        "apex":        {"sku": "TSD-APX",   "name": "Tub Spout w/ Diverter (Chrome)", "cost": 20.25},
+    },
+    "tub_spout.nipple_half": {
+        "ferguson":    {"sku": "NIP-1/2x4", "name": "1/2\" IPS Nipple 4\"",           "cost": 3.95},
+        "moore_supply":{"sku": "N12-4",     "name": "1/2\" IPS Nipple 4\"",           "cost": 3.50},
+        "apex":        {"sku": "NP12-4A",   "name": "1/2\" IPS Nipple 4\"",           "cost": 4.25},
+    },
+    # ── Shower Head ───────────────────────────────────────────────────────────
+    "shower_head.standard_chrome": {
+        "ferguson":    {"sku": "SH-CHR",    "name": "Moen 1.75 GPM Shower Head",     "cost": 24.95},
+        "moore_supply":{"sku": "SHD-CH",    "name": "Delta 1.75 GPM Shower Head",    "cost": 22.95},
+        "apex":        {"sku": "SH-APX",    "name": "Standard Chrome Shower Head",   "cost": 26.50},
+    },
+    "shower_head.arm_flange": {
+        "ferguson":    {"sku": "SHA-CH",    "name": "Shower Arm & Flange Set",       "cost": 14.95},
+        "moore_supply":{"sku": "SAF-CH",    "name": "Shower Arm & Flange Set",       "cost": 13.50},
+        "apex":        {"sku": "SAF-APX",   "name": "Shower Arm & Flange Set",       "cost": 15.95},
+    },
+    # ── Lavatory Sink ─────────────────────────────────────────────────────────
+    "lav_sink.drain_grid_chrome": {
+        "ferguson":    {"sku": "DG-CH",     "name": "Lav Sink Drain Grid Assembly",  "cost": 16.95},
+        "moore_supply":{"sku": "SDG-CH",    "name": "Lav Sink Drain Grid Assembly",  "cost": 15.50},
+        "apex":        {"sku": "DGA-APX",   "name": "Lav Sink Drain Grid Assembly",  "cost": 18.25},
+    },
+    "lav_sink.p_trap_white": {
+        "ferguson":    {"sku": "PT-15W",    "name": "1-1/2\" White PVC P-Trap",      "cost": 7.95},
+        "moore_supply":{"sku": "WPT-15",    "name": "1-1/2\" White PVC P-Trap",      "cost": 7.25},
+        "apex":        {"sku": "PT15W-A",   "name": "1-1/2\" White PVC P-Trap",      "cost": 8.50},
+    },
+    # ── Gas Shutoff ───────────────────────────────────────────────────────────
+    "gas.ball_valve_3_4": {
+        "ferguson":    {"sku": "BV-34GAS",  "name": "3/4\" FIP Gas Ball Valve",      "cost": 18.95},
+        "moore_supply":{"sku": "GBV-34",    "name": "3/4\" FIP Gas Ball Valve",      "cost": 17.50},
+        "apex":        {"sku": "GBV34-APX", "name": "3/4\" FIP Gas Ball Valve",      "cost": 20.25},
+    },
+    "gas.teflon_tape_yellow": {
+        "ferguson":    {"sku": "TT-GAS",    "name": "Yellow PTFE Gas Tape",          "cost": 3.25},
+        "moore_supply":{"sku": "TTG-YLW",   "name": "Yellow PTFE Gas Tape",          "cost": 2.95},
+        "apex":        {"sku": "TT-GASA",   "name": "Yellow PTFE Gas Tape",          "cost": 3.50},
+    },
+    # ── Clean-Out ─────────────────────────────────────────────────────────────
+    "clean_out.4in_co_wye": {
+        "ferguson":    {"sku": "CO-WYE4",   "name": "4\" PVC Clean-Out Wye w/ Plug", "cost": 14.95},
+        "moore_supply":{"sku": "COW-4",     "name": "4\" PVC Clean-Out Wye w/ Plug", "cost": 13.50},
+        "apex":        {"sku": "COW4-APX",  "name": "4\" PVC Clean-Out Wye w/ Plug", "cost": 15.95},
+    },
+    "clean_out.co_plug_4in": {
+        "ferguson":    {"sku": "COP-4",     "name": "4\" PVC Clean-Out Plug",        "cost": 3.95},
+        "moore_supply":{"sku": "CP-4",      "name": "4\" PVC Clean-Out Plug",        "cost": 3.50},
+        "apex":        {"sku": "COP4-A",    "name": "4\" PVC Clean-Out Plug",        "cost": 4.25},
+    },
+    "clean_out.fernco_4in": {
+        "ferguson":    {"sku": "FC-4",      "name": "4\" Fernco Flexible Coupling",  "cost": 9.50},
+        "moore_supply":{"sku": "FFC-4",     "name": "4\" Fernco Flexible Coupling",  "cost": 8.75},
+        "apex":        {"sku": "FNC4-A",    "name": "4\" Fernco Flexible Coupling",  "cost": 10.25},
+    },
 }
 
 
@@ -345,6 +474,102 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
             "ptrap.extension_tube_12":  1,
         },
     },
+    "EXPANSION_TANK_KIT": {
+        "name": "Thermal Expansion Tank Add-On Kit",
+        "labor_template": "EXPANSION_TANK_ONLY",
+        "items": {
+            "exp_tank.2gal_thermal":  1,
+            "exp_tank.nipple_34":     2,
+        },
+    },
+    "WATER_SOFTENER_KIT": {
+        "name": "Water Softener Install Kit",
+        "labor_template": "WATER_SOFTENER_INSTALL",
+        "items": {
+            "softener.unit_48k_grain":        1,
+            "softener.bypass_valve_1in":      1,
+            "softener.brine_line_kit":        1,
+            "softener.supply_line_pair_1in":  1,
+        },
+    },
+    "TUB_SHOWER_VALVE_KIT": {
+        "name": "Tub/Shower Combo Valve Kit",
+        "labor_template": "TUB_SHOWER_COMBO_REPLACE",
+        "items": {
+            "tub_shower.moen_posi_temp_valve": 1,
+            "tub_shower.diverter_tee":         1,
+            "tub_shower.tub_spout_chrome":     1,
+            "tub_shower.trim_kit_chrome":      1,
+        },
+    },
+    "TOILET_FLAPPER_KIT": {
+        "name": "Toilet Flapper Replacement Kit",
+        "labor_template": "TOILET_FLAPPER_REPLACE",
+        "items": {
+            "toilet.flapper_korky":  1,
+        },
+    },
+    "TOILET_FILL_VALVE_KIT": {
+        "name": "Toilet Fill Valve Replacement Kit",
+        "labor_template": "TOILET_FILL_VALVE_REPLACE",
+        "items": {
+            "toilet.fill_valve_400a": 1,
+            "toilet.flapper_korky":   1,  # replace both while in there
+        },
+    },
+    "TOILET_COMFORT_HEIGHT_KIT": {
+        "name": "Comfort Height Toilet Install Kit",
+        "labor_template": "TOILET_COMFORT_HEIGHT",
+        "items": {
+            "toilet.comfort_height_unit": 1,
+            "toilet.wax_ring":            1,
+            "toilet.closet_bolts":        1,
+            "toilet.supply_line_12":      1,
+        },
+    },
+    "TUB_SPOUT_KIT": {
+        "name": "Tub Spout Replace Kit",
+        "labor_template": "TUB_SPOUT_REPLACE",
+        "items": {
+            "tub_spout.diverter_chrome": 1,
+            "tub_spout.nipple_half":     1,
+        },
+    },
+    "SHOWER_HEAD_KIT": {
+        "name": "Shower Head Replacement Kit",
+        "labor_template": "SHOWER_HEAD_REPLACE",
+        "items": {
+            "shower_head.standard_chrome": 1,
+            "shower_head.arm_flange":      1,
+        },
+    },
+    "LAV_SINK_KIT": {
+        "name": "Lavatory Sink Replace Kit",
+        "labor_template": "LAV_SINK_REPLACE",
+        "items": {
+            "lav_sink.drain_grid_chrome":  1,
+            "lav_sink.p_trap_white":       1,
+            "lav.supply_lines_12_pair":    1,
+            "angle_stop.quarter_turn_3_8": 2,
+        },
+    },
+    "GAS_SHUTOFF_KIT": {
+        "name": "Gas Shutoff Valve Kit",
+        "labor_template": "GAS_SHUTOFF_REPLACE",
+        "items": {
+            "gas.ball_valve_3_4":       1,
+            "gas.teflon_tape_yellow":   1,
+        },
+    },
+    "CLEAN_OUT_KIT": {
+        "name": "4\" Clean-Out Install Kit",
+        "labor_template": "CLEAN_OUT_INSTALL",
+        "items": {
+            "clean_out.4in_co_wye":   1,
+            "clean_out.co_plug_4in":  1,
+            "clean_out.fernco_4in":   1,
+        },
+    },
 }
 
 
@@ -471,22 +696,83 @@ class SupplierService:
 
         return None
 
+    async def _db_lookup_batch(
+        self,
+        db: AsyncSession,
+        canonical_items: list[str],
+        preferred_supplier: Optional[str] = None,
+    ) -> dict[str, "MaterialCostResult"]:
+        """Single query to fetch prices for multiple canonical items."""
+        try:
+            query = (
+                select(SupplierProduct, Supplier)
+                .join(Supplier, SupplierProduct.supplier_id == Supplier.id)
+                .where(
+                    and_(
+                        SupplierProduct.canonical_item.in_(canonical_items),
+                        SupplierProduct.is_active == True,
+                    )
+                )
+                .order_by(SupplierProduct.cost.asc())
+            )
+            result = await db.execute(query)
+            rows = result.all()
+
+            # Group by canonical_item; list is already sorted cheapest first
+            by_item: dict[str, list] = {}
+            for product, supplier in rows:
+                by_item.setdefault(product.canonical_item, []).append((product, supplier))
+
+            out: dict[str, MaterialCostResult] = {}
+            for canonical_item, row_list in by_item.items():
+                selected = None
+                if preferred_supplier:
+                    for product, supplier in row_list:
+                        if supplier.slug == preferred_supplier:
+                            selected = (product, supplier)
+                            break
+                if selected is None:
+                    selected = row_list[0]  # cheapest
+                product, supplier = selected
+                out[canonical_item] = MaterialCostResult(
+                    canonical_item=canonical_item,
+                    preferred_supplier=preferred_supplier,
+                    selected_supplier=supplier.slug,
+                    sku=product.sku,
+                    name=product.name,
+                    unit_cost=product.cost,
+                    confidence=product.confidence_score,
+                    source="database",
+                )
+            return out
+        except Exception as e:
+            logger.warning("Batch DB lookup failed, falling back to canonical map", error=str(e))
+            return {}
+
     async def get_assembly_costs(
         self,
         assembly_code: str,
         preferred_supplier: Optional[str] = None,
         db: Optional[AsyncSession] = None,
     ) -> list[MaterialItem]:
-        """Get all material costs for an assembly."""
+        """Get all material costs for an assembly (single DB query when DB available)."""
 
         assembly = MATERIAL_ASSEMBLIES.get(assembly_code)
         if not assembly:
             logger.warning("Assembly not found", assembly_code=assembly_code)
             return []
 
+        item_quantities = assembly["items"]
+        canonical_items = list(item_quantities.keys())
+
+        # Batch-fetch from DB in a single query, then fall back per-item to canonical map
+        db_results: dict[str, MaterialCostResult] = {}
+        if db:
+            db_results = await self._db_lookup_batch(db, canonical_items, preferred_supplier)
+
         items = []
-        for canonical_item, quantity in assembly["items"].items():
-            result = await self.get_material_cost(canonical_item, preferred_supplier, db)
+        for canonical_item, quantity in item_quantities.items():
+            result = db_results.get(canonical_item) or self._canonical_lookup(canonical_item, preferred_supplier)
             if result:
                 items.append(MaterialItem(
                     canonical_item=canonical_item,

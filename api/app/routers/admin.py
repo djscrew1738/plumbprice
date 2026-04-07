@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import structlog
@@ -83,16 +84,23 @@ async def get_markup_rules(db: AsyncSession = Depends(get_db)):
     ]
 
 
+class MarkupRuleUpdate(BaseModel):
+    materials_markup_pct: float
+    misc_flat: float = 45.0
+
+
 @router.put("/markup-rules/{job_type}")
 async def update_markup_rules(
     job_type: str,
-    materials_markup_pct: float,
-    misc_flat: float = 45.0,
+    body: MarkupRuleUpdate,
     db: AsyncSession = Depends(get_db),
 ):
     """Update markup rules for a job type."""
     if job_type not in ("service", "construction", "commercial"):
         raise HTTPException(status_code=400, detail="Invalid job type")
+
+    materials_markup_pct = body.materials_markup_pct
+    misc_flat = body.misc_flat
 
     result = await db.execute(
         select(MarkupRule).where(MarkupRule.job_type == job_type, MarkupRule.is_active == True)
@@ -111,12 +119,14 @@ async def update_markup_rules(
         )
         db.add(rule)
 
+    await db.commit()
+
     # Immediately reflect change in the in-memory pricing dict
     from app.services.pricing_engine import MARKUP_RULES
     MARKUP_RULES[job_type] = {
-        "labor_markup_pct":    rule.labor_markup_pct if hasattr(rule, "labor_markup_pct") else 0.0,
+        "labor_markup_pct":     getattr(rule, "labor_markup_pct", 0.0),
         "materials_markup_pct": materials_markup_pct,
-        "misc_flat":           misc_flat,
+        "misc_flat":            misc_flat,
     }
 
     return {"job_type": job_type, "materials_markup_pct": materials_markup_pct, "misc_flat": misc_flat}
@@ -151,9 +161,10 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     avg_total = await db.execute(select(func.avg(Estimate.grand_total)))
     avg_value = avg_total.scalar()
 
+    from app.services.supplier_service import CANONICAL_MAP
     return {
-        "total_estimates": total_count or 0,
-        "avg_estimate_value": round(avg_value or 0, 2),
-        "labor_templates": len(LABOR_TEMPLATES),
-        "canonical_items": len(__import__("app.services.supplier_service", fromlist=["CANONICAL_MAP"]).CANONICAL_MAP),
+        "total_estimates":       total_count or 0,
+        "avg_estimate_value":    round(avg_value or 0, 2),
+        "labor_templates_count": len(LABOR_TEMPLATES),
+        "canonical_items_count": len(CANONICAL_MAP),
     }

@@ -6,11 +6,14 @@ RULE: No LLM in the calculation path. Every dollar is traceable.
 from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
+import structlog
 
 from app.services.labor_engine import (
     LABOR_TEMPLATES, LaborTemplateData, get_template,
     AccessType, UrgencyType
 )
+
+logger = structlog.get_logger()
 
 
 class County(str, Enum):
@@ -391,8 +394,105 @@ class PricingEngine:
             }
         )
 
+    def quick_estimate(
+        self,
+        task_code: str,
+        assembly_code: Optional[str] = None,
+        access: str = "first_floor",
+        urgency: str = "standard",
+        county: str = "Dallas",
+        preferred_supplier: Optional[str] = None,
+        quantity: int = 1,
+    ) -> EstimateResult:
+        """
+        Synchronous, pure in-memory estimate — no DB calls, returns instantly.
+        Uses CANONICAL_MAP directly. Ideal for fast chat responses and ballparks.
+        """
+        # Lazy import to avoid circular at module load
+        from app.services.supplier_service import supplier_service, MATERIAL_ASSEMBLIES
+
+        materials: list[MaterialItem] = []
+        if assembly_code:
+            assembly = MATERIAL_ASSEMBLIES.get(assembly_code)
+            if assembly:
+                for canonical_item, qty in assembly["items"].items():
+                    result = supplier_service._canonical_lookup(canonical_item, preferred_supplier)
+                    if result:
+                        materials.append(MaterialItem(
+                            canonical_item=canonical_item,
+                            description=result.name,
+                            quantity=qty,
+                            unit="ea",
+                            unit_cost=result.unit_cost,
+                            supplier=result.selected_supplier,
+                            sku=result.sku,
+                        ))
+
+        estimate = self.calculate_service_estimate(
+            task_code=task_code,
+            materials=materials,
+            assembly_code=assembly_code,
+            access=access,
+            urgency=urgency,
+            county=county,
+            preferred_supplier=preferred_supplier,
+        )
+
+        if quantity > 1:
+            estimate = self.scale_estimate(estimate, quantity)
+
+        return estimate
+
+    def scale_estimate(self, result: EstimateResult, quantity: int) -> EstimateResult:
+        """Scale a single-unit estimate by a whole-number quantity."""
+        if quantity <= 1:
+            return result
+        q = quantity
+
+        scaled_lines = []
+        for li in result.line_items:
+            scaled_lines.append(LineItem(
+                line_type=li.line_type,
+                description=li.description,
+                quantity=round(li.quantity * q, 4),
+                unit=li.unit,
+                unit_cost=li.unit_cost,
+                total_cost=round(li.total_cost * q, 2),
+                supplier=li.supplier,
+                sku=li.sku,
+                canonical_item=li.canonical_item,
+                trace_json=li.trace_json,
+            ))
+
+        return EstimateResult(
+            template_code=result.template_code,
+            assembly_code=result.assembly_code,
+            job_type=result.job_type,
+            access_type=result.access_type,
+            urgency_type=result.urgency_type,
+            county=result.county,
+            tax_rate=result.tax_rate,
+            labor_total=round(result.labor_total * q, 2),
+            materials_total=round(result.materials_total * q, 2),
+            tax_total=round(result.tax_total * q, 2),
+            markup_total=round(result.markup_total * q, 2),
+            misc_total=round(result.misc_total * q, 2),
+            subtotal=round(result.subtotal * q, 2),
+            grand_total=round(result.grand_total * q, 2),
+            confidence_score=result.confidence_score,
+            confidence_label=result.confidence_label,
+            line_items=scaled_lines,
+            assumptions=result.assumptions + [f"Quantity: {q} units (scaled from single-unit estimate)"],
+            sources=result.sources,
+            pricing_trace={**result.pricing_trace, "quantity": q},
+        )
+
     def _get_tax_rate(self, county: str) -> float:
-        return TAX_RATES.get(county.lower(), 0.0825)
+        rate = TAX_RATES.get(county.lower())
+        if rate is None:
+            logger.warning("Unknown county, using DFW default tax rate", county=county)
+            return 0.0825
+        return rate
 
     def _calculate_confidence(
         self, template: LaborTemplateData, materials: list[MaterialItem], access: str

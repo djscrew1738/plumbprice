@@ -272,6 +272,7 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         base_hours=0.5,
         helper_required=False,
         disposal_hours=0.0,
+        applicable_assemblies=["TUB_SPOUT_KIT"],
     ),
 
     "SHOWER_HEAD_REPLACE": LaborTemplateData(
@@ -281,6 +282,7 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         base_hours=0.5,
         helper_required=False,
         disposal_hours=0.0,
+        applicable_assemblies=["SHOWER_HEAD_KIT"],
     ),
 
     # ── Kitchen ───────────────────────────────────────────────────────────────
@@ -324,6 +326,7 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         helper_required=False,
         disposal_hours=0.25,
         applicable_assemblies=["LAV_SINK_KIT"],
+        notes="Drop-in only. Undermount adds 0.5hr. Includes new drain and supply lines.",
     ),
 
     # ── Angle Stops / Supply Lines ─────────────────────────────────────────────
@@ -369,11 +372,12 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
 
     "DRAIN_CLEAN_STANDARD": LaborTemplateData(
         code="DRAIN_CLEAN_STANDARD",
-        name="Drain Cleaning — Standard",
+        name="Drain Cleaning — Standard (snake)",
         category="service",
         base_hours=1.0,
         helper_required=False,
         disposal_hours=0.0,
+        notes="Single fixture drain; includes cable machine. Camera inspection add-on sold separately.",
     ),
 
     "MAIN_LINE_CLEAN": LaborTemplateData(
@@ -383,6 +387,82 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         base_hours=1.5,
         helper_required=False,
         disposal_hours=0.0,
+        notes="Includes clean-out access. Add camera if roots suspected.",
+    ),
+
+    "HYDROJETTING": LaborTemplateData(
+        code="HYDROJETTING",
+        name="Hydro-Jetting — Drain/Main Line",
+        category="service",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=1.0,
+        disposal_hours=0.0,
+        notes="Up to 4\" residential line. Requires clean-out access. Camera recommended before/after.",
+    ),
+
+    "SLAB_LEAK_REPAIR": LaborTemplateData(
+        code="SLAB_LEAK_REPAIR",
+        name="Slab Leak Repair (tunnel or open)",
+        category="service",
+        base_hours=7.0,
+        helper_required=True,
+        helper_hours=7.0,
+        disposal_hours=1.0,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.1,
+            "attic": 1.0,
+            "crawlspace": 1.0,
+            "slab": 1.0,
+            "basement": 1.0,
+        },
+        urgency_multipliers={"standard": 1.0, "same_day": 1.25, "emergency": 1.5},
+        notes="Per repair point. Concrete cutting/patching by GC. Includes pressure test and restore.",
+    ),
+
+    "LEAK_DETECTION": LaborTemplateData(
+        code="LEAK_DETECTION",
+        name="Leak Detection Service",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        notes="Acoustic/electronic detection. Slab leak locating included. Written report provided.",
+    ),
+
+    "EXPANSION_TANK_ONLY": LaborTemplateData(
+        code="EXPANSION_TANK_ONLY",
+        name="Thermal Expansion Tank — Add-On Only",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["EXPANSION_TANK_KIT"],
+        notes="For systems with check valve or PRV — required by code in DFW.",
+    ),
+
+    "WATER_SOFTENER_INSTALL": LaborTemplateData(
+        code="WATER_SOFTENER_INSTALL",
+        name="Water Softener Install (whole-house)",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.5,
+        applicable_assemblies=["WATER_SOFTENER_KIT"],
+        notes="Includes bypass valve, brine line, drain tie-in. Homeowner provides unit location.",
+    ),
+
+    "TUB_SHOWER_COMBO_REPLACE": LaborTemplateData(
+        code="TUB_SHOWER_COMBO_REPLACE",
+        name="Tub/Shower Combo Valve Replace",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.1,
+        applicable_assemblies=["TUB_SHOWER_VALVE_KIT"],
+        notes="Includes diverter valve and trim. Access panel assumed. Add 1.5hr for tile cut.",
     ),
 
     # ── Gas Lines ─────────────────────────────────────────────────────────────
@@ -396,6 +476,17 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         notes="Includes pressure test and relight.",
     ),
 
+    "GAS_LINE_NEW_RUN": LaborTemplateData(
+        code="GAS_LINE_NEW_RUN",
+        name="Gas Line — New Run (per 25 ft)",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.0,
+        notes="CSST or black iron per local code. Includes pressure test and permit. Price per 25-ft run.",
+    ),
+
     "GAS_SHUTOFF_REPLACE": LaborTemplateData(
         code="GAS_SHUTOFF_REPLACE",
         name="Gas Shutoff Valve Replace",
@@ -403,7 +494,73 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         base_hours=1.0,
         helper_required=False,
         disposal_hours=0.0,
+        applicable_assemblies=["GAS_SHUTOFF_KIT"],
     ),
+
+    # ── Common Repair Calls ───────────────────────────────────────────────────
+    "TOILET_FLAPPER_REPLACE": LaborTemplateData(
+        code="TOILET_FLAPPER_REPLACE",
+        name="Toilet Flapper Replace (running toilet)",
+        category="service",
+        base_hours=0.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["TOILET_FLAPPER_KIT"],
+        notes="Most common service call. Includes inspect fill valve and adjust float.",
+    ),
+
+    "TOILET_FILL_VALVE_REPLACE": LaborTemplateData(
+        code="TOILET_FILL_VALVE_REPLACE",
+        name="Toilet Fill Valve Replace",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["TOILET_FILL_VALVE_KIT"],
+        notes="Includes flush and leak check. Recommend replacing flapper at same time.",
+    ),
+
+    "TOILET_COMFORT_HEIGHT": LaborTemplateData(
+        code="TOILET_COMFORT_HEIGHT",
+        name="Comfort Height Toilet Replace (ADA/tall)",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.25,
+            "attic": 1.5,
+            "crawlspace": 1.3,
+            "slab": 1.0,
+            "basement": 1.1,
+        },
+        applicable_assemblies=["TOILET_COMFORT_HEIGHT_KIT"],
+        notes="Same labor as standard. Comfort height (17–19\") for ADA or tall users.",
+    ),
+
+    "CLEAN_OUT_INSTALL": LaborTemplateData(
+        code="CLEAN_OUT_INSTALL",
+        name="Clean-Out Install — 4\" ABS/PVC",
+        category="service",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=1.0,
+        disposal_hours=0.25,
+        applicable_assemblies=["CLEAN_OUT_KIT"],
+        notes="Required before main line cleaning if no clean-out present. Includes concrete saw if slab.",
+    ),
+
+    "CAMERA_INSPECTION": LaborTemplateData(
+        code="CAMERA_INSPECTION",
+        name="Drain Camera Inspection",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        notes="Full line video inspection with recording. Locating mark-out included.",
+    ),
+
 
     # ─────────────────────────────────────────────────────────────────────────
     # NEW CONSTRUCTION TEMPLATES

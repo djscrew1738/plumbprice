@@ -134,6 +134,66 @@ TASK_KEYWORDS: dict[str, dict] = {
         "assembly": "PTRAP_KIT",
         "default_access": "first_floor",
     },
+    "TOILET_FLAPPER_REPLACE": {
+        "keywords": ["flapper", "running toilet", "toilet running", "toilet won't stop", "toilet keeps running",
+                     "toilet runs", "phantom flush", "ghost flush", "water wasting toilet"],
+        "actions": ["replace", "fix", "repair", "stop"],
+        "assembly": "TOILET_FLAPPER_KIT",
+        "default_access": "first_floor",
+    },
+    "TOILET_FILL_VALVE_REPLACE": {
+        "keywords": ["fill valve", "toilet fill", "ballcock", "toilet hissing", "hissing toilet",
+                     "toilet constantly filling", "toilet tank slow"],
+        "actions": ["replace", "fix", "repair"],
+        "assembly": "TOILET_FILL_VALVE_KIT",
+        "default_access": "first_floor",
+    },
+    "TOILET_COMFORT_HEIGHT": {
+        "keywords": ["comfort height", "ada toilet", "tall toilet", "elongated comfort", "raised toilet",
+                     "accessibility toilet", "handicap toilet"],
+        "actions": ["replace", "install", "swap"],
+        "assembly": "TOILET_COMFORT_HEIGHT_KIT",
+        "default_access": "first_floor",
+    },
+    "TUB_SPOUT_REPLACE": {
+        "keywords": ["tub spout", "bathtub spout", "tub faucet spout", "spout replace", "tub dripping spout"],
+        "actions": ["replace", "install", "fix"],
+        "assembly": "TUB_SPOUT_KIT",
+        "default_access": "first_floor",
+    },
+    "SHOWER_HEAD_REPLACE": {
+        "keywords": ["shower head", "showerhead", "shower nozzle", "rain head", "handheld shower"],
+        "actions": ["replace", "install", "upgrade", "swap"],
+        "assembly": "SHOWER_HEAD_KIT",
+        "default_access": "first_floor",
+    },
+    "LAV_SINK_REPLACE": {
+        "keywords": ["bathroom sink", "lav sink", "vanity sink", "lavatory sink", "sink replace",
+                     "pedestal sink"],
+        "actions": ["replace", "install", "swap"],
+        "assembly": "LAV_SINK_KIT",
+        "default_access": "first_floor",
+    },
+    "GAS_SHUTOFF_REPLACE": {
+        "keywords": ["gas shutoff", "gas shut off", "gas valve", "appliance shutoff", "gas cock"],
+        "actions": ["replace", "install", "fix"],
+        "assembly": "GAS_SHUTOFF_KIT",
+        "default_access": "first_floor",
+    },
+    "CLEAN_OUT_INSTALL": {
+        "keywords": ["clean out install", "add clean out", "cleanout install", "need a clean out",
+                     "no clean out", "add cleanout"],
+        "actions": ["install", "add", "cut in"],
+        "assembly": "CLEAN_OUT_KIT",
+        "default_access": "first_floor",
+    },
+    "CAMERA_INSPECTION": {
+        "keywords": ["camera inspection", "camera line", "video inspection", "scope the line", "sewer camera",
+                     "drain camera", "scope drain"],
+        "actions": ["inspect", "scope", "camera"],
+        "assembly": None,
+        "default_access": "first_floor",
+    },
     "DRAIN_CLEAN_STANDARD": {
         "keywords": ["drain clean", "clogged drain", "slow drain", "drain snake", "sink clog", "tub clog",
                      "shower drain clog", "blocked drain"],
@@ -489,29 +549,40 @@ async def process_chat_message(
         }
 
     quantity = classification.get("quantity", 1)
+    preferred_supplier = classification.get("preferred_supplier")
 
-    # ── Step 3: Fetch material costs ─────────────────────────────────────────
-    materials: list[MaterialItem] = []
-    if assembly_code:
-        materials = await supplier_service.get_assembly_costs(
-            assembly_code,
-            preferred_supplier=classification.get("preferred_supplier"),
-            db=db,
+    # ── Steps 3+4: Material costs + Deterministic pricing ────────────────────
+    # Fast path: no DB → use pure in-memory canonical map (zero DB round-trips)
+    # Standard path: DB session present → single batched query for all assembly items
+    if not db:
+        result = pricing_engine.quick_estimate(
+            task_code=task_code,
+            assembly_code=assembly_code,
+            access=classification["access_type"],
+            urgency=classification["urgency"],
+            county=classification["county"],
+            preferred_supplier=preferred_supplier,
+            quantity=quantity,
         )
-
-    # ── Step 4: Deterministic pricing (never replaced by LLM) ────────────────
-    result = pricing_engine.calculate_service_estimate(
-        task_code=task_code,
-        materials=materials,
-        assembly_code=assembly_code,
-        access=classification["access_type"],
-        urgency=classification["urgency"],
-        county=classification["county"],
-        preferred_supplier=classification.get("preferred_supplier"),
-    )
-
-    if quantity > 1:
-        result = pricing_engine.scale_estimate(result, quantity)
+    else:
+        materials: list[MaterialItem] = []
+        if assembly_code:
+            materials = await supplier_service.get_assembly_costs(
+                assembly_code,
+                preferred_supplier=preferred_supplier,
+                db=db,
+            )
+        result = pricing_engine.calculate_service_estimate(
+            task_code=task_code,
+            materials=materials,
+            assembly_code=assembly_code,
+            access=classification["access_type"],
+            urgency=classification["urgency"],
+            county=classification["county"],
+            preferred_supplier=preferred_supplier,
+        )
+        if quantity > 1:
+            result = pricing_engine.scale_estimate(result, quantity)
 
     # ── Step 5: LLM response generation (optional) ───────────────────────────
     template      = get_template(result.template_code or "")

@@ -40,3 +40,11 @@ async def supplier_error_handler(request: Request, exc: SupplierError) -> JSONRe
         status_code=503,
         content={"error": "SUPPLIER_ERROR", "message": exc.message},
     )
+
+
+async def blueprint_error_handler(request: Request, exc: BlueprintError) -> JSONResponse:
+    logger.error("Blueprint error", job_id=exc.job_id, message=exc.message)
+    return JSONResponse(
+        status_code=422,
+        content={"error": "BLUEPRINT_ERROR", "message": exc.message, "job_id": exc.job_id},
+    )
