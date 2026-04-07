@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { RefreshCw } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import type { EstimateListItem, EstimatesListResponse } from '@/lib/api'
+import type { EstimateListItem } from '@/lib/api'
 import { estimatesApi } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 
@@ -21,7 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
   lost: 'Not won',
 }
 
-function normalizeRecentJobs(data: EstimatesListResponse): EstimateListItem[] {
+function normalizeRecentJobs(data: EstimateListItem[] | { estimates?: EstimateListItem[] }): EstimateListItem[] {
   const items = Array.isArray(data) ? data : data.estimates ?? []
 
   return [...items].sort((a, b) => {
@@ -63,36 +64,24 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadRecentJobs = useCallback(async () => {
     let isMounted = true
-
-    async function loadRecentJobs() {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await estimatesApi.list()
-        if (!isMounted) {
-          return
-        }
-
-        setJobs(normalizeRecentJobs(response.data).slice(0, limit))
-      } catch {
-        if (isMounted) {
-          setError('Could not load recent jobs')
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await estimatesApi.list()
+      if (isMounted) setJobs(normalizeRecentJobs(response.data).slice(0, limit))
+    } catch {
+      if (isMounted) setError('Could not load recent jobs')
+    } finally {
+      if (isMounted) setLoading(false)
     }
-
-    void loadRecentJobs()
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [limit])
+
+  useEffect(() => {
+    void loadRecentJobs()
+  }, [loadRecentJobs])
 
   return (
     <section className={cn(compact ? 'space-y-2' : 'shell-panel space-y-3 p-4', className)}>
@@ -109,9 +98,17 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
       )}
 
       {!loading && error && (
-        <p className={cn('rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-3 text-[color:var(--muted-ink)]', compact ? 'text-xs' : 'text-sm')}>
-          {error}
-        </p>
+        <div className={cn('rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-3', compact ? 'text-xs' : 'text-sm')}>
+          <p className="text-[color:var(--muted-ink)]">{error}</p>
+          <button
+            type="button"
+            onClick={() => void loadRecentJobs()}
+            className="mt-2 flex items-center gap-1.5 text-[color:var(--accent-strong)] hover:underline"
+          >
+            <RefreshCw size={12} />
+            Try again
+          </button>
+        </div>
       )}
 
       {!loading && !error && jobs.length === 0 && (

@@ -278,6 +278,40 @@ async def list_estimate_versions(estimate_id: int, db: AsyncSession = Depends(ge
     )
 
 
+@router.get("/{estimate_id}/cost-breakdown")
+async def get_cost_breakdown(estimate_id: int, db: AsyncSession = Depends(get_db)):
+    """Return a percentage breakdown of costs for an estimate."""
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+
+    grand_total = estimate.grand_total or 0.0
+    category_amounts = {
+        "labor": estimate.labor_total or 0.0,
+        "materials": estimate.materials_total or 0.0,
+        "tax": estimate.tax_total or 0.0,
+        "markup": estimate.markup_total or 0.0,
+        "misc": estimate.misc_total or 0.0,
+    }
+
+    breakdown = {
+        category: {
+            "amount": amount,
+            "pct": round(amount / grand_total * 100, 2) if grand_total else 0.0,
+        }
+        for category, amount in category_amounts.items()
+    }
+
+    return {
+        "estimate_id": estimate.id,
+        "grand_total": grand_total,
+        "breakdown": breakdown,
+        "confidence_score": estimate.confidence_score,
+        "confidence_label": estimate.confidence_label,
+    }
+
+
 @router.patch("/{estimate_id}/status")
 async def update_estimate_status(
     estimate_id: int,
@@ -298,6 +332,116 @@ async def update_estimate_status(
     await db.commit()
     await db.refresh(estimate)
     return {"id": estimate.id, "status": estimate.status}
+
+
+@router.post("/{estimate_id}/duplicate", response_model=EstimateResponse, status_code=http_status.HTTP_201_CREATED)
+async def duplicate_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
+    """Duplicate an estimate: creates a copy with status=draft, title appended ' (copy)', and all line items copied."""
+    # Fetch the original estimate
+    result = await db.execute(
+        select(Estimate).where(Estimate.id == estimate_id)
+    )
+    original_estimate = result.scalar_one_or_none()
+    if not original_estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+
+    # Fetch all line items for the original estimate
+    li_result = await db.execute(
+        select(EstimateLineItem)
+        .where(EstimateLineItem.estimate_id == estimate_id)
+        .order_by(EstimateLineItem.sort_order)
+    )
+    original_line_items = li_result.scalars().all()
+
+    # Create a new estimate with same data but new title and status=draft
+    new_estimate = Estimate(
+        project_id=original_estimate.project_id,
+        title=f"{original_estimate.title} (copy)",
+        job_type=original_estimate.job_type,
+        status="draft",  # Always start as draft
+        labor_total=original_estimate.labor_total,
+        materials_total=original_estimate.materials_total,
+        tax_total=original_estimate.tax_total,
+        markup_total=original_estimate.markup_total,
+        misc_total=original_estimate.misc_total,
+        subtotal=original_estimate.subtotal,
+        grand_total=original_estimate.grand_total,
+        confidence_score=original_estimate.confidence_score,
+        confidence_label=original_estimate.confidence_label,
+        assumptions=original_estimate.assumptions,
+        sources=original_estimate.sources,
+        chat_context=original_estimate.chat_context,
+        county=original_estimate.county,
+        tax_rate=original_estimate.tax_rate,
+        preferred_supplier=original_estimate.preferred_supplier,
+        created_by=original_estimate.created_by,
+        organization_id=original_estimate.organization_id,
+        valid_until=original_estimate.valid_until,
+    )
+    db.add(new_estimate)
+    await db.flush()  # Flush to get the new estimate's ID
+
+    # Copy all line items
+    for original_li in original_line_items:
+        new_li = EstimateLineItem(
+            estimate_id=new_estimate.id,
+            line_type=original_li.line_type,
+            description=original_li.description,
+            quantity=original_li.quantity,
+            unit=original_li.unit,
+            unit_cost=original_li.unit_cost,
+            total_cost=original_li.total_cost,
+            supplier=original_li.supplier,
+            sku=original_li.sku,
+            canonical_item=original_li.canonical_item,
+            sort_order=original_li.sort_order,
+            trace_json=original_li.trace_json,
+        )
+        db.add(new_li)
+
+    await db.commit()
+    await db.refresh(new_estimate)
+
+    # Fetch the copied line items for response
+    li_result = await db.execute(
+        select(EstimateLineItem)
+        .where(EstimateLineItem.estimate_id == new_estimate.id)
+        .order_by(EstimateLineItem.sort_order)
+    )
+    copied_line_items = li_result.scalars().all()
+
+    return EstimateResponse(
+        id=new_estimate.id,
+        title=new_estimate.title,
+        job_type=new_estimate.job_type,
+        status=new_estimate.status,
+        labor_total=new_estimate.labor_total,
+        materials_total=new_estimate.materials_total,
+        tax_total=new_estimate.tax_total,
+        markup_total=new_estimate.markup_total,
+        misc_total=new_estimate.misc_total,
+        subtotal=new_estimate.subtotal,
+        grand_total=new_estimate.grand_total,
+        confidence_score=new_estimate.confidence_score,
+        confidence_label=new_estimate.confidence_label,
+        assumptions=new_estimate.assumptions,
+        county=new_estimate.county,
+        tax_rate=new_estimate.tax_rate,
+        preferred_supplier=new_estimate.preferred_supplier,
+        line_items=[
+            {
+                "line_type": li.line_type,
+                "description": li.description,
+                "quantity": li.quantity,
+                "unit": li.unit,
+                "unit_cost": li.unit_cost,
+                "total_cost": li.total_cost,
+                "supplier": li.supplier,
+            }
+            for li in copied_line_items
+        ],
+        created_at=new_estimate.created_at,
+    )
 
 
 @router.delete("/{estimate_id}", status_code=http_status.HTTP_204_NO_CONTENT)

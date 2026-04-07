@@ -81,11 +81,42 @@ export interface EstimateListItem {
   created_at: string
 }
 
+export interface EstimateDetailResponse {
+  id: number
+  title: string
+  status: string
+  job_type: string
+  county: string
+  confidence_score: number
+  confidence_label: string
+  assumptions: string[]
+  labor_total: number
+  materials_total: number
+  tax_total: number
+  markup_total: number
+  misc_total: number
+  subtotal: number
+  grand_total: number
+  line_items: Array<{
+    line_type: string
+    description: string
+    quantity: number
+    unit: string
+    unit_cost: number
+    total_cost: number
+    supplier?: string | null
+    sku?: string | null
+  }>
+  created_at: string
+}
+
+export type EstimatesListResponse = EstimateListItem[] | { estimates?: EstimateListItem[] }
+
 export const estimatesApi = {
   list: (params?: { job_type?: string; status?: string; limit?: number; offset?: number }) =>
     api.get<EstimateListItem[]>('/estimates', { params }),
   get: (id: number) =>
-    api.get(`/estimates/${id}`),
+    api.get<EstimateDetailResponse>(`/estimates/${id}`),
   updateStatus: (id: number, status: string) =>
     api.patch<{ id: number; status: string }>(`/estimates/${id}/status`, { status }),
   delete: (id: number) =>

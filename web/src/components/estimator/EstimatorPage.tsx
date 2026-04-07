@@ -64,8 +64,8 @@ function normalizeLineItems(lineItems: EstimateDetailResponse['line_items']): Li
     unit: item.unit,
     unit_cost: item.unit_cost,
     total_cost: item.total_cost,
-    supplier: item.supplier,
-    sku: item.sku,
+    supplier: item.supplier ?? undefined,
+    sku: item.sku ?? undefined,
   }))
 }
 
@@ -128,7 +128,7 @@ export function EstimatorPage() {
     async function resumeEstimateFromQuery() {
       try {
         setLoading(true)
-        const { data } = await estimatesApi.get(estimateIdToResume)
+        const { data } = await estimatesApi.get(Number(estimateIdToResume))
         if (!isMounted) {
           return
         }
@@ -224,7 +224,14 @@ export function EstimatorPage() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: data.answer,
-        estimate: data.estimate,
+        estimate: data.estimate ? {
+          ...data.estimate,
+          line_items: data.estimate.line_items.map(item => ({
+            ...item,
+            supplier: item.supplier ?? undefined,
+            sku: item.sku ?? undefined,
+          })),
+        } : undefined,
         confidence: data.confidence,
         confidence_label: data.confidence_label,
         assumptions: data.assumptions,

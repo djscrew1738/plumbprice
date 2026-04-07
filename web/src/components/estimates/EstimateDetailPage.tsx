@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, MapPin, Layers, CircleDollarSign,
-  RefreshCw, FileText, TrendingUp, Tag, AlertCircle,
+  FileText, TrendingUp, Tag, AlertCircle,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api } from '@/lib/api'

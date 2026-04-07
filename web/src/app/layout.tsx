@@ -10,7 +10,7 @@ import { MoreSheet } from '@/components/layout/MoreSheet'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { ErrorFallback } from '@/components/ui/ErrorBoundary'
-import { Button } from '@/components/ui/Button'
+import { AuthProvider } from '@/contexts/AuthContext'
 import './globals.css'
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -18,17 +18,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     setSidebarOpen(false)
     setMoreOpen(false)
-    setError(null)
   }, [pathname])
-
-  const handleError = () => {
-    setError(new Error('Failed to load content'))
-  }
 
   const handleSkipToMain = () => {
     router.push(pathname, { scroll: false })
@@ -66,6 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             />
           }
         >
+          <AuthProvider>
           <ToastProvider>
             <div className="flex min-h-dvh">
               <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -101,7 +96,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       <ErrorBoundary
                         key={pathname}
                         fallback={
-                          <ErrorFallback message="Failed to load this page. Please try again." onRetry={handleError} />
+                          <ErrorFallback message="Failed to load this page. Please try again." onRetry={() => window.location.reload()} />
                         }
                       >
                         {children}
@@ -116,6 +111,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
             </div>
           </ToastProvider>
+          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>
