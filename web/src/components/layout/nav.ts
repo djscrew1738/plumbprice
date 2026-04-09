@@ -4,7 +4,7 @@ import {
   FileText,
   House,
   Layers,
-  MessageSquareMore,
+  MoreHorizontal,
   Package,
   Settings,
   type LucideIcon,
@@ -42,7 +42,7 @@ export const MOBILE_TABS = [
   PRIMARY_NAV[0],
   PRIMARY_NAV[1],
   PRIMARY_NAV[2],
-  { href: '#more', label: 'More', icon: MessageSquareMore },
+  { href: '#more', label: 'More', icon: MoreHorizontal },
 ] as const
 
 export const PAGE_META: Record<string, PageMeta> = {
@@ -65,5 +65,14 @@ export function matchesPathname(pathname: string, href: string) {
 }
 
 export function getPageMeta(pathname: string): PageMeta {
-  return PAGE_META[pathname] ?? PAGE_META['/']
+  if (PAGE_META[pathname]) return PAGE_META[pathname]
+
+  // Match nested routes by longest prefix
+  const match = Object.keys(PAGE_META)
+    .filter(key => key !== '/' && pathname.startsWith(key + '/'))
+    .sort((a, b) => b.length - a.length)[0]
+
+  if (match) return PAGE_META[match]
+
+  return PAGE_META['/']
 }

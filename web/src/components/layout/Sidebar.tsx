@@ -3,12 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X } from 'lucide-react'
+import { Keyboard, X } from 'lucide-react'
 import { PRIMARY_NAV, SECONDARY_NAV, matchesPathname } from './nav'
 import { RecentJobsList } from '@/components/workspace/RecentJobsList'
 
 function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => void; showRecentRail?: boolean }) {
   const pathname = usePathname()
+
+  const openShortcuts = () => window.dispatchEvent(new Event('show-shortcuts'))
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -65,7 +67,7 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
                   onClick={onClose}
                   className={`flex items-center gap-3 rounded-[1.25rem] px-3 py-3 text-sm font-medium transition-colors ${
                     active
-                      ? 'bg-[color:var(--panel-strong)] text-[color:var(--ink)]'
+                      ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]'
                       : 'text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]'
                   }`}
                 >
@@ -82,6 +84,19 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
             <RecentJobsList compact limit={4} />
           </div>
         )}
+
+        {/* Keyboard shortcut hint */}
+        <div className="border-t border-[color:var(--line)] px-3 py-3">
+          <button
+            onClick={openShortcuts}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
+            title="View keyboard shortcuts"
+          >
+            <Keyboard size={13} />
+            <span>Keyboard shortcuts</span>
+            <kbd className="ml-auto rounded border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-1.5 py-0.5 font-mono text-[10px]">?</kbd>
+          </button>
+        </div>
       </div>
     </div>
   )

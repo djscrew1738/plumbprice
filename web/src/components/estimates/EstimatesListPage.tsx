@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
-  TrendingUp, Search, X, ChevronDown, ArrowUpDown, Check, Download,
+  TrendingUp, Search, X, ChevronDown, ArrowUpDown, Check, Download, Copy,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -26,10 +26,10 @@ const JOB_TYPE_CLASS: Record<string, string> = {
   service: 'badge-service', construction: 'badge-construction', commercial: 'badge-commercial',
 }
 const STATUS_CLASS: Record<string, string> = {
-  draft:    'bg-white/[0.04] text-zinc-500 border border-white/[0.08]',
-  sent:     'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  accepted: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-  rejected: 'bg-red-500/10 text-red-400 border border-red-500/20',
+  draft:    'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border border-[color:var(--line)]',
+  sent:     'bg-blue-500/10 text-blue-600 border border-blue-500/20 dark:text-blue-400',
+  accepted: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 dark:text-emerald-400',
+  rejected: 'bg-red-500/10 text-red-600 border border-red-500/20 dark:text-red-400',
 }
 
 const STATUS_OPTIONS = [
@@ -73,7 +73,7 @@ function StatusDropdown({
         disabled={updating}
         className={cn(
           'badge cursor-pointer hover:opacity-80 transition-opacity gap-1',
-          STATUS_CLASS[current] ?? 'bg-white/[0.04] text-zinc-500 border border-white/[0.08]',
+          STATUS_CLASS[current] ?? 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border border-[color:var(--line)]',
           updating && 'opacity-50 pointer-events-none',
         )}
       >
@@ -89,7 +89,7 @@ function StatusDropdown({
               animate={{ opacity: 1, y: 0,  scale: 1    }}
               exit={{   opacity: 0, y: -4,  scale: 0.96 }}
               transition={{ duration: 0.1 }}
-              className="absolute top-full left-0 mt-1 bg-[#111] border border-white/[0.1] rounded-xl shadow-2xl z-20 overflow-hidden min-w-[110px]"
+              className="absolute top-full left-0 mt-1 bg-[color:var(--panel)] border border-[color:var(--line)] rounded-xl shadow-2xl z-20 overflow-hidden min-w-[110px]"
             >
               {STATUS_OPTIONS.map(opt => (
                 <button
@@ -98,8 +98,8 @@ function StatusDropdown({
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors text-left',
                     opt.value === current
-                      ? 'text-blue-400 bg-blue-500/10'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]',
+                      ? 'text-[color:var(--accent-strong)] bg-[color:var(--accent-soft)]'
+                      : 'text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)]',
                   )}
                 >
                   {opt.label}
@@ -131,14 +131,16 @@ export function EstimatesListPage() {
   const router  = useRouter()
   const toast   = useToast()
 
-  const [estimates, setEstimates] = useState<Estimate[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState<string | null>(null)
-  const [filter,    setFilter]    = useState('all')
-  const [deleting,  setDeleting]  = useState<number | null>(null)
-  const [search,    setSearch]    = useState('')
-  const [sortBy,    setSortBy]    = useState<SortKey>('newest')
-  const [sortOpen,  setSortOpen]  = useState(false)
+  const [estimates,     setEstimates]     = useState<Estimate[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState<string | null>(null)
+  const [filter,        setFilter]        = useState('all')
+  const [deleting,      setDeleting]      = useState<number | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [duplicating,   setDuplicating]   = useState<number | null>(null)
+  const [search,        setSearch]        = useState('')
+  const [sortBy,        setSortBy]        = useState<SortKey>('newest')
+  const [sortOpen,      setSortOpen]      = useState(false)
 
   const fetchEstimates = useCallback(async () => {
     try {
@@ -159,9 +161,9 @@ export function EstimatesListPage() {
     setEstimates(prev => prev.map(e => e.id === id ? { ...e, status } : e))
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this estimate?')) return
+  const handleDeleteConfirm = async (id: number) => {
     setDeleting(id)
+    setConfirmDelete(null)
     try {
       await api.delete(`/estimates/${id}`)
       setEstimates(prev => prev.filter(e => e.id !== id))
@@ -170,6 +172,21 @@ export function EstimatesListPage() {
       toast.error('Failed to delete', 'Please try again.')
     } finally {
       setDeleting(null)
+    }
+  }
+
+  const handleDuplicate = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDuplicating(id)
+    try {
+      const res = await api.post<Estimate>(`/estimates/${id}/duplicate`, {})
+      const copy = res.data
+      setEstimates(prev => [copy, ...prev])
+      toast.success('Estimate duplicated', copy.title || `Estimate #${copy.id}`)
+    } catch {
+      toast.error('Could not duplicate', 'Please try again.')
+    } finally {
+      setDuplicating(null)
     }
   }
 
@@ -193,10 +210,10 @@ export function EstimatesListPage() {
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Sort'
 
   return (
-    <div className="min-h-full bg-[#080808]">
+    <div className="min-h-full bg-[hsl(var(--background))]">
 
       {/* ── Top bar ── */}
-      <div className="bg-[#080808]/80 backdrop-blur-xl border-b border-white/[0.06] px-4 py-2.5 sticky top-0 z-10">
+      <div className="bg-[color:var(--panel)]/80 backdrop-blur-xl border-b border-[color:var(--line)] px-4 py-2.5 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto space-y-2.5">
           <div className="flex items-center justify-between gap-3">
             {/* Filter pills */}
@@ -208,8 +225,8 @@ export function EstimatesListPage() {
                   className={cn(
                     'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
                     filter === f.value
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white/[0.04] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] border border-white/[0.06]',
+                      ? 'bg-[color:var(--accent)] text-white'
+                      : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] border border-[color:var(--line)]',
                   )}
                 >
                   {f.label}
@@ -234,13 +251,13 @@ export function EstimatesListPage() {
                   })
                   a.click()
                 }}
-                className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
                 title="Export visible estimates as CSV"
                 aria-label="Export CSV"
               >
                 <Download size={15} />
               </button>
-              <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors">
+              <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
               <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2">
@@ -252,15 +269,15 @@ export function EstimatesListPage() {
           {/* Search + sort row */}
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] pointer-events-none" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by title or county…"
-                className="w-full pl-9 pr-8 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500/40 transition-all"
+                className="w-full pl-9 pr-8 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]/25 focus:border-[color:var(--accent)]/40 transition-all"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
                   <X size={13} />
                 </button>
               )}
@@ -269,11 +286,11 @@ export function EstimatesListPage() {
             <div className="relative">
               <button
                 onClick={() => setSortOpen(o => !o)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.07] transition-all whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-xs font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-all whitespace-nowrap"
               >
                 <ArrowUpDown size={13} />
                 <span className="hidden sm:inline">{currentSortLabel}</span>
-                <ChevronDown size={11} className={cn('text-zinc-600 transition-transform', sortOpen && 'rotate-180')} />
+                <ChevronDown size={11} className={cn('text-[color:var(--muted-ink)] transition-transform', sortOpen && 'rotate-180')} />
               </button>
               <AnimatePresence>
                 {sortOpen && (
@@ -282,7 +299,7 @@ export function EstimatesListPage() {
                     animate={{ opacity: 1, y: 0,  scale: 1    }}
                     exit={{   opacity: 0, y: -6,  scale: 0.96 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute top-full right-0 mt-1.5 bg-[#111] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden z-20 min-w-[152px]"
+                    className="absolute top-full right-0 mt-1.5 bg-[color:var(--panel)] border border-[color:var(--line)] rounded-xl shadow-2xl overflow-hidden z-20 min-w-[152px]"
                   >
                     {SORT_OPTIONS.map(o => (
                       <button
@@ -290,7 +307,7 @@ export function EstimatesListPage() {
                         onClick={() => { setSortBy(o.value); setSortOpen(false) }}
                         className={cn(
                           'w-full text-left px-3.5 py-2 text-xs font-medium transition-colors',
-                          o.value === sortBy ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]',
+                          o.value === sortBy ? 'text-[color:var(--accent-strong)] bg-[color:var(--accent-soft)]' : 'text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)]',
                         )}
                       >
                         {o.label}
@@ -319,8 +336,8 @@ export function EstimatesListPage() {
                   <Icon size={14} className={color} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">{label}</div>
-                  <div className="text-sm font-bold text-white truncate">{value}</div>
+                  <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
+                  <div className="text-sm font-bold text-[color:var(--ink)] truncate">{value}</div>
                 </div>
               </div>
             ))}
@@ -351,11 +368,11 @@ export function EstimatesListPage() {
         {/* Empty */}
         {!loading && !error && estimates.length === 0 && (
           <div className="card p-12 text-center">
-            <div className="w-12 h-12 bg-white/[0.03] border border-white/[0.07] rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FileText size={20} className="text-zinc-700" />
+            <div className="w-12 h-12 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FileText size={20} className="text-[color:var(--muted-ink)]" />
             </div>
-            <h3 className="font-bold text-white mb-1.5">No estimates yet</h3>
-            <p className="text-zinc-600 text-sm mb-6">Chat with the estimator to generate your first price.</p>
+            <h3 className="font-bold text-[color:var(--ink)] mb-1.5">No estimates yet</h3>
+            <p className="text-[color:var(--muted-ink)] text-sm mb-6">Chat with the estimator to generate your first price.</p>
             <button onClick={() => router.push('/estimator')} className="btn-primary mx-auto">Start Estimating</button>
           </div>
         )}
@@ -363,8 +380,8 @@ export function EstimatesListPage() {
         {/* No search results */}
         {!loading && !error && estimates.length > 0 && visible.length === 0 && (
           <div className="card p-10 text-center">
-            <Search size={24} className="text-zinc-700 mx-auto mb-3" />
-            <p className="text-zinc-500 text-sm">No estimates match &ldquo;{search}&rdquo;</p>
+            <Search size={24} className="text-[color:var(--muted-ink)] mx-auto mb-3" />
+            <p className="text-[color:var(--muted-ink)] text-sm">No estimates match &ldquo;{search}&rdquo;</p>
             <button onClick={() => setSearch('')} className="btn-ghost mt-3 mx-auto text-xs">Clear search</button>
           </div>
         )}
@@ -382,32 +399,60 @@ export function EstimatesListPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.18, delay: i * 0.02 }}
-                    className="card p-4 cursor-pointer hover:border-white/10 transition-colors"
+                    className="card p-4 cursor-pointer hover:border-[color:var(--line)] transition-colors"
                     onClick={() => router.push(`/estimates/${est.id}`)}
                   >
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white text-sm truncate mb-1.5">{est.title || `Estimate #${est.id}`}</h3>
+                        <h3 className="font-semibold text-[color:var(--ink)] text-sm truncate mb-1.5">{est.title || `Estimate #${est.id}`}</h3>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span>
                           <StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} />
                           <span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span>
                         </div>
                       </div>
-                      <div className="text-xl font-extrabold text-white shrink-0 tabular-nums">{formatCurrency(est.grand_total)}</div>
+                      <div className="text-xl font-extrabold text-[color:var(--ink)] shrink-0 tabular-nums">{formatCurrency(est.grand_total)}</div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-[11px] text-zinc-600">
+                      <div className="flex items-center gap-3 text-[11px] text-[color:var(--muted-ink)]">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county}</span>
                         <span className="flex items-center gap-1"><Calendar size={10} />{formatDate(est.created_at)}</span>
                       </div>
-                      <button
-                        onClick={e => { e.stopPropagation(); handleDelete(est.id) }}
-                        disabled={deleting === est.id}
-                        className="p-2 rounded-xl hover:bg-red-500/10 text-zinc-600 hover:text-red-400 transition-colors disabled:opacity-40"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        {confirmDelete === est.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-red-400 font-medium">Delete?</span>
+                            <button
+                              onClick={() => void handleDeleteConfirm(est.id)}
+                              disabled={deleting === est.id}
+                              className="px-2 py-1 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-semibold hover:bg-red-500/25 transition-colors disabled:opacity-40"
+                            >Yes</button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="px-2 py-1 rounded-lg bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] text-[11px] font-semibold hover:bg-[color:var(--panel-strong)] transition-colors"
+                            >No</button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={e => handleDuplicate(est.id, e)}
+                              disabled={duplicating === est.id}
+                              className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+                              title="Duplicate"
+                            >
+                              {duplicating === est.id ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
+                              disabled={deleting === est.id}
+                              className="p-2 rounded-xl hover:bg-red-500/10 text-[color:var(--muted-ink)] hover:text-red-500 transition-colors disabled:opacity-40"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -418,13 +463,13 @@ export function EstimatesListPage() {
             <div className="hidden lg:block card overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/[0.06] bg-white/[0.015]">
+                  <tr className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]">
                     {['Title', 'Type', 'Status', 'Confidence', 'County', 'Total', 'Date', ''].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.05]">
+                <tbody className="divide-y divide-[color:var(--line)]">
                   <AnimatePresence initial={false}>
                     {visible.map((est, i) => (
                       <motion.tr
@@ -433,25 +478,51 @@ export function EstimatesListPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.12, delay: i * 0.015 }}
-                        className="hover:bg-white/[0.025] transition-colors group cursor-pointer"
+                        className="hover:bg-[color:var(--panel-strong)] transition-colors group cursor-pointer"
                         onClick={() => router.push(`/estimates/${est.id}`)}
                       >
-                        <td className="px-4 py-3 font-medium text-zinc-200 max-w-[180px] truncate">{est.title || `Estimate #${est.id}`}</td>
+                        <td className="px-4 py-3 font-medium text-[color:var(--ink)] max-w-[180px] truncate">{est.title || `Estimate #${est.id}`}</td>
                         <td className="px-4 py-3"><span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span></td>
                         <td className="px-4 py-3"><StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} /></td>
                         <td className="px-4 py-3"><span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span></td>
-                        <td className="px-4 py-3 text-zinc-500 text-xs">{est.county}</td>
-                        <td className="px-4 py-3 font-bold text-white tabular-nums">{formatCurrency(est.grand_total)}</td>
-                        <td className="px-4 py-3 text-zinc-600 text-xs whitespace-nowrap">{formatDate(est.created_at)}</td>
+                        <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs">{est.county}</td>
+                        <td className="px-4 py-3 font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(est.grand_total)}</td>
+                        <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs whitespace-nowrap">{formatDate(est.created_at)}</td>
                         <td className="px-4 py-3">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={e => { e.stopPropagation(); handleDelete(est.id) }}
-                              disabled={deleting === est.id}
-                              className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-600 hover:text-red-400 transition-colors disabled:opacity-40"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                            {confirmDelete === est.id ? (
+                              <>
+                                <span className="text-[11px] text-red-400 font-medium mr-1">Delete?</span>
+                                <button
+                                  onClick={() => void handleDeleteConfirm(est.id)}
+                                  disabled={deleting === est.id}
+                                  className="px-2 py-1 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-semibold hover:bg-red-500/25 transition-colors disabled:opacity-40"
+                                >Yes</button>
+                                <button
+                                  onClick={() => setConfirmDelete(null)}
+                                  className="px-2 py-1 rounded-lg bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] text-[11px] font-semibold hover:bg-[color:var(--panel-strong)] transition-colors"
+                                >No</button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={e => handleDuplicate(est.id, e)}
+                                  disabled={duplicating === est.id}
+                                  className="p-1.5 rounded-lg hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+                                  title="Duplicate"
+                                >
+                                  {duplicating === est.id ? <RefreshCw size={12} className="animate-spin" /> : <Copy size={12} />}
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
+                                  disabled={deleting === est.id}
+                                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-[color:var(--muted-ink)] hover:text-red-500 transition-colors disabled:opacity-40"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </motion.tr>

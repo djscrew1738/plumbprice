@@ -25,9 +25,9 @@ const ToastContext = createContext<ToastCtx>({ success: () => {}, error: () => {
 export function useToast() { return useContext(ToastContext) }
 
 const STYLES: Record<ToastType, { wrap: string; icon: string; title: string }> = {
-  success: { wrap: 'bg-[#0d1f14] border-emerald-500/25',  icon: 'text-emerald-400', title: 'text-emerald-300' },
-  error:   { wrap: 'bg-[#1f0d0d] border-red-500/25',      icon: 'text-red-400',     title: 'text-red-300'     },
-  info:    { wrap: 'bg-[#0d1020] border-blue-500/25',      icon: 'text-blue-400',    title: 'text-blue-300'    },
+  success: { wrap: 'bg-[color:var(--panel)] border-emerald-500/30',  icon: 'text-emerald-500', title: 'text-emerald-700 dark:text-emerald-400' },
+  error:   { wrap: 'bg-[color:var(--panel)] border-red-500/30',      icon: 'text-red-500',     title: 'text-red-700 dark:text-red-400'         },
+  info:    { wrap: 'bg-[color:var(--panel)] border-blue-500/30',      icon: 'text-blue-500',    title: 'text-blue-700 dark:text-blue-400'        },
 }
 
 const ICONS: Record<ToastType, typeof CheckCircle2> = {
@@ -78,9 +78,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <Icon size={16} className={cn('shrink-0 mt-0.5', s.icon)} />
                 <div className="flex-1 min-w-0">
                   <p className={cn('text-sm font-semibold leading-snug', s.title)}>{t.title}</p>
-                  {t.message && <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{t.message}</p>}
+                  {t.message && <p className="text-xs text-[color:var(--muted-ink)] mt-0.5 leading-relaxed">{t.message}</p>}
                 </div>
-                <button onClick={() => dismiss(t.id)} className="shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors mt-0.5">
+                <button onClick={() => dismiss(t.id)} className="shrink-0 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors mt-0.5">
                   <X size={14} />
                 </button>
               </motion.div>

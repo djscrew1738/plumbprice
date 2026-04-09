@@ -4,10 +4,24 @@ import { usePathname } from 'next/navigation'
 import { Menu, MapPin } from 'lucide-react'
 import { getPageMeta } from './nav'
 import { ThemeToggle } from './ThemeToggle'
+import { useAuth } from '@/contexts/AuthContext'
+
+function getUserInitials(name: string | undefined, email: string | undefined): string {
+  if (name) {
+    const parts = name.trim().split(/\s+/)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+  if (email) return email[0].toUpperCase()
+  return '?'
+}
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname()
   const meta = getPageMeta(pathname)
+  const { user } = useAuth()
+  const initials = getUserInitials(user?.full_name, user?.email)
+  const displayName = user?.full_name ?? user?.email ?? 'User'
 
   return (
     <header
@@ -34,9 +48,13 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <div className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)]">
-            E
-          </div>
+          <button
+            title={displayName}
+            aria-label={`Signed in as ${displayName}`}
+            className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] cursor-default select-none"
+          >
+            {initials}
+          </button>
         </div>
       </div>
     </header>

@@ -59,25 +59,33 @@ export function LauncherHome() {
       </section>
 
       {/* This-week stats */}
-      {stats !== null && (
-        <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="This week's activity">
-          <StatCard
-            icon={Wrench}
-            label="Estimates this week"
-            value={stats.count === 0 ? 'None yet' : `${stats.count} estimate${stats.count === 1 ? '' : 's'}`}
-          />
-          <StatCard
-            icon={DollarSign}
-            label="Total quoted this week"
-            value={stats.totalValue > 0 ? formatCurrency(stats.totalValue) : '—'}
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Average job value"
-            value={stats.avgValue > 0 ? formatCurrency(stats.avgValue) : '—'}
-          />
-        </section>
-      )}
+      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="This week's activity">
+        {stats === null ? (
+          <>
+            <div className="skeleton rounded-2xl h-[60px]" />
+            <div className="skeleton rounded-2xl h-[60px]" />
+            <div className="skeleton rounded-2xl h-[60px]" />
+          </>
+        ) : (
+          <>
+            <StatCard
+              icon={Wrench}
+              label="Estimates this week"
+              value={stats.count === 0 ? 'None yet' : `${stats.count} estimate${stats.count === 1 ? '' : 's'}`}
+            />
+            <StatCard
+              icon={DollarSign}
+              label="Total quoted this week"
+              value={stats.totalValue > 0 ? formatCurrency(stats.totalValue) : '—'}
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Average job value"
+              value={stats.avgValue > 0 ? formatCurrency(stats.avgValue) : '—'}
+            />
+          </>
+        )}
+      </section>
 
       {/* Quick-action cards */}
       <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Start a new estimate">

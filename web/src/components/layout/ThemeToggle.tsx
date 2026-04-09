@@ -35,7 +35,7 @@ export function ThemeToggle() {
     }
   }
 
-  if (!mounted) return null
+  if (!mounted) return <div className="size-9" aria-hidden="true" />
 
   return (
     <button
