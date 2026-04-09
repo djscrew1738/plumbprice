@@ -1,7 +1,8 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { Menu, MapPin } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Menu, MapPin, LogOut } from 'lucide-react'
 import { getPageMeta } from './nav'
 import { ThemeToggle } from './ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,10 +19,32 @@ function getUserInitials(name: string | undefined, email: string | undefined): s
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname()
+  const router = useRouter()
   const meta = getPageMeta(pathname)
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const initials = getUserInitials(user?.full_name, user?.email)
   const displayName = user?.full_name ?? user?.email ?? 'User'
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen])
+
+  const handleLogout = () => {
+    setMenuOpen(false)
+    logout()
+    router.push('/login')
+  }
 
   return (
     <header
@@ -48,13 +71,42 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button
-            title={displayName}
-            aria-label={`Signed in as ${displayName}`}
-            className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] cursor-default select-none"
-          >
-            {initials}
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(prev => !prev)}
+              title={displayName}
+              aria-label={`Signed in as ${displayName}`}
+              aria-expanded={menuOpen}
+              aria-haspopup="true"
+              className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] cursor-pointer select-none transition-colors hover:bg-[color:var(--accent-strong)] hover:text-white"
+            >
+              {initials}
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-50">
+                <div className="border-b border-[color:var(--line)] px-4 py-3">
+                  <p className="text-sm font-semibold text-[color:var(--ink)] truncate">{displayName}</p>
+                  {user?.email && (
+                    <p className="text-xs text-[color:var(--muted-ink)] truncate">{user.email}</p>
+                  )}
+                  {user?.role && (
+                    <span className="mt-1 inline-block rounded-full bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--accent-strong)]">
+                      {user.role}
+                    </span>
+                  )}
+                </div>
+                <div className="py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                  >
+                    <LogOut size={15} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

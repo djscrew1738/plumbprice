@@ -35,6 +35,7 @@ api.interceptors.response.use(
     if (error?.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('pp_token')
       localStorage.removeItem('pp_user')
+      document.cookie = 'pp_token=; path=/; max-age=0'
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
       }
@@ -215,10 +216,20 @@ export const estimatesApi = {
     api.get<EstimateListItem[]>('/estimates', { params }),
   get: (id: number) =>
     api.get<EstimateDetailResponse>(`/estimates/${id}`),
+  createService: (body: Record<string, unknown>) =>
+    api.post('/estimates/service', body),
+  createConstruction: (body: Record<string, unknown>) =>
+    api.post('/estimates/construction', body),
   updateStatus: (id: number, status: string) =>
     api.patch<{ id: number; status: string }>(`/estimates/${id}/status`, { status }),
   delete: (id: number) =>
     api.delete(`/estimates/${id}`),
+  duplicate: (id: number) =>
+    api.post(`/estimates/${id}/duplicate`, {}),
+  getCostBreakdown: (id: number) =>
+    api.get(`/estimates/${id}/cost-breakdown`),
+  getVersions: (id: number) =>
+    api.get(`/estimates/${id}/versions`),
 }
 
 // ─── Projects / Pipeline ──────────────────────────────────────────────────────
@@ -257,6 +268,10 @@ export const suppliersApi = {
   compare: (items: string[]) =>
     api.post('/suppliers/compare', { items }),
   list: () => api.get('/suppliers'),
+  updateProduct: (productId: number, body: Record<string, unknown>) =>
+    api.put(`/suppliers/products/${productId}`, body),
+  updatePrices: (supplierId: number, body: Record<string, unknown>) =>
+    api.post(`/suppliers/${supplierId}/prices`, body),
 }
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -264,6 +279,8 @@ export const suppliersApi = {
 export const adminApi = {
   listTemplates: () =>
     api.get('/admin/labor-templates'),
+  getTemplate: (code: string) =>
+    api.get(`/admin/labor-templates/${code}`),
   getMarkupRules: () =>
     api.get('/admin/markup-rules'),
   updateMarkupRule: (job_type: string, body: { materials_markup_pct: number; misc_flat: number }) =>
@@ -272,4 +289,37 @@ export const adminApi = {
     api.get('/admin/stats'),
   listAssemblies: () =>
     api.get('/admin/assemblies'),
+}
+
+// ─── Blueprints ─────────────────────────────────────────────────────────────
+
+export const blueprintsApi = {
+  upload: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post('/blueprints/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120_000,
+    })
+  },
+  getStatus: (jobId: string) =>
+    api.get(`/blueprints/${jobId}/status`),
+  getTakeoff: (jobId: string) =>
+    api.get(`/blueprints/${jobId}/takeoff`),
+}
+
+// ─── Proposals ──────────────────────────────────────────────────────────────
+
+export const proposalsApi = {
+  create: (estimateId: number) =>
+    api.post(`/proposals/${estimateId}`),
+  getPdf: (proposalId: number) =>
+    api.get(`/proposals/${proposalId}/pdf`, { responseType: 'blob' }),
+}
+
+// ─── Prices ─────────────────────────────────────────────────────────────────
+
+export const pricesApi = {
+  getCache: () => api.get('/prices/cache'),
+  refresh: () => api.post('/prices/refresh'),
 }

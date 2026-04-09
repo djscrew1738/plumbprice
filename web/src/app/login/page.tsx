@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, FormEvent, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Droplets, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login } = useAuth()
 
   const [email,    setEmail]    = useState('')
@@ -22,7 +23,8 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email.trim(), password)
-      router.replace('/pipeline')
+      const redirect = searchParams.get('redirect') || '/pipeline'
+      router.replace(redirect)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setError(msg ?? 'Invalid email or password')
@@ -128,5 +130,13 @@ export default function LoginPage() {
         </p>
       </motion.div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

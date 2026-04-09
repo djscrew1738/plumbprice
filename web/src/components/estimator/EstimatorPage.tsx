@@ -215,6 +215,8 @@ export function EstimatorPage() {
       setCopiedId(id)
       success('Copied to clipboard')
       setTimeout(() => setCopiedId(null), 2000)
+    }).catch(() => {
+      error('Failed to copy — try selecting the text manually')
     })
   }
 

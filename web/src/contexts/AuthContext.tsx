@@ -60,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.setItem(TOKEN_KEY, access_token)
     localStorage.setItem(USER_KEY, JSON.stringify(userData))
+    // Set cookie so Next.js middleware can read the token for route guards
+    document.cookie = `pp_token=${access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
     api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
     setToken(access_token)
     setUser(userData)
@@ -68,6 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
+    // Clear auth cookie used by middleware
+    document.cookie = 'pp_token=; path=/; max-age=0'
     delete api.defaults.headers.common['Authorization']
     setToken(null)
     setUser(null)
