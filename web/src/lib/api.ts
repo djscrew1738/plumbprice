@@ -45,11 +45,35 @@ api.interceptors.response.use(
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export interface ChatPriceRequest {
   message: string
   county?: string
   preferred_supplier?: string
   job_type?: string
+  conversation_id?: string
+  history?: ChatHistoryMessage[]
+}
+
+export interface ChatPriceStreamEvent {
+  type: 'pricing' | 'token' | 'done'
+  // pricing event payload
+  estimate?: EstimateBreakdownPayload | null
+  estimate_id?: number | null
+  confidence?: number
+  confidence_label?: string
+  assumptions?: string[]
+  sources?: string[]
+  conversation_id?: string | null
+  job_type_detected?: string | null
+  template_used?: string | null
+  classified_by?: 'keyword' | 'llm' | null
+  // token event payload
+  token?: string
 }
 
 export interface ChatPriceResponse {
@@ -92,6 +116,54 @@ export interface LineItemPayload {
 export const chatApi = {
   price: (body: ChatPriceRequest) =>
     api.post<ChatPriceResponse>('/chat/price', body),
+
+  /** SSE stream — yields parsed ChatPriceStreamEvents until done */
+  async *priceStream(body: ChatPriceRequest): AsyncGenerator<ChatPriceStreamEvent> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('pp_token') : null
+    const base = typeof window === 'undefined'
+      ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
+      : ''
+    const res = await fetch(`${base}/api/v1/chat/price/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok || !res.body) {
+      throw new Error(`Stream request failed: ${res.status}`)
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    let currentEvent = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const lines = buf.split('\n')
+      buf = lines.pop() ?? ''
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim()
+        } else if (line.startsWith('data: ')) {
+          const raw = line.slice(6).trim()
+          try {
+            const payload = JSON.parse(raw) as Record<string, unknown>
+            if (currentEvent === 'pricing') {
+              yield { type: 'pricing', ...(payload as Omit<ChatPriceStreamEvent, 'type'>) }
+            } else if (currentEvent === 'token') {
+              yield { type: 'token', token: raw.replace(/^"|"$/g, '').replace(/\\"/g, '"') }
+            } else if (currentEvent === 'done') {
+              yield { type: 'done' }
+              return
+            }
+          } catch { /* skip malformed lines */ }
+        }
+      }
+    }
+  },
 }
 
 // ─── Estimates ────────────────────────────────────────────────────────────────

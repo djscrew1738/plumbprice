@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { BriefcaseBusiness, CircleDollarSign, MapPin, RefreshCw, UserRound, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  BriefcaseBusiness, CircleDollarSign, MapPin, RefreshCw,
+  UserRound, TrendingUp, ChevronLeft, ChevronRight, Plus, X, Check,
+} from 'lucide-react'
 import { projectsApi, type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
-import { api } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
+import { useToast } from '@/components/ui/Toast'
 
 const STAGES = [
   { key: 'lead', label: 'Lead', colClass: 'stage-lead', countColor: 'text-[color:var(--muted-ink)]', emptyColor: 'border-[color:var(--line)]' },
@@ -16,9 +19,11 @@ const STAGES = [
 ] as const
 
 export function PipelinePage() {
-  const [data,    setData]    = useState<ProjectPipelineResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState<string | null>(null)
+  const toast = useToast()
+  const [data,        setData]        = useState<ProjectPipelineResponse | null>(null)
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState<string | null>(null)
+  const [showCreate,  setShowCreate]  = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -36,29 +41,44 @@ export function PipelinePage() {
   useEffect(() => { void load() }, [load])
 
   const moveProject = useCallback(async (projectId: number, newStatus: string) => {
+    // Optimistic update
+    setData(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        projects: prev.projects.map(p =>
+          p.id === projectId ? { ...p, status: newStatus } : p
+        ),
+        summary: (() => {
+          const old = prev.projects.find(p => p.id === projectId)
+          if (!old) return prev.summary
+          const s = { ...prev.summary }
+          s[old.status] = Math.max(0, (s[old.status] ?? 1) - 1)
+          s[newStatus] = (s[newStatus] ?? 0) + 1
+          return s
+        })(),
+      }
+    })
     try {
-      await api.patch(`/projects/${projectId}/status`, { status: newStatus })
-      setData(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          projects: prev.projects.map(p =>
-            p.id === projectId ? { ...p, status: newStatus } : p
-          ),
-          summary: (() => {
-            const old = prev.projects.find(p => p.id === projectId)
-            if (!old) return prev.summary
-            const s = { ...prev.summary }
-            s[old.status] = Math.max(0, (s[old.status] ?? 1) - 1)
-            s[newStatus] = (s[newStatus] ?? 0) + 1
-            return s
-          })(),
-        }
-      })
+      await projectsApi.update(projectId, { status: newStatus })
     } catch {
-      // Silent — user still sees the current state
+      toast.error('Could not move project', 'Refreshing pipeline…')
+      void load()
     }
-  }, [])
+  }, [load, toast])
+
+  const handleProjectCreated = useCallback((project: ProjectPipelineItem) => {
+    setShowCreate(false)
+    setData(prev => {
+      if (!prev) return { projects: [project], summary: { lead: 1 } }
+      return {
+        ...prev,
+        projects: [project, ...prev.projects],
+        summary: { ...prev.summary, lead: (prev.summary['lead'] ?? 0) + 1 },
+      }
+    })
+    toast.success('Project created', project.name)
+  }, [toast])
 
   const stageKeys = STAGES.map(s => s.key)
   const projects = data?.projects ?? []
@@ -79,14 +99,23 @@ export function PipelinePage() {
           title="Track bid movement from lead to close."
           description="Watch stage counts, win rate, and total open value in one view."
           actions={(
-            <button
-              onClick={() => void load()}
-              disabled={loading}
-              className="btn-secondary min-h-0 py-2"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => void load()}
+                disabled={loading}
+                className="btn-secondary min-h-0 py-2"
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary min-h-0 py-2"
+              >
+                <Plus size={14} />
+                <span className="hidden sm:inline">New Project</span>
+              </button>
+            </div>
           )}
         >
           <div className="flex flex-wrap items-center gap-2.5">
@@ -203,6 +232,16 @@ export function PipelinePage() {
         )}
         </div>
       </div>
+
+      {/* Create Project Modal */}
+      <AnimatePresence>
+        {showCreate && (
+          <CreateProjectModal
+            onClose={() => setShowCreate(false)}
+            onCreated={handleProjectCreated}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -322,5 +361,179 @@ function ProjectCard({
         </div>
       </div>
     </motion.article>
+  )
+}
+
+// ─── Create Project Modal ─────────────────────────────────────────────────────
+
+const JOB_TYPES = ['service', 'construction', 'commercial']
+const COUNTIES  = ['Dallas', 'Tarrant', 'Collin', 'Denton', 'Rockwall', 'Parker']
+
+function CreateProjectModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (p: ProjectPipelineItem) => void
+}) {
+  const toast = useToast()
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: '',
+    job_type: 'service',
+    customer_name: '',
+    county: 'Dallas',
+    notes: '',
+  })
+
+  const set = (field: string, val: string) =>
+    setForm(prev => ({ ...prev, [field]: val }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.name.trim()) return
+    setSaving(true)
+    try {
+      const res = await projectsApi.create({
+        name:          form.name.trim(),
+        job_type:      form.job_type,
+        customer_name: form.customer_name.trim() || undefined,
+        county:        form.county,
+        notes:         form.notes.trim() || undefined,
+      })
+      // API may return the new project directly or nested
+      const raw = res.data as unknown as { project?: ProjectPipelineItem } | ProjectPipelineItem
+      const project = ('project' in raw && raw.project) ? raw.project : raw as ProjectPipelineItem
+      onCreated(project)
+    } catch {
+      toast.error('Could not create project', 'Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
+        animate={{ opacity: 1, scale: 1,    y: 0  }}
+        exit={{   opacity: 0, scale: 0.96,  y: 16 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <form
+          onSubmit={e => void handleSubmit(e)}
+          className="w-full max-w-md bg-[color:var(--panel)] border border-[color:var(--line)] rounded-2xl shadow-2xl overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--line)]">
+            <h2 className="text-sm font-bold text-[color:var(--ink)]">New Project</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="px-5 py-4 space-y-4">
+            {/* Name */}
+            <div>
+              <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">
+                Project Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                autoFocus
+                value={form.name}
+                onChange={e => set('name', e.target.value)}
+                placeholder="e.g. 123 Main St — Water Heater"
+                className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+                required
+              />
+            </div>
+
+            {/* Job type + County */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Job Type</label>
+                <select
+                  value={form.job_type}
+                  onChange={e => set('job_type', e.target.value)}
+                  className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+                >
+                  {JOB_TYPES.map(t => (
+                    <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">County</label>
+                <select
+                  value={form.county}
+                  onChange={e => set('county', e.target.value)}
+                  className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+                >
+                  {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Customer */}
+            <div>
+              <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Customer Name</label>
+              <input
+                value={form.customer_name}
+                onChange={e => set('customer_name', e.target.value)}
+                placeholder="Optional"
+                className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={e => set('notes', e.target.value)}
+                placeholder="Optional job notes…"
+                rows={2}
+                className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-[color:var(--line)] bg-[color:var(--panel-strong)]">
+            <button type="button" onClick={onClose} className="btn-secondary min-h-0 py-2">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !form.name.trim()}
+              className="btn-primary min-h-0 py-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : (
+                <Check size={13} />
+              )}
+              {saving ? 'Creating…' : 'Create Project'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </>
   )
 }

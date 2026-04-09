@@ -37,6 +37,7 @@ export function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveOk, setSaveOk] = useState(false)
+  const [confirmSave, setConfirmSave] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -97,6 +98,7 @@ export function AdminPage() {
   }
 
   const saveMarkup = async () => {
+    setConfirmSave(false)
     setSaving(true)
     try {
       await Promise.all(markupRules.map(r =>
@@ -115,7 +117,10 @@ export function AdminPage() {
     }
   }
 
-  const updateMarkup = (jobType: string, field: keyof MarkupRule, value: number) => {
+  const updateMarkup = (jobType: string, field: keyof MarkupRule, rawValue: number) => {
+    const value = field === 'materials_markup_pct'
+      ? Math.min(200, Math.max(0, rawValue))
+      : Math.min(500, Math.max(0, rawValue))
     setMarkupRules(prev => prev.map(r => r.job_type === jobType ? { ...r, [field]: value } : r))
   }
 
@@ -286,7 +291,7 @@ export function AdminPage() {
                               className="input pr-8"
                               value={rule.materials_markup_pct}
                               onChange={e => updateMarkup(rule.job_type, 'materials_markup_pct', parseFloat(e.target.value))}
-                              step="1" min="0" max="100"
+                              step="1" min="0" max="200"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[color:var(--muted-ink)]">%</span>
                           </div>
@@ -310,15 +315,34 @@ export function AdminPage() {
                     </motion.div>
                   ))}
                   {markupRules.length > 0 && (
-                    <motion.button
-                      onClick={saveMarkup}
-                      disabled={saving}
-                      whileTap={{ scale: 0.97 }}
-                      className="btn-primary w-full"
-                    >
-                      {saving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
-                      {saving ? 'Saving…' : 'Save Markup Rules'}
-                    </motion.button>
+                    <motion.div className="flex items-center gap-2">
+                      {confirmSave ? (
+                        <>
+                          <span className="text-sm text-[color:var(--muted-ink)] flex-1">Save changes to all markup rules?</span>
+                          <button
+                            onClick={() => void saveMarkup()}
+                            disabled={saving}
+                            className="btn-primary disabled:opacity-50"
+                          >
+                            {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                            {saving ? 'Saving…' : 'Confirm Save'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmSave(false)}
+                            className="btn-secondary"
+                          >Cancel</button>
+                        </>
+                      ) : (
+                        <motion.button
+                          onClick={() => setConfirmSave(true)}
+                          whileTap={{ scale: 0.97 }}
+                          className="btn-primary w-full"
+                        >
+                          <Save size={15} />
+                          Save Markup Rules
+                        </motion.button>
+                      )}
+                    </motion.div>
                   )}
                 </div>
           )}

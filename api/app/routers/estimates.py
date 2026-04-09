@@ -5,8 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 import structlog
 
+from app.core.auth import get_current_user
 from app.database import get_db
 from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion
+from app.models.users import User
 from app.schemas.estimates import (
     ServiceEstimateRequest, ConstructionEstimateRequest,
     EstimateResponse, EstimateListItem, EstimateVersionItem, EstimateVersionListResponse
@@ -29,6 +31,7 @@ class EstimateStatusUpdate(BaseModel):
 async def create_service_estimate(
     request: ServiceEstimateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a deterministic service estimate from a labor template."""
     try:
@@ -47,16 +50,20 @@ async def create_service_estimate(
             access=request.access_type,
             urgency=request.urgency,
             county=request.county,
+            city=request.city,
+            include_trip_charge=request.include_trip_charge,
             preferred_supplier=request.preferred_supplier,
         )
 
         estimate = await persist_estimate(
             db=db,
             result=result,
-            title=f"{request.task_code} — {request.county}",
+            title=f"{request.task_code} — {request.city or request.county}",
             county=request.county,
             preferred_supplier=request.preferred_supplier,
             project_id=request.project_id,
+            created_by=current_user.id,
+            organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
         )
 
         return EstimateResponse(
@@ -168,9 +175,14 @@ async def list_estimates(
     limit: int = Query(50, le=200),
     offset: int = Query(0),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """List estimates with optional filters."""
+    """List estimates with optional filters (scoped to current user's organization)."""
     query = select(Estimate).order_by(desc(Estimate.created_at)).limit(limit).offset(offset)
+    if hasattr(current_user, "organization_id") and current_user.organization_id:
+        query = query.where(Estimate.organization_id == current_user.organization_id)
+    else:
+        query = query.where(Estimate.created_by == current_user.id)
     if status:
         query = query.where(Estimate.status == status)
     if job_type:
@@ -195,8 +207,12 @@ async def list_estimates(
 
 
 @router.get("/{estimate_id}")
-async def get_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
-    """Get a single estimate with line items."""
+async def get_estimate(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a single estimate with line items (eager-loaded via selectin)."""
     result = await db.execute(
         select(Estimate).where(Estimate.id == estimate_id)
     )
@@ -204,12 +220,8 @@ async def get_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
 
-    li_result = await db.execute(
-        select(EstimateLineItem)
-        .where(EstimateLineItem.estimate_id == estimate_id)
-        .order_by(EstimateLineItem.sort_order)
-    )
-    line_items = li_result.scalars().all()
+    # line_items are eager-loaded via lazy="selectin" — no second query needed
+    line_items = sorted(estimate.line_items, key=lambda li: li.sort_order or 0)
 
     return {
         "id": estimate.id,
@@ -250,7 +262,11 @@ async def get_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{estimate_id}/versions", response_model=EstimateVersionListResponse)
-async def list_estimate_versions(estimate_id: int, db: AsyncSession = Depends(get_db)):
+async def list_estimate_versions(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     estimate_result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = estimate_result.scalar_one_or_none()
     if not estimate:
@@ -279,7 +295,11 @@ async def list_estimate_versions(estimate_id: int, db: AsyncSession = Depends(ge
 
 
 @router.get("/{estimate_id}/cost-breakdown")
-async def get_cost_breakdown(estimate_id: int, db: AsyncSession = Depends(get_db)):
+async def get_cost_breakdown(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Return a percentage breakdown of costs for an estimate."""
     result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = result.scalar_one_or_none()
@@ -317,6 +337,7 @@ async def update_estimate_status(
     estimate_id: int,
     body: EstimateStatusUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update estimate status (draft → sent → accepted/rejected)."""
     if body.status not in VALID_ESTIMATE_STATUSES:
@@ -335,9 +356,12 @@ async def update_estimate_status(
 
 
 @router.post("/{estimate_id}/duplicate", response_model=EstimateResponse, status_code=http_status.HTTP_201_CREATED)
-async def duplicate_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
+async def duplicate_estimate(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Duplicate an estimate: creates a copy with status=draft, title appended ' (copy)', and all line items copied."""
-    # Fetch the original estimate
     result = await db.execute(
         select(Estimate).where(Estimate.id == estimate_id)
     )
@@ -345,20 +369,14 @@ async def duplicate_estimate(estimate_id: int, db: AsyncSession = Depends(get_db
     if not original_estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
 
-    # Fetch all line items for the original estimate
-    li_result = await db.execute(
-        select(EstimateLineItem)
-        .where(EstimateLineItem.estimate_id == estimate_id)
-        .order_by(EstimateLineItem.sort_order)
-    )
-    original_line_items = li_result.scalars().all()
+    # line_items eager-loaded via selectin — no extra query
+    original_line_items = sorted(original_estimate.line_items, key=lambda li: li.sort_order or 0)
 
-    # Create a new estimate with same data but new title and status=draft
     new_estimate = Estimate(
         project_id=original_estimate.project_id,
         title=f"{original_estimate.title} (copy)",
         job_type=original_estimate.job_type,
-        status="draft",  # Always start as draft
+        status="draft",
         labor_total=original_estimate.labor_total,
         materials_total=original_estimate.materials_total,
         tax_total=original_estimate.tax_total,
@@ -374,14 +392,14 @@ async def duplicate_estimate(estimate_id: int, db: AsyncSession = Depends(get_db
         county=original_estimate.county,
         tax_rate=original_estimate.tax_rate,
         preferred_supplier=original_estimate.preferred_supplier,
-        created_by=original_estimate.created_by,
+        created_by=current_user.id,
         organization_id=original_estimate.organization_id,
         valid_until=original_estimate.valid_until,
     )
     db.add(new_estimate)
-    await db.flush()  # Flush to get the new estimate's ID
+    await db.flush()
 
-    # Copy all line items
+    copied_items = []
     for original_li in original_line_items:
         new_li = EstimateLineItem(
             estimate_id=new_estimate.id,
@@ -398,17 +416,10 @@ async def duplicate_estimate(estimate_id: int, db: AsyncSession = Depends(get_db
             trace_json=original_li.trace_json,
         )
         db.add(new_li)
+        copied_items.append(new_li)
 
     await db.commit()
     await db.refresh(new_estimate)
-
-    # Fetch the copied line items for response
-    li_result = await db.execute(
-        select(EstimateLineItem)
-        .where(EstimateLineItem.estimate_id == new_estimate.id)
-        .order_by(EstimateLineItem.sort_order)
-    )
-    copied_line_items = li_result.scalars().all()
 
     return EstimateResponse(
         id=new_estimate.id,
@@ -438,14 +449,18 @@ async def duplicate_estimate(estimate_id: int, db: AsyncSession = Depends(get_db
                 "total_cost": li.total_cost,
                 "supplier": li.supplier,
             }
-            for li in copied_line_items
+            for li in copied_items
         ],
         created_at=new_estimate.created_at,
     )
 
 
 @router.delete("/{estimate_id}", status_code=http_status.HTTP_204_NO_CONTENT)
-async def delete_estimate(estimate_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_estimate(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Delete an estimate."""
     result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = result.scalar_one_or_none()

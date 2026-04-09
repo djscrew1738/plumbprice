@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, TrendingDown, Package, DollarSign, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
+import { RefreshCw, TrendingDown, Package, DollarSign, ChevronDown, ChevronUp, Search, X, Copy, Check } from 'lucide-react'
 import { cn, formatCurrencyDecimal } from '@/lib/utils'
-import axios from 'axios'
+import { api } from '@/lib/api'
 import { PageIntro } from '@/components/layout/PageIntro'
+import { useToast } from '@/components/ui/Toast'
 
 interface SupplierPrice { name: string; sku: string; cost: number }
 interface CatalogItem {
@@ -17,7 +18,6 @@ interface CatalogItem {
   prices: { ferguson?: SupplierPrice; moore_supply?: SupplierPrice; apex?: SupplierPrice }
 }
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') + '/api/v1'
 const SUPPLIER_LABELS: Record<string, string> = {
   ferguson: 'Ferguson',
   moore_supply: 'Moore Supply',
@@ -29,17 +29,27 @@ function prettyCat(cat: string) {
 }
 
 export function SuppliersPage() {
-  const [items,       setItems]       = useState<CatalogItem[]>([])
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState<string | null>(null)
-  const [expanded,    setExpanded]    = useState<string | null>(null)
-  const [search,      setSearch]      = useState('')
+  const toast = useToast()
+  const [items,          setItems]          = useState<CatalogItem[]>([])
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState<string | null>(null)
+  const [expanded,       setExpanded]       = useState<string | null>(null)
+  const [search,         setSearch]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
+  const [copiedSku,      setCopiedSku]      = useState<string | null>(null)
+
+  const copySku = (sku: string) => {
+    void navigator.clipboard.writeText(sku).then(() => {
+      setCopiedSku(sku)
+      toast.success('SKU copied', sku)
+      setTimeout(() => setCopiedSku(null), 2000)
+    })
+  }
 
   const fetchCatalog = async () => {
     try {
       setLoading(true); setError(null)
-      const res = await axios.get(`${API}/suppliers/catalog`)
+      const res = await api.get('/suppliers/catalog')
       const raw: Record<string, Record<string, { sku: string; name: string; cost: number }>> =
         res.data?.items ?? res.data ?? {}
       const parsed: CatalogItem[] = Object.entries(raw).map(([canonical_id, prices]) => {
@@ -66,7 +76,7 @@ export function SuppliersPage() {
     }
   }
 
-  useEffect(() => { fetchCatalog() }, [])
+  useEffect(() => { void fetchCatalog() }, [])
 
   const categories = useMemo(() => {
     const cats = [...new Set(items.map(i => i.category))].sort()
@@ -97,7 +107,7 @@ export function SuppliersPage() {
           description="Check the lowest supplier cost per item without leaving the workspace shell."
           actions={(
             <button
-              onClick={fetchCatalog}
+              onClick={() => void fetchCatalog()}
               disabled={loading}
               className="btn-secondary min-h-0 px-3 py-2"
               aria-label="Refresh supplier catalog"
@@ -200,7 +210,7 @@ export function SuppliersPage() {
         {error && !loading && (
           <div className="card p-10 text-center">
             <p className="text-red-700 font-medium text-sm mb-3">{error}</p>
-            <button onClick={fetchCatalog} className="btn-primary mx-auto">Retry</button>
+            <button onClick={() => void fetchCatalog()} className="btn-primary mx-auto">Retry</button>
           </div>
         )}
 
@@ -272,7 +282,16 @@ export function SuppliersPage() {
                                         {SUPPLIER_LABELS[sup]}
                                         {isBest && <span className="px-1.5 py-px bg-emerald-500/10 text-emerald-700 text-[9px] rounded-full border border-emerald-500/20 font-bold">BEST</span>}
                                       </div>
-                                      <div className="text-[11px] text-[color:var(--muted-ink)] font-mono mt-0.5">{p.sku}</div>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className="text-[11px] text-[color:var(--muted-ink)] font-mono">{p.sku}</span>
+                                        <button
+                                          onClick={e => { e.stopPropagation(); copySku(p.sku) }}
+                                          className="p-0.5 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                                          title="Copy SKU"
+                                        >
+                                          {copiedSku === p.sku ? <Check size={10} className="text-emerald-600" /> : <Copy size={10} />}
+                                        </button>
+                                      </div>
                                     </div>
                                     <div className={cn('text-sm font-bold tabular-nums', isBest ? 'text-emerald-700' : 'text-[color:var(--muted-ink)]')}>
                                       {formatCurrencyDecimal(p.cost)}

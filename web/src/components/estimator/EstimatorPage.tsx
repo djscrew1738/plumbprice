@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, RotateCcw, Zap, Copy, Check, FileUp } from 'lucide-react'
+import { Send, RotateCcw, Zap, Copy, Check, FileUp, X } from 'lucide-react'
 import { chatApi, estimatesApi, type EstimateDetailResponse } from '@/lib/api'
 import { ConfidenceBadge } from './ConfidenceBadge'
 import { useToast } from '@/components/ui/Toast'
@@ -97,20 +97,36 @@ export function EstimatorPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeSuggestion, setActiveSuggestion] = useState(0)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+
+  const [blueprintName, setBlueprintName] = useState<string | null>(null)
 
   const MAX_INPUT = 2000
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const resumeErrorRef = useRef(error)
   const abortRef = useRef<AbortController | null>(null)
 
   const uploadMode = entryMode === 'upload-job-files'
-  const showUploadPlaceholder = uploadMode && messages.length === 0
+  const showUploadPlaceholder = uploadMode && messages.length === 0 && !uploadedFile
 
   useEffect(() => {
     setEntryMode(normalizeEntryMode(entryParam))
   }, [entryParam])
+
+  // Read blueprint filename from sessionStorage when landing from Blueprints page
+  useEffect(() => {
+    const isBlueprintEntry = searchParams.get('blueprint') === '1'
+    if (isBlueprintEntry && typeof window !== 'undefined') {
+      const name = sessionStorage.getItem('blueprint_filename')
+      if (name) {
+        setBlueprintName(name)
+        sessionStorage.removeItem('blueprint_filename')
+      }
+    }
+  }, [searchParams])
 
   useEffect(() => {
     resumeErrorRef.current = error
@@ -204,7 +220,7 @@ export function EstimatorPage() {
 
   const sendMessage = useCallback(async (text?: string) => {
     const message = (text ?? input).trim()
-    if (!message || loading || uploadMode) {
+    if (!message || loading || (uploadMode && !uploadedFile)) {
       return
     }
     if (message.length > MAX_INPUT) {
@@ -229,41 +245,81 @@ export function EstimatorPage() {
     }
     setLoading(true)
 
+    // Build history from current messages (before this new user turn)
+    const history = messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+    // Placeholder assistant message for streaming
+    const streamId = crypto.randomUUID()
+    setMessages(prev => [...prev, {
+      id: streamId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    }])
+
     try {
-      const { data } = await chatApi.price({ message, county })
-      const aiMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.answer,
-        estimate: data.estimate ? {
-          ...data.estimate,
-          line_items: data.estimate.line_items.map(item => ({
-            ...item,
-            supplier: item.supplier ?? undefined,
-            sku: item.sku ?? undefined,
-          })),
-        } : undefined,
-        confidence: data.confidence,
-        confidence_label: data.confidence_label,
-        assumptions: data.assumptions,
-        timestamp: new Date(),
+      let pricingData: { estimate?: ChatMessage['estimate']; confidence?: number; confidence_label?: string; assumptions?: string[] } = {}
+      let narrative = ''
+
+      for await (const event of chatApi.priceStream({ message, county, history })) {
+        if (event.type === 'pricing') {
+          pricingData = {
+            estimate: event.estimate ? {
+              ...event.estimate,
+              line_items: (event.estimate.line_items ?? []).map(item => ({
+                ...item,
+                supplier: item.supplier ?? undefined,
+                sku: item.sku ?? undefined,
+              })),
+            } : undefined,
+            confidence: event.confidence,
+            confidence_label: event.confidence_label,
+            assumptions: event.assumptions,
+          }
+        } else if (event.type === 'token') {
+          narrative += event.token ?? ''
+          setMessages(prev => prev.map(m =>
+            m.id === streamId ? { ...m, content: narrative } : m
+          ))
+        } else if (event.type === 'done') {
+          break
+        }
       }
-      setMessages(prev => [...prev, aiMsg])
-      if (data.estimate) {
-        setSelectedEstimate(aiMsg)
-        setSheetOpen(true)
+
+      // Finalise the streamed message with pricing metadata
+      setMessages(prev => prev.map(m => {
+        if (m.id !== streamId) return m
+        return {
+          ...m,
+          content: narrative || pricingData.estimate
+            ? narrative
+            : 'Could not reach the API. Please check that the backend is running.',
+          estimate: pricingData.estimate,
+          confidence: pricingData.confidence,
+          confidence_label: pricingData.confidence_label
+            ? normalizeConfidenceLabel(pricingData.confidence_label)
+            : 'HIGH',
+          assumptions: pricingData.assumptions ?? [],
+        }
+      }))
+
+      if (pricingData.estimate) {
+        const finalMsg = messages.find(m => m.id === streamId)
+        if (finalMsg) {
+          setSelectedEstimate(finalMsg)
+          setSheetOpen(true)
+        }
       }
     } catch {
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'Could not reach the API. Please check that the backend is running.',
-        timestamp: new Date(),
-      }])
+      setMessages(prev => prev.map(m =>
+        m.id === streamId
+          ? { ...m, content: 'Could not reach the API. Please check that the backend is running.' }
+          : m
+      ))
     } finally {
       setLoading(false)
     }
-  }, [input, loading, county, uploadMode])
+  }, [input, loading, county, uploadMode, uploadedFile, messages])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -317,15 +373,63 @@ export function EstimatorPage() {
           <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
             {showUploadPlaceholder && (
               <div className="flex h-full items-center justify-center px-4 py-8">
-                <div className="max-w-sm text-center">
-                  <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
-                    <FileUp size={24} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.webp"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) {
+                      setUploadedFile(f)
+                      setInput(`I have a job file: "${f.name}". Please help me price the plumbing work described.`)
+                      setTimeout(() => inputRef.current?.focus(), 50)
+                    }
+                  }}
+                />
+                <div
+                  className="w-full max-w-sm text-center cursor-pointer group"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] transition-colors group-hover:border-[color:var(--accent-strong)] group-hover:bg-[color:var(--accent-soft)]">
+                    <FileUp size={26} />
                   </div>
-                  <h2 className="text-xl font-semibold text-[color:var(--ink)]">Upload Job Files</h2>
+                  <h2 className="text-xl font-semibold text-[color:var(--ink)]">Upload Job File</h2>
                   <p className="mt-2 text-sm text-[color:var(--muted-ink)]">
-                    File-first intake is not wired yet. Switch to Quick Quote to keep pricing in chat.
+                    Click to browse or drag a PDF, photo, or plan sheet — then describe the scope in chat.
                   </p>
+                  <p className="mt-3 text-[11px] text-[color:var(--muted-ink)] opacity-60">PDF · PNG · JPG · WEBP · up to 20 MB</p>
                 </div>
+              </div>
+            )}
+
+            {/* Uploaded file banner */}
+            {uploadMode && uploadedFile && messages.length === 0 && (
+              <div className="flex items-center gap-2.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-2.5 mb-3 text-sm">
+                <FileUp size={14} className="text-[color:var(--accent-strong)] shrink-0" />
+                <span className="flex-1 truncate text-[color:var(--ink)] font-medium">{uploadedFile.name}</span>
+                <button
+                  onClick={() => { setUploadedFile(null); setInput('') }}
+                  className="p-1 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+
+            {/* Blueprint loaded banner */}
+            {blueprintName && messages.length === 0 && (
+              <div className="flex items-center gap-2.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] px-3 py-2.5 mb-3 text-sm">
+                <FileUp size={14} className="text-[color:var(--accent-strong)] shrink-0" />
+                <span className="flex-1 truncate text-[color:var(--ink)]">
+                  Blueprint loaded: <span className="font-medium">{blueprintName}</span> — describe the scope to price it.
+                </span>
+                <button
+                  onClick={() => setBlueprintName(null)}
+                  className="p-1 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                >
+                  <X size={13} />
+                </button>
               </div>
             )}
 
@@ -466,17 +570,17 @@ export function EstimatorPage() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder={uploadMode ? 'Switch to Quick Quote to ask pricing questions' : 'Ask a pricing question…'}
+                placeholder={uploadMode && !uploadedFile ? 'Select a file above to begin…' : 'Ask a pricing question…'}
                 rows={1}
                 maxLength={MAX_INPUT}
-                disabled={uploadMode}
+                disabled={uploadMode && !uploadedFile}
                 className="input max-h-[120px] resize-none overflow-auto py-2.5 disabled:cursor-not-allowed disabled:opacity-65"
                 style={{ minHeight: '46px' }}
               />
               <motion.button
                 type="button"
                 onClick={() => void sendMessage()}
-                disabled={!input.trim() || loading || uploadMode}
+                disabled={!input.trim() || loading || (uploadMode && !uploadedFile)}
                 whileTap={{ scale: 0.9 }}
                 className="btn-primary h-11 w-11 shrink-0 rounded-2xl p-0 disabled:opacity-40"
                 aria-label="Send message"
@@ -485,8 +589,8 @@ export function EstimatorPage() {
               </motion.button>
             </div>
             <div className="mt-1.5 flex items-center justify-between px-0.5">
-              {uploadMode ? (
-                <span className="text-[11px] text-[color:var(--muted-ink)]">Upload intake placeholder is active.</span>
+              {uploadMode && !uploadedFile ? (
+                <span className="text-[11px] text-[color:var(--muted-ink)]">Select a file to unlock chat.</span>
               ) : messages.length > 0 ? (
                 <button
                   type="button"

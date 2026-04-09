@@ -49,16 +49,28 @@ class Settings(BaseSettings):
         default="http://localhost:11434/v1",
         env="HERMES_ENDPOINT_URL",
     )
-    hermes_model: str = Field(default="hermes3", env="HERMES_MODEL")
+    # Primary model: best quality (used first)
+    llm_primary_model: str = Field(default="qwen2.5:7b-instruct", env="LLM_PRIMARY_MODEL")
+    # Secondary model: fast fallback (used when primary circuit-breaks)
+    llm_secondary_model: str = Field(default="hermes3:3b", env="LLM_SECONDARY_MODEL")
+    # Legacy alias — kept for backward-compat; overridden by llm_primary_model when set
+    hermes_model: str = Field(default="qwen2.5:7b-instruct", env="HERMES_MODEL")
     hermes_api_key: str = Field(default="ollama", env="HERMES_API_KEY")
-    llm_timeout: float = Field(default=12.0, env="LLM_TIMEOUT")
+    llm_timeout: float = Field(default=30.0, env="LLM_TIMEOUT")
+    llm_classify_timeout: float = Field(default=20.0, env="LLM_CLASSIFY_TIMEOUT")
     llm_classify_threshold: float = Field(default=0.75, env="LLM_CLASSIFY_THRESHOLD")
 
     # CORS
     cors_origins: list[str] = Field(
-        default=["http://localhost:3000"],
+        default=["http://localhost:3000", "https://app.ctlplumbing.com"],
         env="CORS_ORIGINS"
     )
+
+    # External price data sources
+    apify_token: Optional[str] = Field(default=None, env="APIFY_TOKEN")
+    apify_actor_id: str = Field(default="apify/website-content-crawler", env="APIFY_ACTOR_ID")
+    construct_api_url: Optional[str] = Field(default=None, env="CONSTRUCT_API_URL")
+    price_cache_ttl_hours: int = Field(default=24, env="PRICE_CACHE_TTL_HOURS")
 
     # Celery
     celery_broker_url: str = Field(default="redis://localhost:6379/0", env="CELERY_BROKER_URL")

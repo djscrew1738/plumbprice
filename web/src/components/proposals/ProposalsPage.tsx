@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileOutput, RefreshCw, MapPin, Calendar, X,
   Copy, Check, Printer, FileText, ChevronRight,
-  Zap, Building2, Clock,
+  Zap, Building2, Clock, Download,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api } from '@/lib/api'
@@ -183,29 +183,44 @@ function ProposalModal({
   const proposalText = buildProposalText(estimate)
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(proposalText).then(() => {
+    void navigator.clipboard.writeText(proposalText).then(() => {
       setCopied(true)
       toast.success('Proposal copied to clipboard')
       setTimeout(() => setCopied(false), 2500)
     })
   }
 
+  const handleDownload = () => {
+    const blob = new Blob([proposalText], { type: 'text/plain;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `proposal-PP-${String(estimate.id).padStart(5, '0')}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handlePrint = () => {
-    const win = window.open('', '_blank')
-    if (!win) return
+    const win = window.open('', '_blank', 'width=800,height=900')
+    if (!win) {
+      // Fallback: download as txt if popup blocked
+      handleDownload()
+      return
+    }
     win.document.write(`
       <html><head>
         <title>Proposal PP-${String(estimate.id).padStart(5, '0')}</title>
         <style>
-          body { font-family: 'Courier New', monospace; font-size: 13px;
-                 margin: 48px; line-height: 1.6; color: #1a1a1a; }
-          pre { white-space: pre-wrap; word-wrap: break-word; }
+          @page { margin: 1in; }
+          body { font-family: 'Courier New', monospace; font-size: 12px;
+                 line-height: 1.65; color: #111; background: #fff; }
+          pre { white-space: pre-wrap; word-wrap: break-word; margin: 0; }
         </style>
       </head><body>
-        <pre>${proposalText}</pre>
+        <pre>${proposalText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+        <script>window.onload = function(){ window.print(); }</script>
       </body></html>`)
     win.document.close()
-    win.print()
   }
 
   return (
@@ -246,6 +261,14 @@ function ProposalModal({
               >
                 {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                 {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                onClick={handleDownload}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
+                title="Download as .txt"
+              >
+                <Download size={13} />
+                <span className="hidden sm:inline">Download</span>
               </button>
               <button
                 onClick={handlePrint}

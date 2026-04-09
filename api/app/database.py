@@ -12,9 +12,15 @@ engine_kwargs = {
 if not settings.database_url.startswith("sqlite"):
     engine_kwargs.update(
         {
-            "pool_pre_ping": True,
-            "pool_size": 10,
-            "max_overflow": 20,
+            "pool_pre_ping": True,    # discard stale connections before each use
+            "pool_size": 10,          # base pool
+            "max_overflow": 20,       # burst capacity
+            "pool_timeout": 30,       # seconds to wait for a connection
+            "pool_recycle": 1800,     # recycle connections every 30 min
+            "connect_args": {
+                "server_settings": {"application_name": "plumbprice-api"},
+                "command_timeout": 30,
+            },
         }
     )
 

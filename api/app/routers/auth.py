@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 import structlog
 
 from app.database import get_db
@@ -17,7 +17,7 @@ router = APIRouter()
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8, description="Minimum 8 characters")
     full_name: str = ""
 
 
@@ -36,6 +36,10 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Track last successful login
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
 
     access_token = create_access_token(
         data={"sub": str(user.id)},

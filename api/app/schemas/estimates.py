@@ -17,9 +17,11 @@ class LineItemCreate(BaseModel):
 class ServiceEstimateRequest(BaseModel):
     task_code: str = Field(..., description="Labor template code, e.g. TOILET_REPLACE_STANDARD")
     assembly_code: Optional[str] = None
-    access_type: str = Field(default="first_floor", description="first_floor, second_floor, attic, crawlspace")
+    access_type: str = Field(default="first_floor", description="first_floor, second_floor, attic, crawlspace, slab")
     urgency: str = Field(default="standard", description="standard, same_day, emergency")
     county: str = Field(default="Dallas")
+    city: Optional[str] = Field(default=None, description="DFW city name for zone premium (e.g. 'highland park')")
+    include_trip_charge: bool = Field(default=True, description="Include per-visit service call fee")
     preferred_supplier: Optional[str] = None
     project_id: Optional[int] = None
     notes: Optional[str] = None

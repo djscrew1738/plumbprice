@@ -6,10 +6,12 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, MapPin, Layers, CircleDollarSign,
   FileText, TrendingUp, Tag, AlertCircle, Printer, Download,
+  Copy, Trash2, Zap, RefreshCw,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 interface LineItem {
   line_type: string
@@ -75,11 +77,15 @@ function formatDate(dateStr: string) {
 export function EstimateDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const toast  = useToast()
   const id = Number(params?.id)
 
-  const [estimate, setEstimate] = useState<EstimateDetail | null>(null)
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState<string | null>(null)
+  const [estimate,      setEstimate]      = useState<EstimateDetail | null>(null)
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState<string | null>(null)
+  const [duplicating,   setDuplicating]   = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting,      setDeleting]      = useState(false)
 
   const exportCSV = useCallback(() => {
     if (!estimate) return
@@ -99,6 +105,34 @@ export function EstimateDetailPage() {
     a.click()
     URL.revokeObjectURL(url)
   }, [estimate])
+
+  const handleDuplicate = useCallback(async () => {
+    if (!estimate) return
+    setDuplicating(true)
+    try {
+      const res = await api.post<{ id: number }>(`/estimates/${estimate.id}/duplicate`, {})
+      toast.success('Estimate duplicated')
+      router.push(`/estimates/${res.data.id}`)
+    } catch {
+      toast.error('Could not duplicate', 'Please try again.')
+    } finally {
+      setDuplicating(false)
+    }
+  }, [estimate, router, toast])
+
+  const handleDelete = useCallback(async () => {
+    if (!estimate) return
+    setDeleting(true)
+    try {
+      await api.delete(`/estimates/${estimate.id}`)
+      toast.success('Estimate deleted')
+      router.push('/estimates')
+    } catch {
+      toast.error('Could not delete', 'Please try again.')
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }, [estimate, router, toast])
 
   useEffect(() => {
     if (!id) return
@@ -175,10 +209,26 @@ export function EstimateDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Open in estimator */}
+            <button
+              onClick={() => router.push(`/estimator?estimateId=${estimate.id}`)}
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+              title="Open in Estimator"
+            >
+              <Zap size={15} />
+            </button>
+            {/* Duplicate */}
+            <button
+              onClick={() => void handleDuplicate()}
+              disabled={duplicating}
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-40"
+              title="Duplicate estimate"
+            >
+              {duplicating ? <RefreshCw size={15} className="animate-spin" /> : <Copy size={15} />}
+            </button>
             <button
               onClick={exportCSV}
               className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
-              aria-label="Export line items as CSV"
               title="Export CSV"
             >
               <Download size={16} />
@@ -186,12 +236,36 @@ export function EstimateDetailPage() {
             <button
               onClick={() => window.print()}
               className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
-              aria-label="Print estimate"
               title="Print / Save as PDF"
             >
               <Printer size={16} />
             </button>
-            <div className="text-right">
+            {/* Delete with inline confirm */}
+            {confirmDelete ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-red-400 font-medium">Delete?</span>
+                <button
+                  onClick={() => void handleDelete()}
+                  disabled={deleting}
+                  className="px-2 py-1 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-semibold hover:bg-red-500/25 transition-colors disabled:opacity-40"
+                >
+                  {deleting ? <RefreshCw size={11} className="animate-spin" /> : 'Yes'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-2 py-1 rounded-lg bg-white/[0.05] text-zinc-400 text-[11px] font-semibold hover:bg-white/[0.08] transition-colors"
+                >No</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="p-2 rounded-xl hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors"
+                title="Delete estimate"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+            <div className="text-right ml-1">
               <div className="text-lg font-extrabold text-white tabular-nums">
                 {formatCurrency(estimate.grand_total)}
               </div>

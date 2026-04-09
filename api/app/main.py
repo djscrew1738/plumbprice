@@ -1,7 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 import structlog
+import uuid
 
 from app.config import settings
 from app.database import init_db, AsyncSessionLocal
@@ -9,6 +16,7 @@ from app.routers import chat, estimates, suppliers, blueprints, proposals, auth,
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 
 logger = structlog.get_logger()
+limiter = Limiter(key_func=get_remote_address)
 
 
 async def _ensure_seeded():
@@ -167,7 +175,33 @@ async def lifespan(app: FastAPI):
             endpoint=settings.hermes_endpoint_url,
         )
 
+    # Warm the price enrichment cache, then schedule periodic auto-refresh
+    import asyncio as _asyncio
+    from app.services.data_sources.price_enrichment import get_enrichment_service
+
+    enrichment_svc = get_enrichment_service()
+    _asyncio.ensure_future(enrichment_svc.refresh())
+    logger.info("Price enrichment cache warming started in background")
+
+    async def _periodic_enrichment_refresh():
+        """Re-warm price cache every price_cache_ttl_hours so prices stay current."""
+        interval = settings.price_cache_ttl_hours * 3600
+        while True:
+            await _asyncio.sleep(interval)
+            logger.info("Scheduled price enrichment refresh starting",
+                        interval_hours=settings.price_cache_ttl_hours)
+            try:
+                await enrichment_svc.refresh()
+                logger.info("Scheduled price enrichment refresh complete",
+                            stats=enrichment_svc.cache_stats())
+            except Exception as exc:
+                logger.warning("Scheduled price enrichment refresh failed", error=str(exc))
+
+    refresh_task = _asyncio.ensure_future(_periodic_enrichment_refresh())
+
     yield
+
+    refresh_task.cancel()
     logger.info("Shutting down PlumbPrice AI API")
 
 
@@ -180,13 +214,29 @@ app = FastAPI(
     redoc_url="/redoc" if settings.environment == "development" else None,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Compress responses larger than 500 bytes — saves significant bandwidth on estimate payloads
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "X-Request-ID"],
 )
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """Inject X-Request-ID header for cross-log tracing."""
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 app.add_exception_handler(PricingError, pricing_error_handler)
 app.add_exception_handler(SupplierError, supplier_error_handler)
@@ -205,6 +255,7 @@ app.include_router(admin.router,     prefix="/api/v1/admin",       tags=["admin"
 @app.get("/health")
 async def health_check():
     from app.services.llm_service import llm_service
+    from app.services.data_sources.price_enrichment import get_enrichment_service
     return {
         "status": "ok",
         "version": settings.version,
@@ -215,7 +266,24 @@ async def health_check():
             "model": settings.hermes_model,
             "available": llm_service._available,
         },
+        "price_cache": get_enrichment_service().cache_stats(),
     }
+
+
+@app.get("/api/v1/prices/cache", tags=["admin"])
+async def price_cache_stats():
+    """Return current state of the price enrichment cache."""
+    from app.services.data_sources.price_enrichment import get_enrichment_service
+    return get_enrichment_service().cache_stats()
+
+
+@app.post("/api/v1/prices/refresh", tags=["admin"])
+async def price_cache_refresh():
+    """Trigger an immediate background refresh of the price enrichment cache."""
+    import asyncio as _asyncio
+    from app.services.data_sources.price_enrichment import get_enrichment_service
+    _asyncio.ensure_future(get_enrichment_service().refresh())
+    return {"status": "refresh_started"}
 
 
 @app.get("/")

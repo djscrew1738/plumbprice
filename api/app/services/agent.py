@@ -570,6 +570,225 @@ TASK_KEYWORDS: dict[str, dict] = {
         "default_access": "first_floor",
         "priority": 1,
     },
+
+    "DRAIN_CLEAN_KITCHEN": {
+        "keywords": [
+            "kitchen drain", "kitchen sink clogged", "kitchen sink backed up",
+            "grease clog", "kitchen grease drain", "kitchen drain slow",
+            "garbage disposal drain", "kitchen drain backed",
+        ],
+        "actions": ["clean", "unclog", "clear", "fix"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "DRAIN_CLEAN_BATHTUB": {
+        "keywords": [
+            "bathtub drain", "tub drain clogged", "tub won't drain",
+            "bathtub slow drain", "tub clogged", "bath drain",
+            "tub drains slow",
+        ],
+        "actions": ["clean", "unclog", "clear", "fix"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "DRAIN_CLEAN_SHOWER": {
+        "keywords": [
+            "shower drain", "shower clogged", "shower won't drain",
+            "shower drain slow", "shower backup", "shower drain backed",
+        ],
+        "actions": ["clean", "unclog", "clear", "fix"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "TOILET_AUGER_SERVICE": {
+        "keywords": [
+            "toilet clogged", "toilet won't flush", "toilet backup",
+            "toilet auger", "closet snake", "toilet not flushing",
+            "toilet stopped up", "toilet overflow",
+        ],
+        "actions": ["unclog", "clear", "fix", "snake", "auger"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "TANKLESS_WH_DESCALE": {
+        "keywords": [
+            "tankless water heater descale", "descale tankless",
+            "flush tankless water heater", "tankless maintenance",
+            "tankless annual service", "tankless scale",
+        ],
+        "actions": ["descale", "flush", "service", "clean", "maintain"],
+        "assembly": "TANKLESS_DESCALE_KIT",
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "EXPANSION_TANK_INSTALL": {
+        "keywords": [
+            "expansion tank", "thermal expansion", "expansion tank water heater",
+            "closed system expansion", "wh expansion tank",
+        ],
+        "actions": ["install", "add", "replace"],
+        "assembly": "EXPANSION_TANK_KIT",
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "WATER_HAMMER_ARRESTER": {
+        "keywords": [
+            "water hammer", "banging pipes", "pipes banging", "pipes knocking",
+            "loud pipes", "hammer arrester", "water hammer arrester",
+            "pipes make noise",
+        ],
+        "actions": ["fix", "install", "repair", "stop"],
+        "assembly": "HAMMER_ARRESTER_KIT",
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "LAUNDRY_BOX_REPLACE": {
+        "keywords": [
+            "laundry box", "washer box", "washing machine box",
+            "laundry outlet box", "washer outlet", "washing machine valves",
+            "laundry valves", "washer hookup valves",
+        ],
+        "actions": ["replace", "install", "fix", "repair"],
+        "assembly": "LAUNDRY_BOX_KIT",
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "ICE_MAKER_LINE_INSTALL": {
+        "keywords": [
+            "ice maker line", "refrigerator water line", "fridge water line",
+            "ice maker hookup", "ice maker install", "refrigerator ice maker",
+        ],
+        "actions": ["install", "run", "hookup", "connect"],
+        "assembly": "ICE_MAKER_KIT",
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "MIXING_VALVE_REPLACE": {
+        "keywords": [
+            "mixing valve", "thermostatic mixing valve", "tempering valve",
+            "anti-scald valve", "water too hot", "scald prevention",
+        ],
+        "actions": ["replace", "install", "fix", "adjust"],
+        "assembly": "MIXING_VALVE_KIT",
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "SHOWER_VALVE_CARTRIDGE": {
+        "keywords": [
+            "shower valve cartridge", "shower cartridge", "tub valve cartridge",
+            "shower dripping", "shower leaking", "tub faucet dripping",
+            "shower won't turn off", "shower hard to turn",
+            "moen cartridge", "delta monitor cartridge",
+        ],
+        "actions": ["replace", "fix", "repair"],
+        "assembly": "SHOWER_CARTRIDGE_KIT",
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "BATHTUB_DRAIN_REPAIR": {
+        "keywords": [
+            "bathtub drain repair", "tub drain broken", "trip lever broken",
+            "tub stopper broken", "bathtub won't hold water",
+            "tub drain assembly", "overflow plate",
+        ],
+        "actions": ["repair", "replace", "fix"],
+        "assembly": "TUB_DRAIN_KIT",
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "SINK_REPLACE_KITCHEN": {
+        "keywords": [
+            "kitchen sink replacement", "replace kitchen sink",
+            "new kitchen sink", "install kitchen sink",
+            "kitchen sink cracked", "kitchen sink leaking",
+        ],
+        "actions": ["replace", "install", "new"],
+        "assembly": "KITCHEN_SINK_KIT",
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "SINK_REPLACE_BATH": {
+        "keywords": [
+            "bathroom sink replacement", "replace bathroom sink",
+            "vanity sink", "pedestal sink", "new bathroom sink",
+            "lavatory replacement",
+        ],
+        "actions": ["replace", "install", "new"],
+        "assembly": "BATH_SINK_KIT",
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "GARBAGE_DISPOSAL_REPAIR": {
+        "keywords": [
+            "garbage disposal not working", "disposal jammed",
+            "disposal humming", "disposal won't turn on",
+            "reset disposal", "disposal repair",
+        ],
+        "actions": ["fix", "repair", "reset", "clear"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "HOSE_BIB_FREEZE_REPAIR": {
+        "keywords": [
+            "frozen hose bib", "burst hose bib", "hose bib frozen",
+            "sillcock frozen", "outdoor faucet frozen",
+            "hose bib burst", "freeze damage outside faucet",
+        ],
+        "actions": ["repair", "replace", "fix"],
+        "assembly": "HOSE_BIB_FREEZE_KIT",
+        "default_access": "first_floor",
+        "priority": 0,
+    },
+    "PRESSURE_TEST_SYSTEM": {
+        "keywords": [
+            "pressure test", "pressure test plumbing",
+            "whole house pressure test", "system pressure test",
+            "plumbing pressure check",
+        ],
+        "actions": ["test", "check", "inspect"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "LAUNDRY_DRAIN_INSTALL": {
+        "keywords": [
+            "laundry drain", "standpipe install", "washer drain",
+            "laundry room drain", "washing machine drain install",
+            "laundry standpipe",
+        ],
+        "actions": ["install", "add", "run"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+    "SUMP_PUMP_INSTALL": {
+        "keywords": [
+            "sump pump", "sump pit", "submersible pump",
+            "basement pump", "crawl space pump",
+            "install sump pump", "sump pump replace",
+        ],
+        "actions": ["install", "replace", "add"],
+        "assembly": "SUMP_PUMP_KIT",
+        "default_access": "crawlspace",
+        "priority": 1,
+    },
+    "SHOWER_PAN_REPLACE": {
+        "keywords": [
+            "shower pan", "shower base", "shower floor cracked",
+            "shower pan leaking", "replace shower pan",
+            "shower base cracked", "shower floor leaking",
+        ],
+        "actions": ["replace", "install", "fix"],
+        "assembly": None,
+        "default_access": "first_floor",
+        "priority": 1,
+    },
+
 }
 
 ACCESS_KEYWORDS = {

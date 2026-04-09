@@ -20,7 +20,7 @@ services:
     image: redis:7-alpine
     container_name: plumbprice_redis
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

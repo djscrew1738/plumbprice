@@ -7,12 +7,14 @@ alembic
 structlog
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 redis
 celery
 pgvector
 pydantic[email]
 python-multipart
 openai
+slowapi
 pytest
 pytest-asyncio
 httpx

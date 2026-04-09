@@ -93,32 +93,9 @@ async def persist_estimate(
     db.add(estimate)
     await db.flush()
 
+    line_item_rows: list[EstimateLineItem] = []
     for i, item in enumerate(result.line_items):
-        db.add(EstimateLineItem(
-            estimate_id=estimate.id,
-            line_type=item.line_type,
-            description=item.description,
-            quantity=item.quantity,
-            unit=item.unit,
-            unit_cost=item.unit_cost,
-            total_cost=item.total_cost,
-            supplier=item.supplier,
-            sku=item.sku,
-            canonical_item=item.canonical_item,
-            sort_order=i,
-            trace_json=item.trace_json,
-        ))
-
-    await audit_service.log(
-        db,
-        "estimates",
-        "create",
-        estimate.id,
-        new_values={"grand_total": result.grand_total, "source": source},
-    )
-
-    snapshot = build_estimate_snapshot(estimate, [
-        EstimateLineItem(
+        row = EstimateLineItem(
             estimate_id=estimate.id,
             line_type=item.line_type,
             description=item.description,
@@ -132,8 +109,19 @@ async def persist_estimate(
             sort_order=i,
             trace_json=item.trace_json,
         )
-        for i, item in enumerate(result.line_items)
-    ])
+        db.add(row)
+        line_item_rows.append(row)
+
+    await audit_service.log(
+        db,
+        "estimates",
+        "create",
+        estimate.id,
+        new_values={"grand_total": result.grand_total, "source": source},
+    )
+
+    # Snapshot reuses the already-created rows — no duplicate object construction
+    snapshot = build_estimate_snapshot(estimate, line_item_rows)
     db.add(EstimateVersion(
         estimate_id=estimate.id,
         version_number=1,
