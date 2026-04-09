@@ -1,6 +1,9 @@
 """
-Labor Engine — All DFW plumbing labor templates with 2024-2025 rates.
-Master Plumber: $95/hr, Journeyman: $75/hr, Helper/Apprentice: $50/hr
+Labor Engine — All DFW plumbing labor templates with 2025-2026 rates.
+Master Plumber: $105/hr, Journeyman: $80/hr, Helper/Apprentice: $55/hr
+
+Rate basis: DFW metro plumbing contractor survey Q1 2026, PHCC-Texas wage data,
+and BLS Occupational Employment Statistics for Dallas-Fort Worth-Arlington MSA.
 """
 
 from dataclasses import dataclass, field
@@ -29,9 +32,9 @@ class LaborTemplateData:
     name: str
     category: str  # service, construction, commercial
     base_hours: float
-    lead_rate: float = 95.0  # DFW master plumber 2024-2025
+    lead_rate: float = 105.0  # DFW master plumber 2025-2026
     helper_required: bool = False
-    helper_rate: float = 50.0
+    helper_rate: float = 55.0
     helper_hours: Optional[float] = None
     disposal_hours: float = 0.25
     min_hours: Optional[float] = None
@@ -47,7 +50,7 @@ class LaborTemplateData:
     urgency_multipliers: dict = field(default_factory=lambda: {
         "standard": 1.0,
         "same_day": 1.35,
-        "emergency": 1.75,
+        "emergency": 2.0,
     })
     applicable_assemblies: list = field(default_factory=list)
     notes: str = ""
@@ -384,7 +387,7 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         code="MAIN_LINE_CLEAN",
         name="Main Line Drain Cleaning",
         category="service",
-        base_hours=1.5,
+        base_hours=2.0,
         helper_required=False,
         disposal_hours=0.0,
         notes="Includes clean-out access. Add camera if roots suspected.",
@@ -652,6 +655,332 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         helper_required=False,
         disposal_hours=0.0,
         notes="Includes annual test certification filing.",
+    ),
+
+    # ── Repipe (DFW high-demand — 1960s-80s galvanized/polybutylene homes) ───
+    "WHOLE_HOUSE_REPIPE_PEX": LaborTemplateData(
+        code="WHOLE_HOUSE_REPIPE_PEX",
+        name="Whole House Repipe — PEX-A (per fixture point)",
+        category="service",
+        base_hours=1.5,          # per fixture point (water outlet/fixture connection)
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.0,      # disposal billed separately as flat per job
+        access_multipliers={
+            "first_floor":  1.0,
+            "second_floor": 1.2,
+            "attic":        1.4,
+            "crawlspace":   1.5,
+            "slab":         1.8,  # slab homes require tunneling/trenching
+            "basement":     1.1,
+        },
+        urgency_multipliers={"standard": 1.0, "same_day": 1.2, "emergency": 1.5},
+        applicable_assemblies=["WHOLE_HOUSE_REPIPE_PEX_KIT"],
+        notes=(
+            "Quoted per fixture point (each hot/cold outlet). "
+            "Average DFW home: 12-18 fixture points. "
+            "Permit required in all DFW counties — add PERMIT_REPIPE line. "
+            "Drywall repair NOT included; recommend subcontractor."
+        ),
+    ),
+
+    # ── Sewer spot repair (common DFW root intrusion / bellied line) ─────────
+    "SEWER_SPOT_REPAIR": LaborTemplateData(
+        code="SEWER_SPOT_REPAIR",
+        name="Sewer Line Spot Repair (excavate & replace section)",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=0.5,
+        access_multipliers={
+            "first_floor":  1.0,   # front/back yard standard
+            "second_floor": 1.0,
+            "attic":        1.0,
+            "crawlspace":   1.0,
+            "slab":         2.2,   # slab requires saw-cutting, tunneling, restore
+            "basement":     1.4,
+        },
+        urgency_multipliers={"standard": 1.0, "same_day": 1.25, "emergency": 1.65},
+        applicable_assemblies=["SEWER_SPOT_KIT"],
+        notes=(
+            "Includes excavation up to 4ft depth, 5ft section replace, backfill. "
+            "Deeper excavation or longer runs are extra. "
+            "Camera inspection recommended before pricing — see CAMERA_INSPECTION. "
+            "Slab repair: tunneling billed at 2.2x; concrete restore NOT included."
+        ),
+    ),
+
+    # ── Recirculation pump (very common in large DFW homes) ──────────────────
+    "RECIRC_PUMP_INSTALL": LaborTemplateData(
+        code="RECIRC_PUMP_INSTALL",
+        name="Hot Water Recirculation Pump Install",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        access_multipliers={
+            "first_floor":  1.0,
+            "second_floor": 1.1,
+            "attic":        1.4,
+            "crawlspace":   1.3,
+            "slab":         1.0,
+            "basement":     1.1,
+        },
+        applicable_assemblies=["RECIRC_PUMP_KIT"],
+        notes=(
+            "Grundfos UP15-10SU7P or equivalent. "
+            "Includes pump, timer/controller, and supply line connections. "
+            "Does NOT include dedicated return line — comfort valve system assumed. "
+            "Electrical outlet at water heater required (verify before quoting)."
+        ),
+    ),
+
+    # ── Dishwasher / appliance hookup ─────────────────────────────────────────
+    "DISHWASHER_HOOKUP": LaborTemplateData(
+        code="DISHWASHER_HOOKUP",
+        name="Dishwasher Supply & Drain Hookup",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        access_multipliers={
+            "first_floor":  1.0,
+            "second_floor": 1.1,
+            "attic":        1.0,
+            "crawlspace":   1.0,
+            "slab":         1.0,
+            "basement":     1.0,
+        },
+        applicable_assemblies=["DISHWASHER_KIT"],
+        notes="Includes SS supply line, drain hose, high-loop or air gap. Electrical NOT included.",
+    ),
+
+    # ── Water main shutoff / main line repair ─────────────────────────────────
+    "WATER_MAIN_REPAIR": LaborTemplateData(
+        code="WATER_MAIN_REPAIR",
+        name="Water Main Shutoff Valve Repair/Replace",
+        category="service",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=1.0,
+        disposal_hours=0.25,
+        access_multipliers={
+            "first_floor":  1.0,
+            "second_floor": 1.0,
+            "attic":        1.0,
+            "crawlspace":   1.3,
+            "slab":         1.6,   # slab requires locating and exposing main
+            "basement":     1.2,
+        },
+        urgency_multipliers={"standard": 1.0, "same_day": 1.35, "emergency": 1.75},
+        applicable_assemblies=["WATER_MAIN_KIT"],
+        notes=(
+            "Includes ball valve replacement on main shutoff or meter angle stop. "
+            "City curb stop operation NOT included — contact water utility. "
+            "If main line is leaking underground, camera/locate billed separately."
+        ),
+    ),
+
+    # ─── Water Heater Repair Templates ────────────────────────────────────────
+    "WH_REPAIR_GAS": LaborTemplateData(
+        code="WH_REPAIR_GAS",
+        name="Water Heater Repair — Gas (thermocouple/pilot/valve)",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WH_REPAIR_GAS_KIT"],
+        notes=(
+            "Covers thermocouple replacement, pilot assembly, gas valve, or T&P valve. "
+            "DFW hard water accelerates thermocouple failure. "
+            "If repair fails diagnosis, upsell to full WH replacement."
+        ),
+    ),
+
+    "WH_ELEMENT_REPLACE": LaborTemplateData(
+        code="WH_ELEMENT_REPLACE",
+        name="Water Heater Element Replacement (Electric)",
+        category="service",
+        base_hours=1.25,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WH_ELEMENT_KIT"],
+        notes=(
+            "Upper or lower element replacement on electric tank water heater. "
+            "Includes drain/flush to access. Check anode rod while in there."
+        ),
+    ),
+
+    "WH_FLUSH_MAINTENANCE": LaborTemplateData(
+        code="WH_FLUSH_MAINTENANCE",
+        name="Water Heater Flush & Maintenance",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Annual sediment flush + inspection. DFW water hardness (15–20 GPG) causes rapid scale. "
+            "Recommend upsell to water softener if sediment is heavy."
+        ),
+    ),
+
+    "WH_ANODE_REPLACE": LaborTemplateData(
+        code="WH_ANODE_REPLACE",
+        name="Water Heater Anode Rod Replacement",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["ANODE_ROD_KIT"],
+        notes=(
+            "DFW hard water depletes magnesium anode rods 2–3× faster than national average. "
+            "Recommend every 3 years. Extends tank life significantly."
+        ),
+    ),
+
+    # ─── Toilet Repair Templates ───────────────────────────────────────────────
+    "TOILET_TANK_REBUILD": LaborTemplateData(
+        code="TOILET_TANK_REBUILD",
+        name="Toilet Tank Full Rebuild",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["TOILET_REBUILD_KIT"],
+        notes="Flapper + fill valve + handle + overflow tube. Stops running/phantom flush. Very common call.",
+    ),
+
+    "TOILET_SEAT_REPLACE": LaborTemplateData(
+        code="TOILET_SEAT_REPLACE",
+        name="Toilet Seat Replacement",
+        category="service",
+        base_hours=0.25,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["TOILET_SEAT_KIT"],
+        notes="Quick seat swap. If elongated vs round mismatch exists, measure before ordering.",
+    ),
+
+    "TOILET_WAX_RING_ONLY": LaborTemplateData(
+        code="TOILET_WAX_RING_ONLY",
+        name="Toilet Wax Ring Replacement (reset only — keep existing toilet)",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WAX_RING_RESET_KIT"],
+        notes=(
+            "Pull toilet, replace wax ring (and closet bolts if corroded), reset. "
+            "Inspect flange — if cracked, add TOILET_FLANGE_REPAIR to quote."
+        ),
+    ),
+
+    # ─── Faucet Repair Template ────────────────────────────────────────────────
+    "FAUCET_CARTRIDGE_REPAIR": LaborTemplateData(
+        code="FAUCET_CARTRIDGE_REPAIR",
+        name="Faucet Cartridge Replacement",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["CARTRIDGE_KIT"],
+        notes=(
+            "Pull and replace cartridge only; keep existing faucet. "
+            "DFW hard water causes cartridge failure within 3–5 years. "
+            "If valve body is pitted/cracked, upsell to full faucet replacement."
+        ),
+    ),
+
+    # ─── Slab Leak Reroute ─────────────────────────────────────────────────────
+    "SLAB_LEAK_REROUTE": LaborTemplateData(
+        code="SLAB_LEAK_REROUTE",
+        name="Slab Leak Reroute — Attic/Wall Bypass",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=0.5,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.15,
+            "attic": 1.05,
+            "crawlspace": 1.0,
+            "slab": 1.0,
+            "basement": 1.0,
+        },
+        urgency_multipliers={"standard": 1.0, "same_day": 1.35, "emergency": 2.0},
+        applicable_assemblies=["SLAB_REROUTE_KIT"],
+        notes=(
+            "Reroute supply line through attic or wall instead of tunneling. "
+            "DFW insurers increasingly prefer reroute over tunneling (avoids foundation disturbance). "
+            "Includes isolation, new PEX run, access panel install. Permit required."
+        ),
+    ),
+
+    # ─── Backflow & Gas Test ───────────────────────────────────────────────────
+    "BACKFLOW_TEST_ANNUAL": LaborTemplateData(
+        code="BACKFLOW_TEST_ANNUAL",
+        name="Backflow Preventer Annual Test & Certification",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Required annually for commercial irrigation, medical, and food service. "
+            "Technician must be TCEQ-certified backflow tester. "
+            "Failing test: add BACKFLOW_PREVENTER_REPAIR or BACKFLOW_PREVENTER_INSTALL."
+        ),
+    ),
+
+    "GAS_PRESSURE_TEST": LaborTemplateData(
+        code="GAS_PRESSURE_TEST",
+        name="Gas Line Pressure Test (stand-alone)",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Required by permit office after any gas line work. "
+            "Includes pressure gauge hookup, hold test, documentation for inspector. "
+            "If test fails: diagnose leak and add GAS_LINE_REPAIR_MINOR to quote."
+        ),
+    ),
+
+    # ─── Water Supply Line Repair ──────────────────────────────────────────────
+    "WATER_LINE_REPAIR_MINOR": LaborTemplateData(
+        code="WATER_LINE_REPAIR_MINOR",
+        name="Water Supply Line Repair (pinhole / joint failure)",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WATER_LINE_REPAIR_KIT"],
+        notes=(
+            "Repair isolated supply line failure: pinhole leak, failed compression fitting, "
+            "or corroded section. Includes pipe exposure (drywall cut not included). "
+            "If galvanized or > 3 ft affected, upsell to repipe section."
+        ),
+    ),
+
+    # ─── Outdoor / Yard Drain ─────────────────────────────────────────────────
+    "OUTDOOR_DRAIN_INSTALL": LaborTemplateData(
+        code="OUTDOOR_DRAIN_INSTALL",
+        name="Outdoor French / Yard Drain Installation (per 10 LF)",
+        category="service",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=2.5,
+        disposal_hours=0.5,
+        applicable_assemblies=["OUTDOOR_DRAIN_KIT"],
+        notes=(
+            "Per 10 linear feet of French drain. DFW clay soil causes drainage failure in yards. "
+            "Includes trench, perforated pipe, filter fabric wrap, gravel bed, pop-up emitter. "
+            "Scale hours proportionally (e.g., 30 LF = 3× base)."
+        ),
     ),
 }
 
