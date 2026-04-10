@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.requests import Request
@@ -14,6 +14,8 @@ from app.config import settings
 from app.database import init_db, AsyncSessionLocal
 from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
+from app.core.auth import get_current_user
+from app.models.users import User
 
 logger = structlog.get_logger()
 limiter = Limiter(key_func=get_remote_address)
@@ -271,15 +273,18 @@ async def health_check():
 
 
 @app.get("/api/v1/prices/cache", tags=["admin"])
-async def price_cache_stats():
-    """Return current state of the price enrichment cache."""
+async def price_cache_stats(current_user: User = Depends(get_current_user)):
+    """Return current state of the price enrichment cache. Requires authentication."""
     from app.services.data_sources.price_enrichment import get_enrichment_service
     return get_enrichment_service().cache_stats()
 
 
 @app.post("/api/v1/prices/refresh", tags=["admin"])
-async def price_cache_refresh():
-    """Trigger an immediate background refresh of the price enrichment cache."""
+async def price_cache_refresh(current_user: User = Depends(get_current_user)):
+    """Trigger an immediate background refresh of the price enrichment cache. Admin only."""
+    if not current_user.is_admin:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin access required")
     import asyncio as _asyncio
     from app.services.data_sources.price_enrichment import get_enrichment_service
     _asyncio.ensure_future(get_enrichment_service().refresh())

@@ -13,6 +13,17 @@ import { api } from '@/lib/api'
 import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 
+// ─── Company config (move to /api/v1/settings when multi-tenant) ──────────────
+const COMPANY = {
+  name: 'CTL PLUMBING LLC',
+  tagline: 'Licensed Master Plumber — DFW Metroplex',
+  license: 'MPL-44467',
+  taclb: 'TACLB-058513',
+  phone: '(469) 843-4066',
+  email: 'estimating@ctlplumbingllc.com',
+  repLabel: 'CTL Plumbing Rep',
+} as const
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Estimate {
@@ -90,11 +101,11 @@ function buildProposalText(est: EstimateDetail): string {
   const materialDesc = materialLines.map(li => `  - ${li.description} (${li.quantity} × ${formatCurrencyDecimal(li.unit_cost)})${li.supplier ? ` [${li.supplier}]` : ''}`).join('\n') || '  - See estimate breakdown'
 
   return `═══════════════════════════════════════════════════════
-CTL PLUMBING LLC
-Licensed Master Plumber — DFW Metroplex
-TACLB: XXXXX | MPL-XXXXX
-Phone: (214) 555-0100
-Email: estimating@ctlplumbingllc.com
+${COMPANY.name}
+${COMPANY.tagline}
+${COMPANY.taclb} | ${COMPANY.license}
+Phone: ${COMPANY.phone}
+Email: ${COMPANY.email}
 ═══════════════════════════════════════════════════════
 
 SERVICE PROPOSAL
@@ -150,22 +161,22 @@ TERMS & CONDITIONS
 5. One-year labor warranty on all installations.
 6. Manufacturer warranty applies to equipment/fixtures.
 7. Customer responsible for drywall repair unless quoted.
-8. CTL Plumbing is not responsible for pre-existing
+8. ${COMPANY.name} is not responsible for pre-existing
    conditions discovered during work.
 
 ACCEPTANCE
 ───────────────────────────────────────────────────────
-By signing below, you authorize CTL Plumbing LLC to
+By signing below, you authorize ${COMPANY.name} to
 proceed with the work described above.
 
 Customer Signature: ____________________  Date: ________
 
 Printed Name:       ____________________
 
-CTL Plumbing Rep:   ____________________  Date: ________
+${COMPANY.repLabel}:   ____________________  Date: ________
 
 ═══════════════════════════════════════════════════════
-          Thank you for choosing CTL Plumbing!
+          Thank you for choosing ${COMPANY.name}!
 ═══════════════════════════════════════════════════════`
 }
 

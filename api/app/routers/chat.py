@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,6 +19,8 @@ from app.services.llm_service import llm_service
 logger = structlog.get_logger()
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+STREAM_TIMEOUT_SECONDS = 90
 
 
 def build_estimate_breakdown(estimate_result):
@@ -88,6 +91,8 @@ async def chat_price(
                 preferred_supplier=body.preferred_supplier,
                 chat_context=body.message,
                 source="chat",
+                created_by=current_user.id,
+                organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
             )
             estimate_id = estimate.id
             await db.commit()
@@ -165,6 +170,8 @@ async def chat_price_stream(
                 preferred_supplier=body.preferred_supplier,
                 chat_context=body.message,
                 source="chat_stream",
+                created_by=current_user.id,
+                organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
             )
             estimate_id = estimate.id
             await db.commit()
@@ -193,23 +200,30 @@ async def chat_price_stream(
         # 1. Send pricing data immediately
         yield f"event: pricing\ndata: {json.dumps(pricing_event)}\n\n"
 
-        # 2. Stream LLM narrative tokens
-        if est:
-            async for token in llm_service.generate_response_stream(
-                message=body.message,
-                grand_total=est["grand_total"] if isinstance(est, dict) else est.grand_total,
-                labor_total=est["labor_total"] if isinstance(est, dict) else est.labor_total,
-                materials_total=est["materials_total"] if isinstance(est, dict) else est.materials_total,
-                tax_total=est["tax_total"] if isinstance(est, dict) else est.tax_total,
-                template_name=template_name,
-                county=body.county or "Dallas",
-                quantity=quantity,
-                history=history or None,
-            ):
-                yield f"event: token\ndata: {json.dumps(token)}\n\n"
-        else:
-            # No estimate — send the fallback answer as a single token event
-            yield f"event: token\ndata: {json.dumps(result.get('answer', ''))}\n\n"
+        # 2. Stream LLM narrative tokens with timeout protection
+        try:
+            async with asyncio.timeout(STREAM_TIMEOUT_SECONDS):
+                if est:
+                    async for token in llm_service.generate_response_stream(
+                        message=body.message,
+                        grand_total=est["grand_total"] if isinstance(est, dict) else est.grand_total,
+                        labor_total=est["labor_total"] if isinstance(est, dict) else est.labor_total,
+                        materials_total=est["materials_total"] if isinstance(est, dict) else est.materials_total,
+                        tax_total=est["tax_total"] if isinstance(est, dict) else est.tax_total,
+                        template_name=template_name,
+                        county=body.county or "Dallas",
+                        quantity=quantity,
+                        history=history or None,
+                    ):
+                        yield f"event: token\ndata: {json.dumps(token)}\n\n"
+                else:
+                    yield f"event: token\ndata: {json.dumps(result.get('answer', ''))}\n\n"
+        except asyncio.TimeoutError:
+            logger.warning("LLM stream timeout", timeout=STREAM_TIMEOUT_SECONDS)
+            yield f'event: error\ndata: {json.dumps({"error": "Response generation timed out. The estimate data above is still valid."})}\n\n'
+        except Exception as e:
+            logger.error("LLM stream error", error=str(e))
+            yield f'event: error\ndata: {json.dumps({"error": "An error occurred generating the narrative response."})}\n\n'
 
         yield "event: done\ndata: {}\n\n"
 

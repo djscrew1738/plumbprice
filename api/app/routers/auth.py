@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import timedelta, datetime, timezone
+from collections import defaultdict
 import structlog
 
 from app.database import get_db
@@ -14,10 +15,36 @@ from app.config import settings
 logger = structlog.get_logger()
 router = APIRouter()
 
+# In-memory brute force protection
+_login_attempts: dict[str, list[datetime]] = defaultdict(list)
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_WINDOW_MINUTES = 15
+
+
+def _check_brute_force(email: str) -> None:
+    """Block login if too many recent failed attempts."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(minutes=LOCKOUT_WINDOW_MINUTES)
+    # Purge old attempts
+    _login_attempts[email] = [t for t in _login_attempts[email] if t > cutoff]
+    if len(_login_attempts[email]) >= MAX_LOGIN_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many failed login attempts. Try again in {LOCKOUT_WINDOW_MINUTES} minutes.",
+        )
+
+
+def _record_failed_attempt(email: str) -> None:
+    _login_attempts[email].append(datetime.now(timezone.utc))
+
+
+def _clear_attempts(email: str) -> None:
+    _login_attempts.pop(email, None)
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8, description="Minimum 8 characters")
+    password: str = Field(..., min_length=8, max_length=128, description="8-128 characters")
     full_name: str = ""
 
 
@@ -27,15 +54,20 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """Login with username/password, returns JWT token."""
+    _check_brute_force(form_data.username)
+
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
+        _record_failed_attempt(form_data.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    _clear_attempts(form_data.username)
 
     # Track last successful login
     user.last_login = datetime.now(timezone.utc)

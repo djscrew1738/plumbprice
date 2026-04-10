@@ -10,7 +10,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatPriceRequest(BaseModel):
-    message: str = Field(..., min_length=3, max_length=2000)
+    message: str = Field(..., min_length=3, max_length=5000)
     job_type: Optional[str] = None  # service, construction, commercial
     location: Optional[str] = None  # city or county
     county: Optional[str] = "Dallas"

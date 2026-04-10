@@ -23,6 +23,24 @@ router = APIRouter()
 VALID_ESTIMATE_STATUSES = {"draft", "sent", "accepted", "rejected"}
 
 
+async def _get_owned_estimate(estimate_id: int, db: AsyncSession, current_user: User) -> Estimate:
+    """Fetch an estimate and verify the current user has access to it."""
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    # Admin can access any estimate; otherwise must be creator or same org
+    if not current_user.is_admin:
+        org_match = (
+            hasattr(current_user, "organization_id")
+            and current_user.organization_id
+            and estimate.organization_id == current_user.organization_id
+        )
+        if estimate.created_by != current_user.id and not org_match:
+            raise HTTPException(status_code=403, detail="Not authorized to access this estimate")
+    return estimate
+
+
 class EstimateStatusUpdate(BaseModel):
     status: str
 
@@ -110,6 +128,7 @@ async def create_service_estimate(
 async def create_construction_estimate(
     request: ConstructionEstimateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new construction estimate."""
     try:
@@ -128,6 +147,8 @@ async def create_construction_estimate(
             county=request.county,
             preferred_supplier=request.preferred_supplier,
             project_id=request.project_id,
+            created_by=current_user.id,
+            organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
             source="construction",
         )
 
@@ -172,8 +193,8 @@ async def create_construction_estimate(
 async def list_estimates(
     status: str = Query(None),
     job_type: str = Query(None),
-    limit: int = Query(50, le=200),
-    offset: int = Query(0),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -213,12 +234,7 @@ async def get_estimate(
     current_user: User = Depends(get_current_user),
 ):
     """Get a single estimate with line items (eager-loaded via selectin)."""
-    result = await db.execute(
-        select(Estimate).where(Estimate.id == estimate_id)
-    )
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        raise HTTPException(status_code=404, detail="Estimate not found")
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
 
     # line_items are eager-loaded via lazy="selectin" — no second query needed
     line_items = sorted(estimate.line_items, key=lambda li: li.sort_order or 0)
@@ -267,10 +283,7 @@ async def list_estimate_versions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    estimate_result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
-    estimate = estimate_result.scalar_one_or_none()
-    if not estimate:
-        raise HTTPException(status_code=404, detail="Estimate not found")
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
 
     versions_result = await db.execute(
         select(EstimateVersion)
@@ -301,10 +314,7 @@ async def get_cost_breakdown(
     current_user: User = Depends(get_current_user),
 ):
     """Return a percentage breakdown of costs for an estimate."""
-    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        raise HTTPException(status_code=404, detail="Estimate not found")
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
 
     grand_total = estimate.grand_total or 0.0
     category_amounts = {
@@ -345,10 +355,7 @@ async def update_estimate_status(
             status_code=400,
             detail=f"Invalid status. Must be one of: {', '.join(sorted(VALID_ESTIMATE_STATUSES))}",
         )
-    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        raise HTTPException(status_code=404, detail="Estimate not found")
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
     estimate.status = body.status
     await db.commit()
     await db.refresh(estimate)
@@ -362,12 +369,7 @@ async def duplicate_estimate(
     current_user: User = Depends(get_current_user),
 ):
     """Duplicate an estimate: creates a copy with status=draft, title appended ' (copy)', and all line items copied."""
-    result = await db.execute(
-        select(Estimate).where(Estimate.id == estimate_id)
-    )
-    original_estimate = result.scalar_one_or_none()
-    if not original_estimate:
-        raise HTTPException(status_code=404, detail="Estimate not found")
+    original_estimate = await _get_owned_estimate(estimate_id, db, current_user)
 
     # line_items eager-loaded via selectin — no extra query
     original_line_items = sorted(original_estimate.line_items, key=lambda li: li.sort_order or 0)
@@ -462,9 +464,6 @@ async def delete_estimate(
     current_user: User = Depends(get_current_user),
 ):
     """Delete an estimate."""
-    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        raise HTTPException(status_code=404, detail="Estimate not found")
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
     await db.delete(estimate)
     await db.commit()

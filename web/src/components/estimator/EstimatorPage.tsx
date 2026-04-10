@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, RotateCcw, Zap, Copy, Check, FileUp, X } from 'lucide-react'
+import { Send, RotateCcw, Zap, Copy, Check, FileUp, X, Square } from 'lucide-react'
 import { chatApi, estimatesApi, type EstimateDetailResponse } from '@/lib/api'
 import { ConfidenceBadge } from './ConfidenceBadge'
 import { useToast } from '@/components/ui/Toast'
@@ -208,6 +208,12 @@ export function EstimatorPage() {
     setInput(event.target.value)
     event.target.style.height = 'auto'
     event.target.style.height = `${Math.min(event.target.scrollHeight, 120)}px`
+  }
+
+  const handleStopGenerating = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
   }
 
   const copyMessage = (id: string, content: string) => {
@@ -553,10 +559,20 @@ export function EstimatorPage() {
                   AI
                 </div>
                 <div className="chat-bubble-assistant px-4 py-3.5">
-                  <div className="flex items-center gap-1.5">
-                    <div className="typing-dot" />
-                    <div className="typing-dot" />
-                    <div className="typing-dot" />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className="typing-dot" />
+                      <div className="typing-dot" />
+                      <div className="typing-dot" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleStopGenerating}
+                      className="ml-2 inline-flex items-center gap-1 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[10px] font-medium text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
+                    >
+                      <Square size={9} />
+                      Stop
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -579,16 +595,28 @@ export function EstimatorPage() {
                 className="input max-h-[120px] resize-none overflow-auto py-2.5 disabled:cursor-not-allowed disabled:opacity-65"
                 style={{ minHeight: '46px' }}
               />
-              <motion.button
-                type="button"
-                onClick={() => void sendMessage()}
-                disabled={!input.trim() || loading || (uploadMode && !uploadedFile)}
-                whileTap={{ scale: 0.9 }}
-                className="btn-primary h-11 w-11 shrink-0 rounded-2xl p-0 disabled:opacity-40"
-                aria-label="Send message"
-              >
-                <Send size={16} />
-              </motion.button>
+              {loading ? (
+                <motion.button
+                  type="button"
+                  onClick={handleStopGenerating}
+                  whileTap={{ scale: 0.9 }}
+                  className="btn-primary h-11 w-11 shrink-0 rounded-2xl bg-red-600 p-0 hover:bg-red-700"
+                  aria-label="Stop generating"
+                >
+                  <Square size={14} />
+                </motion.button>
+              ) : (
+                <motion.button
+                  type="button"
+                  onClick={() => void sendMessage()}
+                  disabled={!input.trim() || (uploadMode && !uploadedFile)}
+                  whileTap={{ scale: 0.9 }}
+                  className="btn-primary h-11 w-11 shrink-0 rounded-2xl p-0 disabled:opacity-40"
+                  aria-label="Send message"
+                >
+                  <Send size={16} />
+                </motion.button>
+              )}
             </div>
             <div className="mt-1.5 flex items-center justify-between px-0.5">
               {uploadMode && !uploadedFile ? (
@@ -605,10 +633,10 @@ export function EstimatorPage() {
               ) : (
                 <span className="text-[11px] text-[color:var(--muted-ink)]">Enter to send · Shift+Enter for newline</span>
               )}
-              {input.length > MAX_INPUT * 0.8 && (
+              {input.length > 0 && (
                 <span className={cn(
-                  'text-[10px] tabular-nums',
-                  input.length >= MAX_INPUT ? 'text-red-500 font-semibold' : 'text-[color:var(--muted-ink)]'
+                  'text-[10px] tabular-nums transition-colors',
+                  input.length >= MAX_INPUT ? 'text-red-500 font-semibold' : input.length > MAX_INPUT * 0.8 ? 'text-amber-500' : 'text-[color:var(--muted-ink)] opacity-60'
                 )}>
                   {input.length}/{MAX_INPUT}
                 </span>

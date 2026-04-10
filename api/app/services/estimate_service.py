@@ -63,6 +63,8 @@ async def persist_estimate(
     project_id: Optional[int] = None,
     chat_context: Optional[str] = None,
     source: str = "api",
+    created_by: Optional[int] = None,
+    organization_id: Optional[int] = None,
 ) -> Estimate:
     """
     Persist an EstimateResult to the database.
@@ -88,6 +90,8 @@ async def persist_estimate(
         preferred_supplier=preferred_supplier,
         project_id=project_id,
         chat_context=chat_context,
+        created_by=created_by,
+        organization_id=organization_id,
         valid_until=datetime.now(timezone.utc) + timedelta(days=30),
     )
     db.add(estimate)

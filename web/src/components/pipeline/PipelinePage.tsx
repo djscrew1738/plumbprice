@@ -4,12 +4,27 @@ import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BriefcaseBusiness, CircleDollarSign, MapPin, RefreshCw,
-  UserRound, TrendingUp, ChevronLeft, ChevronRight, Plus, X, Check,
+  UserRound, TrendingUp, ChevronLeft, ChevronRight, Plus, X, Check, Clock,
 } from 'lucide-react'
 import { projectsApi, type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
+
+function timeAgo(dateStr: string): string {
+  const now = Date.now()
+  const then = new Date(dateStr).getTime()
+  const diffMs = now - then
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
+}
 
 const STAGES = [
   { key: 'lead', label: 'Lead', colClass: 'stage-lead', countColor: 'text-[color:var(--muted-ink)]', emptyColor: 'border-[color:var(--line)]' },
@@ -326,9 +341,13 @@ function ProjectCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[11px]">
-        <span className="text-[color:var(--muted-ink)]">
-          {project.estimate_count} {project.estimate_count === 1 ? 'estimate' : 'estimates'}
-        </span>
+        <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
+          <span>{project.estimate_count} {project.estimate_count === 1 ? 'estimate' : 'estimates'}</span>
+          <span className="flex items-center gap-0.5" title={new Date(project.created_at).toLocaleDateString()}>
+            <Clock size={9} />
+            {timeAgo(project.created_at)}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           {project.status === 'won' && (
             <span className="text-emerald-700 font-bold mr-1">Won ✓</span>

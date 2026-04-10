@@ -205,7 +205,7 @@ export function EstimateDetailPage() {
               <span className={cn('badge', JOB_TYPE_CLASS[estimate.job_type] ?? 'badge-service')}>
                 {estimate.job_type}
               </span>
-              <span className="text-[11px] text-zinc-600">{estimate.county} County</span>
+              <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.county} County</span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -269,7 +269,7 @@ export function EstimateDetailPage() {
               <div className="text-lg font-extrabold text-white tabular-nums">
                 {formatCurrency(estimate.grand_total)}
               </div>
-              <div className="text-[10px] text-zinc-600">grand total</div>
+              <div className="text-[10px] text-[color:var(--muted-ink)]">grand total</div>
             </div>
           </div>
         </div>
@@ -295,7 +295,7 @@ export function EstimateDetailPage() {
                 <Icon size={13} className={color} />
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">{label}</div>
+                <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
                 <div className="text-sm font-bold text-white tabular-nums">{formatCurrency(value)}</div>
               </div>
             </div>
@@ -310,16 +310,16 @@ export function EstimateDetailPage() {
           className="card p-4 flex flex-wrap gap-4 text-sm"
         >
           <div className="flex items-center gap-2 text-zinc-500">
-            <Calendar size={13} className="text-zinc-600 shrink-0" />
+            <Calendar size={13} className="text-[color:var(--muted-ink)] shrink-0" />
             <span className="text-xs">{formatDate(estimate.created_at)}</span>
           </div>
           <div className="flex items-center gap-2 text-zinc-500">
-            <MapPin size={13} className="text-zinc-600 shrink-0" />
+            <MapPin size={13} className="text-[color:var(--muted-ink)] shrink-0" />
             <span className="text-xs">{estimate.county} County · {(estimate.tax_rate * 100).toFixed(2)}% tax</span>
           </div>
           {estimate.preferred_supplier && (
             <div className="flex items-center gap-2 text-zinc-500">
-              <FileText size={13} className="text-zinc-600 shrink-0" />
+              <FileText size={13} className="text-[color:var(--muted-ink)] shrink-0" />
               <span className="text-xs">Supplier: {estimate.preferred_supplier}</span>
             </div>
           )}
@@ -327,7 +327,7 @@ export function EstimateDetailPage() {
             <span className={cn('badge', `badge-${estimate.confidence_label?.toLowerCase() ?? 'high'}`)}>
               {estimate.confidence_label} confidence
             </span>
-            <span className="text-xs text-zinc-600 tabular-nums">
+            <span className="text-xs text-[color:var(--muted-ink)] tabular-nums">
               {Math.round(estimate.confidence_score * 100)}%
             </span>
           </div>
@@ -342,7 +342,7 @@ export function EstimateDetailPage() {
         >
           <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
             <h2 className="text-xs font-bold text-white uppercase tracking-wider">Line Items</h2>
-            <span className="text-[11px] text-zinc-600">{estimate.line_items.length} items</span>
+            <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.line_items.length} {estimate.line_items.length === 1 ? 'item' : 'items'}</span>
           </div>
 
           {/* Labor */}
@@ -406,7 +406,7 @@ function LineItemSection({ title, items }: { title: string; items: LineItem[] })
   return (
     <div>
       <div className="px-4 py-2 bg-white/[0.015] border-y border-white/[0.04]">
-        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{title}</span>
+        <span className="text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">{title}</span>
       </div>
       <div className="divide-y divide-white/[0.04]">
         {items.map((item, i) => (
@@ -415,7 +415,7 @@ function LineItemSection({ title, items }: { title: string; items: LineItem[] })
               <div className="text-sm text-zinc-200 font-medium">{item.description}</div>
               <div className="flex items-center gap-3 mt-1">
                 {item.supplier && (
-                  <span className="text-[10px] text-zinc-600">{item.supplier}</span>
+                  <span className="text-[10px] text-[color:var(--muted-ink)]">{item.supplier}</span>
                 )}
                 {item.sku && (
                   <span className="text-[10px] text-zinc-700 font-mono">SKU: {item.sku}</span>
@@ -430,7 +430,7 @@ function LineItemSection({ title, items }: { title: string; items: LineItem[] })
                 {formatCurrencyDecimal(item.total_cost)}
               </div>
               {item.quantity !== 1 && (
-                <div className="text-[10px] text-zinc-600 tabular-nums">
+                <div className="text-[10px] text-[color:var(--muted-ink)] tabular-nums">
                   {item.quantity} × {formatCurrencyDecimal(item.unit_cost)} / {item.unit}
                 </div>
               )}
