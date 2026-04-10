@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
@@ -19,7 +19,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
 
   useKeyboardShortcuts()
 
@@ -28,9 +27,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     setMoreOpen(false)
   }, [pathname])
 
-  const handleSkipToMain = () => {
-    router.push(pathname, { scroll: false })
-    const main = document.querySelector('main')
+  const handleSkipToMain = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const main = document.getElementById('main-content')
     main?.focus()
   }
 
@@ -38,9 +37,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#f2ebe1" />
+        <meta name="theme-color" content="#1a1410" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="description" content="AI-powered plumbing estimator for DFW contractors" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -110,7 +109,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       </ErrorBoundary>
                     </motion.div>
                   </AnimatePresence>
-                  <div className="h-20 lg:hidden" />
+                  <div className="h-[var(--mobile-nav-height)] lg:hidden" />
                 </main>
               </div>
 

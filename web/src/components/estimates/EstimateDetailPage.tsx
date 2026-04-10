@@ -154,7 +154,7 @@ export function EstimateDetailPage() {
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-full bg-[#080808] px-4 py-6 max-w-4xl mx-auto space-y-4">
+      <div className="min-h-full bg-[hsl(var(--background))] px-4 py-6 max-w-4xl mx-auto space-y-4">
         <div className="skeleton h-8 w-48 rounded-xl" />
         <div className="card p-6 space-y-4">
           <div className="skeleton h-6 w-2/3 rounded-lg" />
@@ -173,7 +173,7 @@ export function EstimateDetailPage() {
   // ── Error ────────────────────────────────────────────────────────────────────
   if (error || !estimate) {
     return (
-      <div className="min-h-full bg-[#080808] flex flex-col items-center justify-center gap-4 p-8">
+      <div className="min-h-full bg-[hsl(var(--background))] flex flex-col items-center justify-center gap-4 p-8">
         <AlertCircle size={32} className="text-red-400" />
         <p className="text-zinc-400 text-sm">{error ?? 'Estimate not found'}</p>
         <button onClick={() => router.back()} className="btn-secondary">
@@ -188,10 +188,10 @@ export function EstimateDetailPage() {
   const otherLines    = estimate.line_items.filter(l => !['labor','material'].includes(l.line_type))
 
   return (
-    <div className="min-h-full bg-[#080808]">
+    <div className="min-h-full bg-[hsl(var(--background))]">
 
       {/* ── Sticky header ────────────────────────────────────────────────────── */}
-      <div className="bg-[#080808]/80 backdrop-blur-xl border-b border-white/[0.06] px-4 py-3 sticky top-0 z-10">
+      <div className="bg-[hsl(var(--background))]/80 backdrop-blur-xl border-b border-white/[0.06] px-4 py-3 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
           <button
             onClick={() => router.back()}
