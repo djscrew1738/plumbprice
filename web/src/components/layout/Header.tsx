@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, MapPin, LogOut } from 'lucide-react'
-import { getPageMeta } from './nav'
+import Link from 'next/link'
+import { Menu, MapPin, LogOut, Settings, ChevronRight } from 'lucide-react'
+import { getPageMeta, PAGE_META } from './nav'
 import { ThemeToggle } from './ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -17,6 +18,23 @@ function getUserInitials(name: string | undefined, email: string | undefined): s
   return '?'
 }
 
+function buildBreadcrumb(pathname: string): { label: string; href: string }[] {
+  const crumbs: { label: string; href: string }[] = [{ label: 'Home', href: '/' }]
+  if (pathname === '/' || pathname === '') return crumbs
+
+  const segments = pathname.split('/').filter(Boolean)
+  let accumulated = ''
+  for (const seg of segments) {
+    accumulated += '/' + seg
+    const meta = PAGE_META[accumulated]
+    crumbs.push({
+      label: meta?.title ?? seg.charAt(0).toUpperCase() + seg.slice(1),
+      href: accumulated,
+    })
+  }
+  return crumbs
+}
+
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -24,6 +42,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user, logout } = useAuth()
   const initials = getUserInitials(user?.full_name, user?.email)
   const displayName = user?.full_name ?? user?.email ?? 'User'
+  const breadcrumb = buildBreadcrumb(pathname)
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -51,7 +70,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
       className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[color:var(--panel)]/95 backdrop-blur-xl"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="flex h-[68px] items-center gap-3 px-4">
+      <div className="flex h-[var(--header-height)] items-center gap-3 px-4">
         <button
           onClick={onMenuClick}
           className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] lg:hidden"
@@ -60,12 +79,40 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <Menu size={18} />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
-            {meta.eyebrow}
-          </p>
-          <h1 className="truncate text-lg font-semibold text-[color:var(--ink)]">{meta.title}</h1>
+          <Link href="/" className="group inline-block">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)] group-hover:text-[color:var(--accent-strong)] transition-colors">
+              PlumbPrice AI
+            </p>
+            <h1 className="truncate text-lg font-semibold text-[color:var(--ink)] group-hover:text-[color:var(--accent-strong)] transition-colors">
+              {meta.title}
+            </h1>
+          </Link>
+          {breadcrumb.length > 1 && (
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 mt-0.5">
+              {breadcrumb.map((crumb, i) => (
+                <span key={crumb.href} className="flex items-center gap-1">
+                  {i > 0 && <ChevronRight size={10} className="text-[color:var(--muted-ink)] opacity-50" />}
+                  {i < breadcrumb.length - 1 ? (
+                    <Link
+                      href={crumb.href}
+                      className="text-[10px] text-[color:var(--muted-ink)] hover:text-[color:var(--accent-strong)] transition-colors"
+                    >
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span className="text-[10px] font-medium text-[color:var(--muted-ink)]">
+                      {crumb.label}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          )}
         </div>
-        <div className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 sm:flex">
+        <div
+          className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 sm:flex"
+          title="Dallas-Fort Worth metro area"
+        >
           <MapPin size={12} className="text-[color:var(--accent-strong)]" />
           <span className="text-xs font-medium text-[color:var(--muted-ink)]">DFW</span>
         </div>
@@ -96,6 +143,14 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                   )}
                 </div>
                 <div className="py-1">
+                  <Link
+                    href="/admin"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[color:var(--ink)] transition-colors hover:bg-[color:var(--panel-strong)]"
+                  >
+                    <Settings size={15} />
+                    <span>Settings</span>
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"

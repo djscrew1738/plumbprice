@@ -23,6 +23,7 @@
     --input: 30 18% 84%;
     --ring: 24 78% 52%;
     --radius: 0.95rem;
+    --content-max-width: 1280px;
     --sidebar-width: 248px;
     --header-height: 68px;
     --mobile-nav-height: 80px;
@@ -247,6 +248,10 @@ body {
     @apply rounded-t-3xl border-t border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_-20px_50px_rgba(84,60,39,0.12)];
     padding-bottom: max(env(safe-area-inset-bottom), 16px);
   }
+
+  .content-container {
+    @apply mx-auto w-full max-w-[var(--content-max-width)] px-4 sm:px-6 lg:px-8;
+  }
 }
 
 .chat-bubble-user {
@@ -317,6 +322,17 @@ body {
 .cost-bar {
   @apply h-1.5 rounded-full transition-all duration-700;
   animation: growWidth 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.offline-banner {
+  @apply fixed top-0 inset-x-0 z-[100] flex items-center justify-center gap-2 bg-[hsl(var(--warning))] px-4 py-2 text-sm font-medium text-[hsl(var(--warning-foreground))];
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --header-height: 52px;
+    --mobile-nav-height: 60px;
+  }
 }
 
 /* ── Reduced motion ──────────────────────────────── */
