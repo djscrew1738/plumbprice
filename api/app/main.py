@@ -256,19 +256,44 @@ app.include_router(admin.router,     prefix="/api/v1/admin",       tags=["admin"
 
 @app.get("/health")
 async def health_check():
+    import time as _time
+    from sqlalchemy import text
     from app.services.llm_service import llm_service
     from app.services.data_sources.price_enrichment import get_enrichment_service
+
+    checks: dict = {}
+    overall = "ok"
+
+    # Database check
+    try:
+        t0 = _time.monotonic()
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        checks["database"] = {"status": "ok", "latency_ms": round((_time.monotonic() - t0) * 1000, 1)}
+    except Exception as e:
+        checks["database"] = {"status": "error", "detail": str(e)[:200]}
+        overall = "degraded"
+
+    # LLM check
+    llm_ok = llm_service._available
+    checks["llm"] = {
+        "provider": "hermes3/ollama",
+        "endpoint": settings.hermes_endpoint_url,
+        "model": settings.hermes_model,
+        "available": llm_ok,
+    }
+    if not llm_ok:
+        overall = "degraded"
+
+    # Price cache check
+    cache_stats = get_enrichment_service().cache_stats()
+    checks["price_cache"] = cache_stats
+
     return {
-        "status": "ok",
+        "status": overall,
         "version": settings.version,
         "environment": settings.environment,
-        "llm": {
-            "provider": "hermes3/ollama",
-            "endpoint": settings.hermes_endpoint_url,
-            "model": settings.hermes_model,
-            "available": llm_service._available,
-        },
-        "price_cache": get_enrichment_service().cache_stats(),
+        **checks,
     }
 
 
