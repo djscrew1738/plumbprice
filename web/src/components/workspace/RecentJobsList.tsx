@@ -7,6 +7,9 @@ import { formatDistanceToNow } from 'date-fns'
 import type { EstimateListItem } from '@/lib/api'
 import { estimatesApi } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Inbox } from 'lucide-react'
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Awaiting details',
@@ -91,9 +94,11 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
 
       {loading && (
         <div className={cn('space-y-2', compact && 'space-y-1.5')}>
-          {Array.from({ length: compact ? 3 : 4 }).map((_, index) => (
-            <div key={index} className={cn('skeleton rounded-lg', compact ? 'h-12' : 'h-16')} />
-          ))}
+          <Skeleton
+            variant={compact ? 'table-row' : 'card'}
+            count={compact ? 3 : 4}
+            className={cn('rounded-lg', compact ? 'h-12' : 'h-16')}
+          />
         </div>
       )}
 
@@ -112,9 +117,12 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
       )}
 
       {!loading && !error && jobs.length === 0 && (
-        <p className={cn('rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-3 text-[color:var(--muted-ink)]', compact ? 'text-xs' : 'text-sm')}>
-          No recent jobs yet.
-        </p>
+        <EmptyState
+          icon={<Inbox size={22} />}
+          title="No recent jobs"
+          description="Your completed estimates will appear here once you start pricing work."
+          className={compact ? 'py-4' : 'py-6'}
+        />
       )}
 
       {!loading && !error && jobs.length > 0 && (

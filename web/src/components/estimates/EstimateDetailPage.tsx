@@ -5,13 +5,15 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, MapPin, Layers, CircleDollarSign,
-  FileText, TrendingUp, Tag, AlertCircle, Printer, Download,
+  FileText, TrendingUp, Tag, Printer, Download,
   Copy, Trash2, Zap, RefreshCw,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { Badge } from '@/components/ui/Badge'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 interface LineItem {
   line_type: string
@@ -47,10 +49,10 @@ interface EstimateDetail {
   created_at: string
 }
 
-const JOB_TYPE_CLASS: Record<string, string> = {
-  service: 'badge-service',
-  construction: 'badge-construction',
-  commercial: 'badge-commercial',
+const JOB_TYPE_VARIANT: Record<string, 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
+  service: 'accent',
+  construction: 'warning',
+  commercial: 'info',
 }
 
 const LINE_TYPE_LABEL: Record<string, string> = {
@@ -61,12 +63,12 @@ const LINE_TYPE_LABEL: Record<string, string> = {
   misc: 'Misc',
 }
 
-const LINE_TYPE_COLOR: Record<string, string> = {
-  labor:    'text-blue-400',
-  material: 'text-emerald-400',
-  markup:   'text-amber-400',
-  tax:      'text-zinc-500',
-  misc:     'text-violet-400',
+const LINE_TYPE_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent'> = {
+  labor:    'info',
+  material: 'success',
+  markup:   'warning',
+  tax:      'neutral',
+  misc:     'info',
 }
 
 function formatDate(dateStr: string) {
@@ -159,8 +161,8 @@ export function EstimateDetailPage() {
         <div className="card p-6 space-y-4">
           <div className="skeleton h-6 w-2/3 rounded-lg" />
           <div className="skeleton h-4 w-1/3 rounded-lg" />
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            {[1,2,3].map(i => <div key={i} className="skeleton h-20 rounded-xl" />)}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+            {[1,2,3,4].map(i => <div key={i} className="skeleton h-20 rounded-xl" />)}
           </div>
         </div>
         <div className="card p-6 space-y-3">
@@ -173,12 +175,12 @@ export function EstimateDetailPage() {
   // ── Error ────────────────────────────────────────────────────────────────────
   if (error || !estimate) {
     return (
-      <div className="min-h-full bg-[hsl(var(--background))] flex flex-col items-center justify-center gap-4 p-8">
-        <AlertCircle size={32} className="text-red-400" />
-        <p className="text-zinc-400 text-sm">{error ?? 'Estimate not found'}</p>
-        <button onClick={() => router.back()} className="btn-secondary">
-          <ArrowLeft size={14} /> Go back
-        </button>
+      <div className="min-h-full bg-[hsl(var(--background))] flex flex-col items-center justify-center gap-6 p-8">
+        <ErrorState
+          message={error ?? 'Estimate not found'}
+          onRetry={() => router.back()}
+          code={error ? undefined : 404}
+        />
       </div>
     )
   }
@@ -195,16 +197,17 @@ export function EstimateDetailPage() {
         <div className="max-w-4xl mx-auto flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+            aria-label="Go back"
+            className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
           >
             <ArrowLeft size={16} />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-white truncate">{estimate.title || `Estimate #${estimate.id}`}</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={cn('badge', JOB_TYPE_CLASS[estimate.job_type] ?? 'badge-service')}>
+            <h1 className="text-sm font-bold text-[color:var(--ink)] truncate">{estimate.title || `Estimate #${estimate.id}`}</h1>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <Badge variant={JOB_TYPE_VARIANT[estimate.job_type] ?? 'accent'} size="sm">
                 {estimate.job_type}
-              </span>
+              </Badge>
               <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.county} County</span>
             </div>
           </div>
@@ -212,8 +215,9 @@ export function EstimateDetailPage() {
             {/* Open in estimator */}
             <button
               onClick={() => router.push(`/estimator?estimateId=${estimate.id}`)}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               title="Open in Estimator"
+              aria-label="Open in Estimator"
             >
               <Zap size={15} />
             </button>
@@ -221,52 +225,56 @@ export function EstimateDetailPage() {
             <button
               onClick={() => void handleDuplicate()}
               disabled={duplicating}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-40"
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
               title="Duplicate estimate"
+              aria-label="Duplicate estimate"
             >
               {duplicating ? <RefreshCw size={15} className="animate-spin" /> : <Copy size={15} />}
             </button>
             <button
               onClick={exportCSV}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               title="Export CSV"
+              aria-label="Export as CSV"
             >
               <Download size={16} />
             </button>
             <button
               onClick={() => window.print()}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-200 transition-colors"
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               title="Print / Save as PDF"
+              aria-label="Print or save as PDF"
             >
               <Printer size={16} />
             </button>
             {/* Delete with inline confirm */}
             {confirmDelete ? (
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-red-400 font-medium">Delete?</span>
+                <span className="text-[11px] text-[hsl(var(--danger))] font-medium">Delete?</span>
                 <button
                   onClick={() => void handleDelete()}
                   disabled={deleting}
-                  className="px-2 py-1 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-semibold hover:bg-red-500/25 transition-colors disabled:opacity-40"
+                  className="px-2 py-1 rounded-lg bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] text-[11px] font-semibold hover:bg-[hsl(var(--danger)/0.25)] transition-colors disabled:opacity-40"
                 >
                   {deleting ? <RefreshCw size={11} className="animate-spin" /> : 'Yes'}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="px-2 py-1 rounded-lg bg-white/[0.05] text-zinc-400 text-[11px] font-semibold hover:bg-white/[0.08] transition-colors"
+                  className="px-2 py-1 rounded-lg bg-white/[0.05] text-[color:var(--muted-ink)] text-[11px] font-semibold hover:bg-white/[0.08] transition-colors"
                 >No</button>
               </div>
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="p-2 rounded-xl hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors"
+                className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors"
                 title="Delete estimate"
+                aria-label="Delete estimate"
               >
                 <Trash2 size={15} />
               </button>
             )}
             <div className="text-right ml-1">
-              <div className="text-lg font-extrabold text-white tabular-nums">
+              <div className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">
                 {formatCurrency(estimate.grand_total)}
               </div>
               <div className="text-[10px] text-[color:var(--muted-ink)]">grand total</div>
@@ -282,21 +290,21 @@ export function EstimateDetailPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3"
         >
           {[
-            { label: 'Labor',     value: estimate.labor_total,     icon: TrendingUp,       color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20'     },
-            { label: 'Materials', value: estimate.materials_total,  icon: Layers,           color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20'},
-            { label: 'Markup',    value: estimate.markup_total,     icon: Tag,              color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20'   },
-            { label: 'Tax',       value: estimate.tax_total,        icon: CircleDollarSign, color: 'text-zinc-400',    bg: 'bg-white/[0.03] border-white/[0.08]'   },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
+            { label: 'Labor',     value: estimate.labor_total,     icon: TrendingUp,       bg: 'bg-[hsl(var(--info)/0.1)] border-[hsl(var(--info)/0.2)]'     },
+            { label: 'Materials', value: estimate.materials_total,  icon: Layers,           bg: 'bg-[hsl(var(--success)/0.1)] border-[hsl(var(--success)/0.2)]'},
+            { label: 'Markup',    value: estimate.markup_total,     icon: Tag,              bg: 'bg-[hsl(var(--warning)/0.1)] border-[hsl(var(--warning)/0.2)]'   },
+            { label: 'Tax',       value: estimate.tax_total,        icon: CircleDollarSign, bg: 'bg-white/[0.03] border-white/[0.08]'   },
+          ].map(({ label, value, icon: Icon, bg }) => (
             <div key={label} className="card p-3.5 flex items-center gap-3">
               <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center border shrink-0', bg)}>
-                <Icon size={13} className={color} />
+                <Icon size={13} className="text-[color:var(--accent)]" />
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
-                <div className="text-sm font-bold text-white tabular-nums">{formatCurrency(value)}</div>
+                <div className="text-sm font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(value)}</div>
               </div>
             </div>
           ))}
@@ -309,24 +317,24 @@ export function EstimateDetailPage() {
           transition={{ duration: 0.2, delay: 0.05 }}
           className="card p-4 flex flex-wrap gap-4 text-sm"
         >
-          <div className="flex items-center gap-2 text-zinc-500">
+          <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
             <Calendar size={13} className="text-[color:var(--muted-ink)] shrink-0" />
             <span className="text-xs">{formatDate(estimate.created_at)}</span>
           </div>
-          <div className="flex items-center gap-2 text-zinc-500">
+          <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
             <MapPin size={13} className="text-[color:var(--muted-ink)] shrink-0" />
             <span className="text-xs">{estimate.county} County · {(estimate.tax_rate * 100).toFixed(2)}% tax</span>
           </div>
           {estimate.preferred_supplier && (
-            <div className="flex items-center gap-2 text-zinc-500">
+            <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
               <FileText size={13} className="text-[color:var(--muted-ink)] shrink-0" />
               <span className="text-xs">Supplier: {estimate.preferred_supplier}</span>
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <span className={cn('badge', `badge-${estimate.confidence_label?.toLowerCase() ?? 'high'}`)}>
+            <Badge variant={estimate.confidence_label?.toLowerCase() === 'high' ? 'success' : estimate.confidence_label?.toLowerCase() === 'medium' ? 'warning' : 'danger'} size="sm">
               {estimate.confidence_label} confidence
-            </span>
+            </Badge>
             <span className="text-xs text-[color:var(--muted-ink)] tabular-nums">
               {Math.round(estimate.confidence_score * 100)}%
             </span>
@@ -341,7 +349,7 @@ export function EstimateDetailPage() {
           className="card overflow-hidden"
         >
           <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider">Line Items</h2>
+            <h2 className="text-xs font-bold text-[color:var(--ink)] uppercase tracking-wider">Line Items</h2>
             <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.line_items.length} {estimate.line_items.length === 1 ? 'item' : 'items'}</span>
           </div>
 
@@ -367,13 +375,13 @@ export function EstimateDetailPage() {
               { label: `Tax (${(estimate.tax_rate * 100).toFixed(2)}%)`, value: estimate.tax_total },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between px-5 py-2.5 text-sm">
-                <span className="text-zinc-500">{label}</span>
-                <span className="text-zinc-300 font-semibold tabular-nums">{formatCurrencyDecimal(value)}</span>
+                <span className="text-[color:var(--muted-ink)]">{label}</span>
+                <span className="text-[color:var(--foreground)] font-semibold tabular-nums">{formatCurrencyDecimal(value)}</span>
               </div>
             ))}
             <div className="flex items-center justify-between px-5 py-3">
-              <span className="text-sm font-bold text-white">Grand Total</span>
-              <span className="text-xl font-extrabold text-white tabular-nums">{formatCurrencyDecimal(estimate.grand_total)}</span>
+              <span className="text-sm font-bold text-[color:var(--ink)]">Grand Total</span>
+              <span className="text-xl font-extrabold text-[color:var(--ink)] tabular-nums">{formatCurrencyDecimal(estimate.grand_total)}</span>
             </div>
           </div>
         </motion.div>
@@ -410,23 +418,29 @@ function LineItemSection({ title, items }: { title: string; items: LineItem[] })
       </div>
       <div className="divide-y divide-white/[0.04]">
         {items.map((item, i) => (
-          <div key={i} className="px-4 py-3 flex items-start gap-3 hover:bg-white/[0.015] transition-colors">
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: 0.05 * i }}
+            className="px-4 py-3 flex items-start gap-3 hover:bg-white/[0.015] transition-colors"
+          >
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-zinc-200 font-medium">{item.description}</div>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="text-sm text-[color:var(--foreground)] font-medium">{item.description}</div>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
                 {item.supplier && (
                   <span className="text-[10px] text-[color:var(--muted-ink)]">{item.supplier}</span>
                 )}
                 {item.sku && (
-                  <span className="text-[10px] text-zinc-700 font-mono">SKU: {item.sku}</span>
+                  <span className="text-[10px] text-[color:var(--muted-ink)] font-mono">SKU: {item.sku}</span>
                 )}
-                <span className={cn('text-[10px] font-semibold', LINE_TYPE_COLOR[item.line_type] ?? 'text-zinc-500')}>
+                <Badge variant={LINE_TYPE_VARIANT[item.line_type] ?? 'neutral'} size="sm">
                   {LINE_TYPE_LABEL[item.line_type] ?? item.line_type}
-                </span>
+                </Badge>
               </div>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-sm font-semibold text-white tabular-nums">
+              <div className="text-sm font-semibold text-[color:var(--ink)] tabular-nums">
                 {formatCurrencyDecimal(item.total_cost)}
               </div>
               {item.quantity !== 1 && (
@@ -435,7 +449,7 @@ function LineItemSection({ title, items }: { title: string; items: LineItem[] })
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

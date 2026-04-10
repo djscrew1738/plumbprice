@@ -7,6 +7,7 @@ import {
   AlertCircle, X, Loader2, FolderOpen, Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/Badge'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,11 +24,11 @@ interface BlueprintJob {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
-const STATUS: Record<JobStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {
-  queued:     { icon: Clock,         color: 'text-zinc-400',    bg: 'bg-white/[0.04] border-white/[0.08]',      label: 'Queued'     },
-  processing: { icon: Loader2,       color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20',        label: 'Processing' },
-  done:       { icon: CheckCircle2,  color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20',  label: 'Complete'   },
-  failed:     { icon: AlertCircle,   color: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/20',          label: 'Failed'     },
+const STATUS: Record<JobStatus, { icon: typeof CheckCircle2; variant: 'neutral' | 'info' | 'success' | 'danger'; label: string }> = {
+  queued:     { icon: Clock,         variant: 'neutral',  label: 'Queued'     },
+  processing: { icon: Loader2,       variant: 'info',     label: 'Processing' },
+  done:       { icon: CheckCircle2,  variant: 'success',  label: 'Complete'   },
+  failed:     { icon: AlertCircle,   variant: 'danger',   label: 'Failed'     },
 }
 
 // ─── Drop zone ────────────────────────────────────────────────────────────────
@@ -49,6 +50,13 @@ function DropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
     e.target.value = ''
   }
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      inputRef.current?.click()
+    }
+  }, [])
+
   return (
     <motion.div
       onDragOver={e => { e.preventDefault(); setDragging(true) }}
@@ -57,7 +65,11 @@ function DropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
       animate={{ scale: dragging ? 1.01 : 1 }}
       transition={{ duration: 0.15 }}
       onClick={() => inputRef.current?.click()}
-      className="relative rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer transition-all"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label="Upload blueprint PDFs. Press Enter or Space to open file picker"
+      className="relative rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
       style={{
         borderColor: dragging ? 'hsl(221 83% 55% / 0.6)' : 'rgba(255,255,255,0.10)',
         background: dragging
@@ -155,18 +167,16 @@ function JobCard({ job, onRemove }: { job: BlueprintJob; onRemove: (id: string) 
       </div>
 
       {/* Status badge */}
-      <div className={cn(
-        'flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold shrink-0',
-        cfg.bg, cfg.color,
-      )}>
-        <StatusIcon size={11} className={cn(job.status === 'processing' && 'animate-spin')} />
+      <Badge variant={cfg.variant} size="md">
+        <StatusIcon size={11} className={cn(job.status === 'processing' && 'animate-spin')} aria-hidden="true" />
         {cfg.label}
-      </div>
+      </Badge>
 
       {/* Remove */}
       <button
         onClick={() => onRemove(job.id)}
         className="p-1.5 rounded-lg hover:bg-white/[0.07] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
+        aria-label={`Remove ${job.filename}`}
       >
         <X size={14} />
       </button>
@@ -232,8 +242,8 @@ export function BlueprintsPage() {
           {jobs.length > 0 && (
             <div className="flex items-center gap-2 text-[11px]">
               {processingCount > 0 && (
-                <span className="flex items-center gap-1 text-blue-400 font-semibold">
-                  <Loader2 size={11} className="animate-spin" />
+                <span className="flex items-center gap-1 text-blue-400 font-semibold" aria-label={`${processingCount} files processing`} role="status">
+                  <Loader2 size={11} className="animate-spin" aria-hidden="true" />
                   {processingCount} processing
                 </span>
               )}
@@ -291,6 +301,7 @@ export function BlueprintsPage() {
               <button
                 onClick={() => setJobs([])}
                 className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                aria-label="Clear all uploaded files"
               >
                 Clear all
               </button>

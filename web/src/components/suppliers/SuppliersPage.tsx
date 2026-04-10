@@ -7,6 +7,10 @@ import { cn, formatCurrencyDecimal } from '@/lib/utils'
 import { api } from '@/lib/api'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
+import { Badge } from '@/components/ui/Badge'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 interface SupplierPrice { name: string; sku: string; cost: number }
 interface CatalogItem {
@@ -156,7 +160,7 @@ export function SuppliersPage() {
                 className="input py-2.5 pl-9 pr-9"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Clear search">
                   <X size={14} />
                 </button>
               )}
@@ -199,33 +203,31 @@ export function SuppliersPage() {
         {loading && (
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="card p-4 flex items-center gap-3">
-                <div className="skeleton h-4 flex-1 rounded-lg" />
-                <div className="skeleton h-6 w-20 rounded-lg" />
-              </div>
+              <Skeleton key={i} variant="card" className="h-16 rounded-xl" />
             ))}
           </div>
         )}
 
         {error && !loading && (
-          <div className="card p-10 text-center">
-            <p className="text-red-700 font-medium text-sm mb-3">{error}</p>
-            <button onClick={() => void fetchCatalog()} className="btn-primary mx-auto">Retry</button>
-          </div>
+          <ErrorState
+            message={error}
+            onRetry={() => void fetchCatalog()}
+            className="card"
+          />
         )}
 
         {!loading && !error && filtered.length === 0 && (
-          <div className="card p-12 text-center">
-            <Package size={28} className="text-[color:var(--muted-ink)] mx-auto mb-3" />
-            <p className="text-[color:var(--muted-ink)] font-medium text-sm">
-              {search || activeCategory !== 'all' ? 'No items match your filter' : 'No catalog data available'}
-            </p>
-            {(search || activeCategory !== 'all') && (
-              <button onClick={() => { setSearch(''); setActiveCategory('all') }} className="btn-ghost mt-3 mx-auto text-xs">
+          <EmptyState
+            icon={<Package size={28} />}
+            title={search || activeCategory !== 'all' ? 'No items match your filter' : 'No catalog data available'}
+            description={search || activeCategory !== 'all' ? 'Try adjusting your search or filters' : 'Check back soon'}
+            action={(search || activeCategory !== 'all') ? (
+              <button onClick={() => { setSearch(''); setActiveCategory('all') }} className="btn-ghost text-xs">
                 Clear filters
               </button>
-            )}
-          </div>
+            ) : undefined}
+            className="card"
+          />
         )}
 
         {!loading && !error && filtered.length > 0 && (
@@ -242,19 +244,19 @@ export function SuppliersPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="card overflow-hidden"
+                      className="card overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-lg"
                     >
                       <button
                         className="w-full flex items-center justify-between px-4 py-3.5 text-left"
                         onClick={() => setExpanded(isOpen ? null : item.canonical_id)}
                       >
                         <div className="flex-1 min-w-0 mr-3">
-                          <div className="text-sm font-semibold text-[color:var(--ink)] truncate">{item.display_name}</div>
+                          <h3 className="text-sm font-semibold text-[color:var(--ink)] truncate">{item.display_name}</h3>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-0.5">
-                              <TrendingDown size={11} />
+                            <Badge variant="success" size="sm" dot>
+                              <TrendingDown size={10} />
                               {formatCurrencyDecimal(item.best_price)}
-                            </span>
+                            </Badge>
                             <span className="text-[11px] text-[color:var(--muted-ink)]">{SUPPLIER_LABELS[item.best_supplier] ?? item.best_supplier}</span>
                           </div>
                         </div>
@@ -280,7 +282,7 @@ export function SuppliersPage() {
                                     <div>
                                       <div className={cn('text-xs font-semibold flex items-center gap-1.5', isBest ? 'text-emerald-700' : 'text-[color:var(--ink)]')}>
                                         {SUPPLIER_LABELS[sup]}
-                                        {isBest && <span className="px-1.5 py-px bg-emerald-500/10 text-emerald-700 text-[9px] rounded-full border border-emerald-500/20 font-bold">BEST</span>}
+                                        {isBest && <Badge variant="success" size="sm">BEST</Badge>}
                                       </div>
                                       <div className="flex items-center gap-1.5 mt-0.5">
                                         <span className="text-[11px] text-[color:var(--muted-ink)] font-mono">{p.sku}</span>
@@ -318,7 +320,7 @@ export function SuppliersPage() {
                     <th className="px-4 py-3 text-right text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Ferguson</th>
                     <th className="px-4 py-3 text-right text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Moore Supply</th>
                     <th className="px-4 py-3 text-right text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">Apex</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Best Price</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-[hsl(var(--success))] uppercase tracking-widest">Best Price</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[color:var(--line)]">
@@ -329,23 +331,23 @@ export function SuppliersPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="hover:bg-[color:var(--panel-strong)] transition-colors"
+                        className="hover:bg-[color:var(--panel-strong)] transition-all hover:-translate-y-0.5"
                       >
                         <td className="px-4 py-3 font-medium text-[color:var(--ink)]">{item.display_name}</td>
                         {suppliers.map(sup => {
                           const p = item.prices?.[sup as keyof typeof item.prices]
                           const isBest = sup === item.best_supplier
                           return (
-                            <td key={sup} className={cn('px-4 py-3 text-right tabular-nums', isBest ? 'text-emerald-700 font-semibold' : 'text-[color:var(--muted-ink)]')}>
+                            <td key={sup} className={cn('px-4 py-3 text-right tabular-nums', isBest ? 'text-[hsl(var(--success))] font-semibold' : 'text-[color:var(--muted-ink)]')}>
                               {p ? formatCurrencyDecimal(p.cost) : <span className="text-[color:var(--muted-ink)]">—</span>}
                             </td>
                           )
                         })}
                         <td className="px-4 py-3 text-right">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-500/20 tabular-nums">
+                          <Badge variant="success" size="sm" dot>
                             <TrendingDown size={10} />
                             {formatCurrencyDecimal(item.best_price)}
-                          </span>
+                          </Badge>
                         </td>
                       </motion.tr>
                     ))}

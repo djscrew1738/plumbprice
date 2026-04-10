@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
-  TrendingUp, Search, X, ChevronDown, ArrowUpDown, Check, Download, Copy,
+  TrendingUp, Search, ChevronDown, ArrowUpDown, Check, Download, Copy,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { badgeVariants } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 interface Estimate {
   id: number; title: string; job_type: string; status: string
@@ -25,11 +29,11 @@ function formatDate(dateStr: string) {
 const JOB_TYPE_CLASS: Record<string, string> = {
   service: 'badge-service', construction: 'badge-construction', commercial: 'badge-commercial',
 }
-const STATUS_CLASS: Record<string, string> = {
-  draft:    'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border border-[color:var(--line)]',
-  sent:     'bg-blue-500/10 text-blue-600 border border-blue-500/20 dark:text-blue-400',
-  accepted: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 dark:text-emerald-400',
-  rejected: 'bg-red-500/10 text-red-600 border border-red-500/20 dark:text-red-400',
+const STATUS_BADGE_VARIANT: Record<string, 'neutral' | 'info' | 'success' | 'danger'> = {
+  draft: 'neutral',
+  sent: 'info',
+  accepted: 'success',
+  rejected: 'danger',
 }
 
 const STATUS_OPTIONS = [
@@ -72,8 +76,8 @@ function StatusDropdown({
         onClick={() => setOpen(o => !o)}
         disabled={updating}
         className={cn(
-          'badge cursor-pointer hover:opacity-80 transition-opacity gap-1',
-          STATUS_CLASS[current] ?? 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border border-[color:var(--line)]',
+          badgeVariants({ variant: STATUS_BADGE_VARIANT[current] ?? 'neutral', size: 'sm' }),
+          'cursor-pointer hover:opacity-80 transition-opacity gap-1',
           updating && 'opacity-50 pointer-events-none',
         )}
       >
@@ -257,7 +261,7 @@ export function EstimatesListPage() {
               >
                 <Download size={15} />
               </button>
-              <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
+              <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Refresh estimates">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
               <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2">
@@ -268,20 +272,13 @@ export function EstimatesListPage() {
 
           {/* Search + sort row */}
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] pointer-events-none" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search by title or county…"
-                className="w-full pl-9 pr-8 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]/25 focus:border-[color:var(--accent)]/40 transition-all"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
-                  <X size={13} />
-                </button>
-              )}
-            </div>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search by title or county…"
+              className="flex-1"
+              aria-label="Search estimates"
+            />
             {/* Sort dropdown */}
             <div className="relative">
               <button
@@ -327,9 +324,9 @@ export function EstimatesListPage() {
         {!loading && visible.length > 0 && (
           <div className="grid grid-cols-3 gap-3 mb-4">
             {[
-              { label: 'Showing',     value: visible.length.toString(), icon: FileText,   color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20' },
-              { label: 'Total Value', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-              { label: 'Avg Value',   value: formatCurrency(avgValue),   icon: MapPin,     color: 'text-violet-400',  bg: 'bg-violet-500/10 border-violet-500/20' },
+              { label: 'Showing',     value: visible.length.toString(), icon: FileText,   color: 'text-[hsl(var(--info))]',           bg: 'bg-[hsl(var(--info)/0.1)] border-[hsl(var(--info)/0.2)]' },
+              { label: 'Total Value', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-[hsl(var(--success))]',        bg: 'bg-[hsl(var(--success)/0.1)] border-[hsl(var(--success)/0.2)]' },
+              { label: 'Avg Value',   value: formatCurrency(avgValue),   icon: MapPin,     color: 'text-[color:var(--accent-strong)]', bg: 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]/20' },
             ].map(({ label, value, icon: Icon, color, bg }) => (
               <div key={label} className="card p-3.5 flex items-center gap-3">
                 <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center border shrink-0', bg)}>
@@ -359,30 +356,40 @@ export function EstimatesListPage() {
 
         {/* Error */}
         {error && !loading && (
-          <div className="card p-8 text-center">
-            <p className="text-red-400 font-medium text-sm mb-3">{error}</p>
-            <button onClick={fetchEstimates} className="btn-primary mx-auto">Retry</button>
+          <div className="card">
+            <ErrorState message={error} onRetry={fetchEstimates} />
           </div>
         )}
 
         {/* Empty */}
         {!loading && !error && estimates.length === 0 && (
-          <div className="card p-12 text-center">
-            <div className="w-12 h-12 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FileText size={20} className="text-[color:var(--muted-ink)]" />
-            </div>
-            <h3 className="font-bold text-[color:var(--ink)] mb-1.5">No estimates yet</h3>
-            <p className="text-[color:var(--muted-ink)] text-sm mb-6">Chat with the estimator to generate your first price.</p>
-            <button onClick={() => router.push('/estimator')} className="btn-primary mx-auto">Start Estimating</button>
+          <div className="card">
+            <EmptyState
+              icon={<FileText size={20} />}
+              title="No estimates yet"
+              description="Chat with the estimator to generate your first price."
+              action={
+                <button onClick={() => router.push('/estimator')} className="btn-primary">
+                  Start Estimating
+                </button>
+              }
+            />
           </div>
         )}
 
         {/* No search results */}
         {!loading && !error && estimates.length > 0 && visible.length === 0 && (
-          <div className="card p-10 text-center">
-            <Search size={24} className="text-[color:var(--muted-ink)] mx-auto mb-3" />
-            <p className="text-[color:var(--muted-ink)] text-sm">No estimates match &ldquo;{search}&rdquo;</p>
-            <button onClick={() => setSearch('')} className="btn-ghost mt-3 mx-auto text-xs">Clear search</button>
+          <div className="card">
+            <EmptyState
+              icon={<Search size={20} />}
+              title="No matches"
+              description={`No estimates match \u201c${search}\u201d`}
+              action={
+                <button onClick={() => setSearch('')} className="btn-ghost text-xs">
+                  Clear search
+                </button>
+              }
+            />
           </div>
         )}
 
@@ -399,7 +406,7 @@ export function EstimatesListPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.18, delay: i * 0.02 }}
-                    className="card p-4 cursor-pointer hover:border-[color:var(--line)] transition-colors"
+                    className="card p-4 cursor-pointer hover:border-[color:var(--line)] hover:-translate-y-0.5 hover:shadow-md transition-all"
                     onClick={() => router.push(`/estimates/${est.id}`)}
                   >
                     <div className="flex items-start justify-between gap-2 mb-3">
@@ -421,11 +428,11 @@ export function EstimatesListPage() {
                       <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                         {confirmDelete === est.id ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] text-red-400 font-medium">Delete?</span>
+                            <span className="text-[11px] text-[hsl(var(--danger))] font-medium">Delete?</span>
                             <button
                               onClick={() => void handleDeleteConfirm(est.id)}
                               disabled={deleting === est.id}
-                              className="px-2 py-1 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-semibold hover:bg-red-500/25 transition-colors disabled:opacity-40"
+                              className="px-2 py-1 rounded-lg bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] text-[11px] font-semibold hover:bg-[hsl(var(--danger)/0.25)] transition-colors disabled:opacity-40"
                             >Yes</button>
                             <button
                               onClick={() => setConfirmDelete(null)}
@@ -445,7 +452,7 @@ export function EstimatesListPage() {
                             <button
                               onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
                               disabled={deleting === est.id}
-                              className="p-2 rounded-xl hover:bg-red-500/10 text-[color:var(--muted-ink)] hover:text-red-500 transition-colors disabled:opacity-40"
+                              className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
                               title="Delete"
                             >
                               <Trash2 size={14} />
@@ -461,11 +468,11 @@ export function EstimatesListPage() {
 
             {/* Desktop table */}
             <div className="hidden lg:block card overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" role="table">
                 <thead>
-                  <tr className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]">
+                  <tr role="row" className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]">
                     {['Title', 'Type', 'Status', 'Confidence', 'County', 'Total', 'Date', ''].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">{h}</th>
+                      <th key={h} role="columnheader" className="px-4 py-3 text-left text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -478,7 +485,8 @@ export function EstimatesListPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.12, delay: i * 0.015 }}
-                        className="hover:bg-[color:var(--panel-strong)] transition-colors group cursor-pointer"
+                        className="hover:bg-[color:var(--panel-strong)] hover:shadow-sm transition-all group cursor-pointer"
+                        role="row"
                         onClick={() => router.push(`/estimates/${est.id}`)}
                       >
                         <td className="px-4 py-3 font-medium text-[color:var(--ink)] max-w-[180px] truncate">{est.title || `Estimate #${est.id}`}</td>
@@ -492,11 +500,11 @@ export function EstimatesListPage() {
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                             {confirmDelete === est.id ? (
                               <>
-                                <span className="text-[11px] text-red-400 font-medium mr-1">Delete?</span>
+                                <span className="text-[11px] text-[hsl(var(--danger))] font-medium mr-1">Delete?</span>
                                 <button
                                   onClick={() => void handleDeleteConfirm(est.id)}
                                   disabled={deleting === est.id}
-                                  className="px-2 py-1 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-semibold hover:bg-red-500/25 transition-colors disabled:opacity-40"
+                                  className="px-2 py-1 rounded-lg bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] text-[11px] font-semibold hover:bg-[hsl(var(--danger)/0.25)] transition-colors disabled:opacity-40"
                                 >Yes</button>
                                 <button
                                   onClick={() => setConfirmDelete(null)}
@@ -516,7 +524,7 @@ export function EstimatesListPage() {
                                 <button
                                   onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
                                   disabled={deleting === est.id}
-                                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-[color:var(--muted-ink)] hover:text-red-500 transition-colors disabled:opacity-40"
+                                  className="p-1.5 rounded-lg hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
                                   title="Delete"
                                 >
                                   <Trash2 size={13} />

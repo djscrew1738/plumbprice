@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Save, RefreshCw, Wrench, DollarSign, BarChart3, AlertCircle, Package } from 'lucide-react'
+import { Save, RefreshCw, Wrench, DollarSign, BarChart3, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import { PageIntro } from '@/components/layout/PageIntro'
+import { Badge } from '@/components/ui/Badge'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 interface LaborTemplate {
   code: string; name: string; category: string; base_hours: number
@@ -22,10 +25,10 @@ const TABS = [
   { id: 'stats', label: 'Stats', icon: BarChart3 },
 ]
 
-const CAT_CLASS: Record<string, string> = {
-  service: 'badge-service',
-  construction: 'badge-construction',
-  commercial: 'badge-commercial',
+const CAT_VARIANT: Record<string, 'success' | 'warning' | 'info' | 'accent' | 'neutral'> = {
+  service: 'info',
+  construction: 'warning',
+  commercial: 'accent',
 }
 
 export function AdminPage() {
@@ -175,16 +178,16 @@ export function AdminPage() {
 
         <div className="mt-4">
           {error && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">
-              <AlertCircle size={15} className="shrink-0" />
-              {error}
-              <button onClick={() => setError(null)} className="ml-auto font-bold text-red-700 hover:text-red-800">×</button>
-            </div>
+            <ErrorState
+              message={error}
+              onRetry={() => { setError(null); refreshCurrentTab() }}
+              className="mb-4"
+            />
           )}
 
           {tab === 'labor' && (
             loading
-              ? <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <div key={i} className="card skeleton h-16 rounded-2xl" />)}</div>
+              ? <Skeleton variant="card" count={5} className="h-16 rounded-2xl" />
               : <>
                   <div className="space-y-2.5 lg:hidden">
                     {templates.map((t, i) => (
@@ -193,14 +196,14 @@ export function AdminPage() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.18, delay: i * 0.03 }}
-                        className="card p-4"
+                        className="card p-4 hover:shadow-lg transition-all"
                       >
                         <div className="mb-3 flex items-start justify-between gap-2">
                           <div>
                             <div className="text-sm font-bold text-[color:var(--ink)]">{t.name}</div>
                             <div className="mt-0.5 font-mono text-[10px] text-[color:var(--muted-ink)]">{t.code}</div>
                           </div>
-                          <span className={cn('badge', CAT_CLASS[t.category] ?? 'badge-service')}>{t.category}</span>
+                          <Badge variant={CAT_VARIANT[t.category] ?? 'neutral'}>{t.category}</Badge>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           {[
@@ -218,9 +221,9 @@ export function AdminPage() {
                     ))}
                   </div>
 
-                  <div className="hidden lg:block card overflow-hidden">
+                  <div className="hidden lg:block card overflow-auto max-h-[70vh]">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10">
                         <tr className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]">
                           {['Code', 'Name', 'Category', 'Base Hrs', 'Lead Rate', 'Helper', 'Disposal'].map(h => (
                             <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted-ink)]">{h}</th>
@@ -239,14 +242,14 @@ export function AdminPage() {
                             <td className="px-4 py-3 font-mono text-[11px] text-[color:var(--muted-ink)]">{t.code}</td>
                             <td className="px-4 py-3 font-medium text-[color:var(--ink)]">{t.name}</td>
                             <td className="px-4 py-3">
-                              <span className={cn('badge', CAT_CLASS[t.category] ?? 'badge-service')}>{t.category}</span>
+                              <Badge variant={CAT_VARIANT[t.category] ?? 'neutral'}>{t.category}</Badge>
                             </td>
                             <td className="px-4 py-3 tabular-nums text-[color:var(--muted-ink)]">{t.base_hours}h</td>
                             <td className="px-4 py-3 tabular-nums text-[color:var(--muted-ink)]">${t.lead_rate}/h</td>
                             <td className="px-4 py-3">
-                              <span className={cn('badge', t.helper_required ? 'badge-construction' : 'border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)]')}>
+                              <Badge variant={t.helper_required ? 'warning' : 'neutral'}>
                                 {t.helper_required ? 'Yes' : 'No'}
-                              </span>
+                              </Badge>
                             </td>
                             <td className="px-4 py-3 tabular-nums text-[color:var(--muted-ink)]">{t.disposal_hours}h</td>
                           </motion.tr>
@@ -259,10 +262,10 @@ export function AdminPage() {
 
           {tab === 'markup' && (
             loading
-              ? <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="card skeleton h-32 rounded-2xl" />)}</div>
+              ? <Skeleton variant="card" count={3} className="h-32 rounded-2xl" />
               : <div className="space-y-3">
                   {saveOk && (
-                    <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700">
+                    <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--success)/0.2)] bg-[hsl(var(--success)/0.1)] px-4 py-3 text-sm text-[hsl(var(--success))]">
                       Markup rules saved successfully
                     </div>
                   )}
@@ -272,12 +275,12 @@ export function AdminPage() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.18, delay: i * 0.05 }}
-                      className="card p-5"
+                      className="card p-5 hover:shadow-lg transition-all"
                     >
                       <div className="mb-4 flex items-center gap-2">
-                        <span className={cn('badge', CAT_CLASS[rule.job_type] ?? 'badge-service')}>
+                        <Badge variant={CAT_VARIANT[rule.job_type] ?? 'neutral'}>
                           {rule.job_type}
-                        </span>
+                        </Badge>
                         <span className="text-sm font-semibold capitalize text-[color:var(--ink)]">{rule.job_type} Jobs</span>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -288,7 +291,7 @@ export function AdminPage() {
                           <div className="relative">
                             <input
                               type="number"
-                              className="input pr-8"
+                              className="input pr-8 focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                               value={rule.materials_markup_pct}
                               onChange={e => updateMarkup(rule.job_type, 'materials_markup_pct', parseFloat(e.target.value))}
                               step="1" min="0" max="200"
@@ -304,7 +307,7 @@ export function AdminPage() {
                             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[color:var(--muted-ink)]">$</span>
                             <input
                               type="number"
-                              className="input pl-7"
+                              className="input pl-7 focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                               value={rule.misc_disposal_flat}
                               onChange={e => updateMarkup(rule.job_type, 'misc_disposal_flat', parseFloat(e.target.value))}
                               step="5" min="0"
@@ -349,21 +352,26 @@ export function AdminPage() {
 
           {tab === 'stats' && (
             loading
-              ? <div className="grid grid-cols-2 gap-3">{[1, 2, 3, 4].map(i => <div key={i} className="card skeleton h-28 rounded-2xl" />)}</div>
+              ? <div className="grid grid-cols-2 gap-3">
+                  <Skeleton variant="stat-card" className="h-28 rounded-2xl" />
+                  <Skeleton variant="stat-card" className="h-28 rounded-2xl" />
+                  <Skeleton variant="stat-card" className="h-28 rounded-2xl" />
+                  <Skeleton variant="stat-card" className="h-28 rounded-2xl" />
+                </div>
               : stats
                 ? <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: 'Total Estimates', value: stats.total_estimates, icon: BarChart3, color: 'text-blue-700', bg: 'bg-blue-500/10 border-blue-500/20' },
-                      { label: 'Avg Value', value: `$${Math.round(stats.avg_estimate_value ?? 0).toLocaleString()}`, icon: DollarSign, color: 'text-emerald-700', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                      { label: 'Labor Templates', value: stats.labor_templates_count, icon: Wrench, color: 'text-violet-700', bg: 'bg-violet-500/10 border-violet-500/20' },
-                      { label: 'Catalog Items', value: stats.canonical_items_count, icon: Package, color: 'text-orange-700', bg: 'bg-orange-500/10 border-orange-500/20' },
+                      { label: 'Total Estimates', value: stats.total_estimates, icon: BarChart3, color: 'text-[hsl(var(--info))]', bg: 'bg-[hsl(var(--info)/0.1)] border-[hsl(var(--info)/0.2)]' },
+                      { label: 'Avg Value', value: `$${Math.round(stats.avg_estimate_value ?? 0).toLocaleString()}`, icon: DollarSign, color: 'text-[hsl(var(--success))]', bg: 'bg-[hsl(var(--success)/0.1)] border-[hsl(var(--success)/0.2)]' },
+                      { label: 'Labor Templates', value: stats.labor_templates_count, icon: Wrench, color: 'text-[color:var(--accent-strong)]', bg: 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]/20' },
+                      { label: 'Catalog Items', value: stats.canonical_items_count, icon: Package, color: 'text-[hsl(var(--warning-foreground))]', bg: 'bg-[hsl(var(--warning)/0.1)] border-[hsl(var(--warning)/0.2)]' },
                     ].map(({ label, value, icon: Icon, color, bg }, i) => (
                       <motion.div
                         key={label}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.18, delay: i * 0.05 }}
-                        className="card flex flex-col gap-4 p-5"
+                        className="card flex flex-col gap-4 p-5 hover:shadow-lg transition-all"
                       >
                         <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl border', bg)}>
                           <Icon size={18} className={color} />
@@ -375,10 +383,10 @@ export function AdminPage() {
                       </motion.div>
                     ))}
                   </div>
-                : <div className="card p-10 text-center">
-                    <p className="mb-4 text-sm text-[color:var(--muted-ink)]">Stats unavailable</p>
-                    <button onClick={fetchStats} className="btn-secondary mx-auto">Retry</button>
-                  </div>
+                : <ErrorState
+                    message="Stats unavailable"
+                    onRetry={fetchStats}
+                  />
           )}
         </div>
       </div>

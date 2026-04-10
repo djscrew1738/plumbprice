@@ -1,11 +1,27 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { motion, type Variants } from 'framer-motion'
 import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { estimatesApi, type EstimateListItem } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+
+/* ── Animation helpers ───────────────────────────── */
+
+const staggerContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+}
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+}
+
+/* ── Helpers ─────────────────────────────────────── */
 
 function computeWeeklyStats(jobs: EstimateListItem[]) {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -17,7 +33,10 @@ function computeWeeklyStats(jobs: EstimateListItem[]) {
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3">
+    <motion.div
+      variants={fadeUp}
+      className="flex items-center gap-3 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3"
+    >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
         <Icon size={16} />
       </span>
@@ -25,7 +44,7 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
         <p className="text-[11px] font-medium text-[color:var(--muted-ink)]">{label}</p>
         <p className="truncate text-sm font-semibold text-[color:var(--ink)]">{value}</p>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -44,7 +63,7 @@ export function LauncherHome() {
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+    <div className="content-container py-5">
       {/* Hero panel */}
       <section className="shell-panel p-5 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
@@ -62,12 +81,17 @@ export function LauncherHome() {
       <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="This week's activity">
         {stats === null ? (
           <>
-            <div className="skeleton rounded-2xl h-[60px]" />
-            <div className="skeleton rounded-2xl h-[60px]" />
-            <div className="skeleton rounded-2xl h-[60px]" />
+            <Skeleton variant="stat-card" />
+            <Skeleton variant="stat-card" />
+            <Skeleton variant="stat-card" />
           </>
         ) : (
-          <>
+          <motion.div
+            className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-3"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+          >
             <StatCard
               icon={Wrench}
               label="Estimates this week"
@@ -83,25 +107,35 @@ export function LauncherHome() {
               label="Average job value"
               value={stats.avgValue > 0 ? formatCurrency(stats.avgValue) : '—'}
             />
-          </>
+          </motion.div>
         )}
       </section>
 
       {/* Quick-action cards */}
-      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Start a new estimate">
-        <PrimaryActionCard
-          href="/estimator?entry=quick-quote"
-          title="Quick Quote"
-          description="Jump into chat pricing with a clean workspace."
-          icon={Sparkles}
-        />
-        <PrimaryActionCard
-          href="/estimator?entry=upload-job-files"
-          title="Upload Job Files"
-          description="Open the estimator with a file-first workflow."
-          icon={FileUp}
-        />
-      </section>
+      <motion.section
+        className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
+        aria-label="Start a new estimate"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={fadeUp}>
+          <PrimaryActionCard
+            href="/estimator?entry=quick-quote"
+            title="Quick Quote"
+            description="Jump into chat pricing with a clean workspace."
+            icon={Sparkles}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <PrimaryActionCard
+            href="/estimator?entry=upload-job-files"
+            title="Upload Job Files"
+            description="Open the estimator with a file-first workflow."
+            icon={FileUp}
+          />
+        </motion.div>
+      </motion.section>
 
       {/* Recent jobs */}
       <section className="mt-5">
@@ -119,32 +153,26 @@ export function LauncherHome() {
 
 export function LauncherHomeSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+    <div className="content-container py-5">
       <div className="shell-panel p-5 sm:p-6">
-        <div className="mb-3 h-3 w-32 skeleton rounded" />
-        <div className="mb-4 h-8 w-2/3 skeleton rounded" />
-        <div className="h-4 w-3/4 skeleton rounded" />
+        <Skeleton variant="text" className="mb-3 h-3 w-32" />
+        <Skeleton variant="text" className="mb-4 h-8 w-2/3" />
+        <Skeleton variant="text" className="h-4 w-3/4" />
       </div>
 
       <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="skeleton rounded-2xl h-[60px]" />
-        ))}
+        <Skeleton variant="stat-card" count={3} />
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="skeleton rounded-2xl p-4 h-[72px]" />
-        <div className="skeleton rounded-2xl p-4 h-[72px]" />
+        <Skeleton variant="card" className="h-[72px]" />
+        <Skeleton variant="card" className="h-[72px]" />
       </section>
 
       <section className="mt-5">
         <div className="shell-panel space-y-3 p-4">
-          <div className="h-5 w-24 skeleton rounded" />
-          <div className="space-y-2">
-            <div className="h-16 skeleton rounded-xl" />
-            <div className="h-16 skeleton rounded-xl" />
-            <div className="h-16 skeleton rounded-xl" />
-          </div>
+          <Skeleton variant="text" className="h-5 w-24" />
+          <Skeleton variant="card" count={3} className="h-16 rounded-xl" />
         </div>
       </section>
     </div>

@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   BriefcaseBusiness, CircleDollarSign, MapPin, RefreshCw,
-  UserRound, TrendingUp, ChevronLeft, ChevronRight, Plus, X, Check, Clock,
+  UserRound, TrendingUp, ChevronLeft, ChevronRight, Plus, Check, Clock,
 } from 'lucide-react'
 import { projectsApi, type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Modal } from '@/components/ui/Modal'
 
 function timeAgo(dateStr: string): string {
   const now = Date.now()
@@ -182,13 +184,12 @@ export function PipelinePage() {
 
         {/* Empty */}
         {!loading && !error && projects.length === 0 && (
-          <div className="card p-12 text-center">
-            <CircleDollarSign size={28} className="mx-auto text-[color:var(--muted-ink)] mb-4" />
-            <h3 className="text-base font-bold text-[color:var(--ink)] mb-2">No opportunities yet</h3>
-            <p className="text-sm text-[color:var(--muted-ink)] max-w-xs mx-auto">
-              Create jobs through the estimator or API to populate the pipeline.
-            </p>
-          </div>
+          <EmptyState
+            icon={<CircleDollarSign size={28} />}
+            title="No opportunities yet"
+            description="Create jobs through the estimator or API to populate the pipeline."
+            className="card"
+          />
         )}
 
         {/* Kanban columns */}
@@ -223,12 +224,12 @@ export function PipelinePage() {
 
                   <div className="space-y-2.5">
                     {stageProjects.length === 0 && (
-                      <div className={cn(
-                        'rounded-2xl border border-dashed p-6 text-xs text-[color:var(--muted-ink)] text-center',
-                        stage.emptyColor,
-                      )}>
-                        No jobs in this stage
-                      </div>
+                      <EmptyState
+                        icon={<CircleDollarSign size={20} />}
+                        title="Empty"
+                        description="No jobs in this stage"
+                        className="card rounded-2xl border border-dashed p-4"
+                      />
                     )}
                     {stageProjects.map((project, projectIndex) => (
                       <ProjectCard
@@ -249,14 +250,17 @@ export function PipelinePage() {
       </div>
 
       {/* Create Project Modal */}
-      <AnimatePresence>
-        {showCreate && (
-          <CreateProjectModal
-            onClose={() => setShowCreate(false)}
-            onCreated={handleProjectCreated}
-          />
-        )}
-      </AnimatePresence>
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="New Project"
+        size="md"
+      >
+        <CreateProjectModalContent
+          onClose={() => setShowCreate(false)}
+          onCreated={handleProjectCreated}
+        />
+      </Modal>
     </div>
   )
 }
@@ -294,7 +298,7 @@ function ProjectCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, delay }}
       className={cn(
-        'rounded-2xl border bg-[color:var(--panel)] p-3.5 space-y-3 transition-colors hover:bg-[color:var(--panel-strong)]',
+        'rounded-2xl border bg-[color:var(--panel)] p-3.5 space-y-3 transition-all hover:-translate-y-0.5 hover:shadow-lg',
         project.status === 'won' && 'border-emerald-500/20 bg-emerald-500/[0.04]',
         project.status === 'lost' && 'border-red-500/20 bg-red-500/[0.03]',
         project.status === 'estimate_sent' && 'border-blue-500/20 bg-blue-500/[0.03]',
@@ -304,7 +308,7 @@ function ProjectCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-[color:var(--ink)] truncate leading-snug">{project.name}</div>
+          <h3 className="text-sm font-semibold text-[color:var(--ink)] truncate leading-snug">{project.name}</h3>
           <div className="flex items-center gap-1 mt-1">
             <BriefcaseBusiness size={11} className="text-[color:var(--muted-ink)] shrink-0" />
             <span className="text-[11px] text-[color:var(--muted-ink)] capitalize">{project.job_type}</span>
@@ -383,12 +387,12 @@ function ProjectCard({
   )
 }
 
-// ─── Create Project Modal ─────────────────────────────────────────────────────
+// ─── Create Project Modal Content ────────────────────────────────────────────
 
 const JOB_TYPES = ['service', 'construction', 'commercial']
 const COUNTIES  = ['Dallas', 'Tarrant', 'Collin', 'Denton', 'Rockwall', 'Parker']
 
-function CreateProjectModal({
+function CreateProjectModalContent({
   onClose,
   onCreated,
 }: {
@@ -432,127 +436,92 @@ function CreateProjectModal({
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-        onClick={onClose}
-      />
-      {/* Panel */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 16 }}
-        animate={{ opacity: 1, scale: 1,    y: 0  }}
-        exit={{   opacity: 0, scale: 0.96,  y: 16 }}
-        transition={{ duration: 0.18 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        onClick={e => e.stopPropagation()}
-      >
-        <form
-          onSubmit={e => void handleSubmit(e)}
-          className="w-full max-w-md bg-[color:var(--panel)] border border-[color:var(--line)] rounded-2xl shadow-2xl overflow-hidden"
+    <form
+      onSubmit={e => void handleSubmit(e)}
+      className="space-y-4"
+    >
+      {/* Name */}
+      <div>
+        <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">
+          Project Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          autoFocus
+          value={form.name}
+          onChange={e => set('name', e.target.value)}
+          placeholder="e.g. 123 Main St — Water Heater"
+          className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+          required
+        />
+      </div>
+
+      {/* Job type + County */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Job Type</label>
+          <select
+            value={form.job_type}
+            onChange={e => set('job_type', e.target.value)}
+            className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+          >
+            {JOB_TYPES.map(t => (
+              <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">County</label>
+          <select
+            value={form.county}
+            onChange={e => set('county', e.target.value)}
+            className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+          >
+            {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Customer */}
+      <div>
+        <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Customer Name</label>
+        <input
+          value={form.customer_name}
+          onChange={e => set('customer_name', e.target.value)}
+          placeholder="Optional"
+          className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+        />
+      </div>
+
+      {/* Notes */}
+      <div>
+        <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Notes</label>
+        <textarea
+          value={form.notes}
+          onChange={e => set('notes', e.target.value)}
+          placeholder="Optional job notes…"
+          rows={2}
+          className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition resize-none"
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-2 pt-2">
+        <button type="button" onClick={onClose} className="btn-secondary min-h-0 py-2">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={saving || !form.name.trim()}
+          className="btn-primary min-h-0 py-2 disabled:opacity-50"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--line)]">
-            <h2 className="text-sm font-bold text-[color:var(--ink)]">New Project</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
-            >
-              <X size={15} />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="px-5 py-4 space-y-4">
-            {/* Name */}
-            <div>
-              <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">
-                Project Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                autoFocus
-                value={form.name}
-                onChange={e => set('name', e.target.value)}
-                placeholder="e.g. 123 Main St — Water Heater"
-                className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
-                required
-              />
-            </div>
-
-            {/* Job type + County */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Job Type</label>
-                <select
-                  value={form.job_type}
-                  onChange={e => set('job_type', e.target.value)}
-                  className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
-                >
-                  {JOB_TYPES.map(t => (
-                    <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">County</label>
-                <select
-                  value={form.county}
-                  onChange={e => set('county', e.target.value)}
-                  className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
-                >
-                  {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Customer */}
-            <div>
-              <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Customer Name</label>
-              <input
-                value={form.customer_name}
-                onChange={e => set('customer_name', e.target.value)}
-                placeholder="Optional"
-                className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
-              />
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-xs font-semibold text-[color:var(--muted-ink)] mb-1.5">Notes</label>
-              <textarea
-                value={form.notes}
-                onChange={e => set('notes', e.target.value)}
-                placeholder="Optional job notes…"
-                rows={2}
-                className="w-full px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-sm text-[color:var(--ink)] placeholder-[color:var(--muted-ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition resize-none"
-              />
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-[color:var(--line)] bg-[color:var(--panel-strong)]">
-            <button type="button" onClick={onClose} className="btn-secondary min-h-0 py-2">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !form.name.trim()}
-              className="btn-primary min-h-0 py-2 disabled:opacity-50"
-            >
-              {saving ? (
-                <RefreshCw size={13} className="animate-spin" />
-              ) : (
-                <Check size={13} />
-              )}
-              {saving ? 'Creating…' : 'Create Project'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </>
+          {saving ? (
+            <RefreshCw size={13} className="animate-spin" />
+          ) : (
+            <Check size={13} />
+          )}
+          {saving ? 'Creating…' : 'Create Project'}
+        </button>
+      </div>
+    </form>
   )
 }

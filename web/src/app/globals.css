@@ -41,6 +41,7 @@
     --accent-hsl: 24 78% 52%;
     --accent-strong: hsl(24 66% 33%);
     --accent-soft: hsl(24 100% 94%);
+    --panel-hsl: 36 36% 98%;
 
     /* Semantic status colors */
     --success: 160 55% 38%;
@@ -94,6 +95,7 @@
     --accent-hsl: 24 78% 55%;
     --accent-strong: hsl(24 78% 68%);
     --accent-soft: hsl(24 60% 18%);
+    --panel-hsl: 24 16% 10%;
 
     /* Semantic status colors (dark) */
     --success: 160 84% 39%;
@@ -255,7 +257,7 @@ body {
 }
 
 .chat-bubble-user {
-  @apply ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-[color:var(--accent)] px-4 py-3 text-white shadow-[0_16px_30px_rgba(183,96,43,0.18)];
+  @apply ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-[color:var(--accent)] px-4 py-3 text-white shadow-[0_8px_24px_hsl(var(--accent-hsl)/0.2)];
 }
 
 .chat-bubble-assistant {
@@ -346,4 +348,91 @@ body {
   .skeleton { animation: none; }
   .typing-dot { animation: none; opacity: 0.5; }
   .cost-bar { animation: none; width: var(--target-width, 100%); }
+}
+
+/* ── Print styles ────────────────────────────────── */
+@media print {
+  /* Hide navigation and UI chrome */
+  .sticky,
+  [role="navigation"],
+  button[title="Open in Estimator"],
+  button[title="Duplicate estimate"],
+  button[title="Export CSV"],
+  button[title="Print / Save as PDF"],
+  button[title="Delete estimate"],
+  .text-right > div:first-child { /* header total */
+    display: none !important;
+  }
+
+  /* Optimize text rendering for print */
+  body {
+    background: white;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  /* Card and container styles for print */
+  .card,
+  .card-sm,
+  [class*="card"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #ddd;
+    box-shadow: none;
+    margin-bottom: 0.5cm;
+  }
+
+  /* Table-like content breaks */
+  .divide-y > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Ensure badges print with clear colors */
+  .badge {
+    border: 1px solid #ccc;
+  }
+
+  /* Optimize spacing for print */
+  .space-y-4 > * {
+    margin-bottom: 0.8cm;
+  }
+
+  /* Hide animations in print */
+  [class*="animate"],
+  [class*="motion"],
+  [style*="animation"] {
+    animation: none !important;
+  }
+
+  /* Optimize layout for print (single column) */
+  .grid {
+    display: block !important;
+  }
+
+  .grid > * {
+    margin-bottom: 0.5cm;
+  }
+
+  /* Preserve semantic colors without gradients */
+  [class*="bg-"] {
+    background: white !important;
+  }
+
+  /* Ensure text is readable */
+  * {
+    background-color: transparent !important;
+    color: #000 !important;
+  }
+
+  .text-\[color\:var\(--\*\)\] {
+    color: #000 !important;
+  }
+
+  /* Print page setup */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
 }

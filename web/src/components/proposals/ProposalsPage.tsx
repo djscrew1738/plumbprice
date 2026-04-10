@@ -10,8 +10,11 @@ import {
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api } from '@/lib/api'
-import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
+import { formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
+import { Badge } from '@/components/ui/Badge'
 
 // ─── Company config (move to /api/v1/settings when multi-tenant) ──────────────
 const COMPANY = {
@@ -71,16 +74,16 @@ function fmtDateShort(s: string) {
   return isValid(d) ? format(d, 'MMM d, yy') : '—'
 }
 
-const JOB_TYPE_CLASS: Record<string, string> = {
-  service: 'badge-service',
-  construction: 'badge-construction',
-  commercial: 'badge-commercial',
+const JOB_TYPE_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info'> = {
+  service: 'info',
+  construction: 'accent',
+  commercial: 'warning',
 }
 
-const STATUS_CLASS: Record<string, string> = {
-  draft:    'bg-white/[0.04] text-zinc-500 border border-white/[0.08]',
-  sent:     'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  accepted: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+const STATUS_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info'> = {
+  draft:    'neutral',
+  sent:     'info',
+  accepted: 'success',
 }
 
 // ─── Proposal text generator ──────────────────────────────────────────────────
@@ -277,6 +280,7 @@ function ProposalModal({
                 onClick={handleDownload}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
                 title="Download as .txt"
+                aria-label="Download proposal"
               >
                 <Download size={13} />
                 <span className="hidden sm:inline">Download</span>
@@ -284,6 +288,7 @@ function ProposalModal({
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-colors"
+                aria-label="Print proposal"
               >
                 <Printer size={13} />
                 Print
@@ -291,6 +296,7 @@ function ProposalModal({
               <button
                 onClick={onClose}
                 className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors"
+                aria-label="Close proposal preview"
               >
                 <X size={16} />
               </button>
@@ -382,6 +388,7 @@ export function ProposalsPage() {
               onClick={() => void load()}
               disabled={loading}
               className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors"
+              aria-label="Refresh proposals"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
@@ -417,27 +424,25 @@ export function ProposalsPage() {
 
         {/* Error */}
         {error && !loading && (
-          <div className="card p-8 text-center">
-            <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
-            <button onClick={() => void load()} className="btn-primary mx-auto">Retry</button>
-          </div>
+          <ErrorState
+            message={error}
+            onRetry={() => void load()}
+          />
         )}
 
         {/* Empty */}
         {!loading && !error && estimates.length === 0 && (
-          <div className="card p-14 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-5">
-              <FileText size={24} className="text-blue-400" />
-            </div>
-            <h3 className="font-bold text-white text-base mb-1.5">No estimates yet</h3>
-            <p className="text-zinc-600 text-sm mb-6 max-w-xs mx-auto leading-relaxed">
-              Generate pricing estimates first, then come back here to create proposals.
-            </p>
-            <button onClick={() => router.push('/estimator')} className="btn-primary mx-auto">
-              <Zap size={15} />
-              Open Estimator
-            </button>
-          </div>
+          <EmptyState
+            icon={<FileText size={24} />}
+            title="No estimates yet"
+            description="Generate pricing estimates first, then come back here to create proposals."
+            action={
+              <button onClick={() => router.push('/estimator')} className="btn-primary">
+                <Zap size={15} />
+                Open Estimator
+              </button>
+            }
+          />
         )}
 
         {/* Estimates list */}
@@ -453,6 +458,7 @@ export function ProposalsPage() {
                   key={est.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -4 }}
                   transition={{ duration: 0.18, delay: i * 0.04 }}
                   className="card p-4"
                 >
@@ -460,12 +466,12 @@ export function ProposalsPage() {
                   <div className="flex items-start gap-3 lg:hidden">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                        <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>
-                          {est.job_type}
-                        </span>
-                        <span className={cn('badge', STATUS_CLASS[est.status] ?? 'bg-white/[0.04] text-zinc-500 border border-white/[0.08]')}>
-                          {est.status}
-                        </span>
+                        <Badge variant={JOB_TYPE_VARIANT[est.job_type] ?? 'neutral'} size="sm">
+                           {est.job_type}
+                         </Badge>
+                        <Badge variant={STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
+                           {est.status}
+                         </Badge>
                       </div>
                       <h3 className="font-semibold text-white text-sm leading-snug truncate mb-1">
                         {est.title || `Estimate #${est.id}`}
@@ -493,9 +499,9 @@ export function ProposalsPage() {
                   {/* Desktop layout */}
                   <div className="hidden lg:flex items-center gap-4">
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>
-                        {est.job_type}
-                      </span>
+                      <Badge variant={JOB_TYPE_VARIANT[est.job_type] ?? 'neutral'} size="sm">
+                           {est.job_type}
+                         </Badge>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-zinc-200 text-sm truncate">
@@ -504,9 +510,9 @@ export function ProposalsPage() {
                       <div className="flex items-center gap-3 text-[11px] text-zinc-600 mt-0.5">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county} County</span>
                         <span className="flex items-center gap-1"><Calendar size={10} />{fmtDate(est.created_at)}</span>
-                        <span className={cn('badge text-[9px]', STATUS_CLASS[est.status] ?? 'bg-white/[0.04] text-zinc-500 border border-white/[0.08]')}>
-                          {est.status}
-                        </span>
+                        <Badge variant={STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
+                         {est.status}
+                       </Badge>
                       </div>
                     </div>
                     <div className="font-extrabold text-white text-lg tabular-nums shrink-0">

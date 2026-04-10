@@ -12,6 +12,7 @@ import { format, isValid } from 'date-fns'
 import { projectsApi } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 interface EstimateSummary {
   id: number
@@ -203,10 +204,10 @@ export function ProjectDrawer({
             <div className="flex-1 overflow-y-auto">
               {loading && (
                 <div className="p-5 space-y-4">
-                  <div className="skeleton h-6 w-3/4 rounded-lg" />
-                  <div className="skeleton h-4 w-1/2 rounded-lg" />
-                  <div className="skeleton h-24 rounded-xl" />
-                  <div className="skeleton h-32 rounded-xl" />
+                  <Skeleton variant="text" className="h-6 w-3/4" />
+                  <Skeleton variant="text" className="h-4 w-1/2" />
+                  <Skeleton variant="card" className="h-24" />
+                  <Skeleton variant="card" className="h-32" />
                 </div>
               )}
 

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Send, RotateCcw, Zap, Copy, Check, FileUp, X, Square } from 'lucide-react'
 import { chatApi, estimatesApi, type EstimateDetailResponse } from '@/lib/api'
 import { ConfidenceBadge } from './ConfidenceBadge'
+import { ChatSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, EstimateBreakdown as EstimateBreakdownType, LineItem } from '@/types'
@@ -355,7 +356,7 @@ export function EstimatorPage() {
 
       <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 sm:gap-4 sm:px-4 sm:pb-4">
         <section className="shell-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-2.5">
+          <div className="border-b border-[color:var(--line)] bg-[hsl(var(--panel-hsl)/0.95)] backdrop-blur-xl px-3 py-2.5">
             {uploadMode ? (
               <div className="shell-chip">
                 <FileUp size={13} />
@@ -435,6 +436,7 @@ export function EstimatorPage() {
                 <button
                   onClick={() => setBlueprintName(null)}
                   className="p-1 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                  aria-label="Clear loaded blueprint"
                 >
                   <X size={13} />
                 </button>
@@ -494,7 +496,7 @@ export function EstimatorPage() {
                 key={message.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18, delay: index > messages.length - 3 ? 0.04 : 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30, delay: index > messages.length - 3 ? 0.04 : 0 }}
                 className={cn('mb-5 flex gap-2.5 group', message.role === 'user' ? 'justify-end' : 'justify-start')}
               >
                 {message.role === 'assistant' && (
@@ -515,8 +517,9 @@ export function EstimatorPage() {
                           onClick={() => copyMessage(message.id, message.content)}
                           className="absolute right-2 top-2 rounded-lg p-1 text-[color:var(--muted-ink)] opacity-0 transition-all hover:bg-[color:var(--panel-strong)] group-hover:opacity-100"
                           title="Copy"
+                          aria-label="Copy response"
                         >
-                          {copiedId === message.id ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                          {copiedId === message.id ? <Check size={12} className="text-[hsl(var(--success))]" /> : <Copy size={12} />}
                         </button>
                       </>
                     ) : (
@@ -553,8 +556,12 @@ export function EstimatorPage() {
               </motion.div>
             ))}
 
-            {!showUploadPlaceholder && loading && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2.5">
+            {!showUploadPlaceholder && loading && messages.length === 0 && (
+              <ChatSkeleton />
+            )}
+
+            {!showUploadPlaceholder && loading && messages.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} className="flex gap-2.5">
                 <div className="flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[9px] font-bold text-[color:var(--accent-strong)]">
                   AI
                 </div>
@@ -600,7 +607,7 @@ export function EstimatorPage() {
                   type="button"
                   onClick={handleStopGenerating}
                   whileTap={{ scale: 0.9 }}
-                  className="btn-primary h-11 w-11 shrink-0 rounded-2xl bg-red-600 p-0 hover:bg-red-700"
+                  className="btn-primary h-11 w-11 shrink-0 rounded-2xl bg-[hsl(var(--danger))] p-0 hover:bg-[hsl(var(--danger)/0.85)]"
                   aria-label="Stop generating"
                 >
                   <Square size={14} />
@@ -636,7 +643,7 @@ export function EstimatorPage() {
               {input.length > 0 && (
                 <span className={cn(
                   'text-[10px] tabular-nums transition-colors',
-                  input.length >= MAX_INPUT ? 'text-red-500 font-semibold' : input.length > MAX_INPUT * 0.8 ? 'text-amber-500' : 'text-[color:var(--muted-ink)] opacity-60'
+                  input.length >= MAX_INPUT ? 'text-[hsl(var(--danger))] font-semibold' : input.length > MAX_INPUT * 0.8 ? 'text-[hsl(var(--warning))]' : 'text-[color:var(--muted-ink)] opacity-60'
                 )}>
                   {input.length}/{MAX_INPUT}
                 </span>

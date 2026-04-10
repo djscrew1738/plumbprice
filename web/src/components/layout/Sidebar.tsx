@@ -22,7 +22,7 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
           <p className="text-sm font-semibold text-[color:var(--ink)]">Field Pricing Shell</p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] lg:hidden">
+          <button onClick={onClose} className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] lg:hidden" aria-label="Close navigation">
             <X size={16} />
           </button>
         )}
@@ -41,6 +41,7 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
                   key={href}
                   href={href}
                   onClick={onClose}
+                  aria-current={active ? 'page' : undefined}
                   className={`flex items-center gap-3 rounded-[1.25rem] px-3 py-3 text-sm font-medium transition-colors ${
                     active
                       ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]'
@@ -65,6 +66,7 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
                   key={href}
                   href={href}
                   onClick={onClose}
+                  aria-current={active ? 'page' : undefined}
                   className={`flex items-center gap-3 rounded-[1.25rem] px-3 py-3 text-sm font-medium transition-colors ${
                     active
                       ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]'

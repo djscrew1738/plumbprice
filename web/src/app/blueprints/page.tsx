@@ -40,6 +40,13 @@ export default function Blueprints() {
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragging(true) }
   const onDragLeave = () => setDragging(false)
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      inputRef.current?.click()
+    }
+  }
+
   const handleOpenInEstimator = () => {
     if (!file) return
     // Store the filename in sessionStorage so the estimator can display context
@@ -63,8 +70,12 @@ export default function Blueprints() {
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onClick={() => inputRef.current?.click()}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload area. Drag and drop files or press Enter to browse"
             className={cn(
-              'card flex flex-col items-center justify-center gap-4 p-12 cursor-pointer transition-all border-2 border-dashed select-none',
+              'card flex flex-col items-center justify-center gap-4 p-12 cursor-pointer transition-all border-2 border-dashed select-none outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
               dragging
                 ? 'border-blue-500/60 bg-blue-500/[0.06]'
                 : 'border-[color:var(--line)] hover:border-blue-500/40 hover:bg-[color:var(--panel-strong)]',

@@ -17,7 +17,7 @@ export function PrimaryActionCard({ href, title, description, icon: Icon, classN
     <Link
       href={href}
       className={cn(
-        'group card flex items-center gap-3 p-4 transition-colors hover:bg-[color:var(--panel-strong)]',
+        'group card flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:bg-[color:var(--panel-strong)]',
         className
       )}
     >
