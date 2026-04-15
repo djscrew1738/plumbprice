@@ -621,6 +621,32 @@ CANONICAL_MAP: dict[str, dict[str, dict]] = {
         "apex":        {"sku": "CV15-A",    "name": "1.5\" check valve",                                   "cost": 19.75},
     },
 
+    # ── New DFW Product Additions ─────────────────────────────────────────────
+    "filter.ro_system_5stage": {
+        "ferguson":    {"sku": "RO-500",    "name": "5-Stage RO Water Filter System",                    "cost": 245.00},
+        "moore_supply":{"sku": "RO-STD",    "name": "5-Stage Reverse Osmosis",                           "cost": 228.00},
+        "apex":        {"sku": "RO5-APX",   "name": "RO System 5-Stage",                                  "cost": 258.00},
+    },
+    "filter.whole_house_carbon": {
+        "ferguson":    {"sku": "WHF-20",    "name": "20\" Big Blue Carbon Filter Housing",               "cost": 185.00},
+        "moore_supply":{"sku": "WHF-BB",    "name": "Whole House Carbon Unit",                           "cost": 169.00},
+        "apex":        {"sku": "WHF20-A",   "name": "Big Blue Filtration Unit",                          "cost": 195.00},
+    },
+    "sewer.pvc_pipe_4_sch40_50ft": {
+        "ferguson":    {"sku": "PVC4-50",   "name": "4\" SCH40 PVC Pipe (5x 10ft joints)",               "cost": 112.50},
+        "moore_supply":{"sku": "P4S40-50",  "name": "4\" PVC SCH40 50ft bundle",                         "cost": 104.00},
+        "apex":        {"sku": "PVC4-50A",  "name": "4\" SCH40 PVC 50ft total",                          "cost": 120.00},
+    },
+    "comm.urinal_valve_sloan": {
+        "ferguson":    {"sku": "SLN-186",   "name": "Sloan Royal 186-1 Urinal Valve",                    "cost": 148.00},
+        "moore_supply":{"sku": "SRV-186",   "name": "Sloan Manual Urinal Valve",                         "cost": 139.00},
+        "apex":        {"sku": "SLN186-A",  "name": "Sloan Urinal Flushometer",                          "cost": 155.00},
+    },
+    "toilet.bidet_seat_brondell": {
+        "ferguson":    {"sku": "BD-SEAT",   "name": "Brondell Swash Bidet Seat",                         "cost": 285.00},
+        "moore_supply":{"sku": "BS-1000",   "name": "Electronic Bidet Seat",                             "cost": 265.00},
+        "apex":        {"sku": "BD-APX",    "name": "Bidet Washlet Seat",                                "cost": 298.00},
+    },
 }
 
 
@@ -1080,7 +1106,7 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
         "labor_template": "HOSE_BIB_FREEZE_REPAIR",
         "items": {"outdoor.frost_free_sillcock_12in": 1},
     },
-    "SUMP_PUMP_KIT": {
+    "SUMP_PUMP_INSTALL": {
         "name": "Sump Pump Installation Kit",
         "labor_template": "SUMP_PUMP_INSTALL",
         "items": {
@@ -1090,7 +1116,46 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
         },
     },
 
-}
+    # ── New DFW High-Demand Assemblies ────────────────────────────────────────
+    "RO_SYSTEM_KIT": {
+        "name": "Reverse Osmosis Install Kit",
+        "labor_template": "RO_SYSTEM_INSTALL",
+        "items": {
+            "filter.ro_system_5stage": 1,
+            "angle_stop.quarter_turn_3_8": 1,
+        },
+    },
+    "WHOLE_HOUSE_FILTER_KIT": {
+        "name": "Whole House Filtration Kit",
+        "labor_template": "FILTRATION_WHOLE_HOUSE",
+        "items": {
+            "filter.whole_house_carbon": 1,
+            "main.ball_valve_1in_fullport": 2, # for bypass
+        },
+    },
+    "SEWER_LINE_FULL_KIT": {
+        "name": "Sewer Main Line Kit (50 LF)",
+        "labor_template": "SEWER_LINE_REPLACE_FULL",
+        "items": {
+            "sewer.pvc_pipe_4_sch40_50ft": 1,
+            "clean_out.4in_co_wye": 2, # two-way cleanout
+        },
+    },
+    "URINAL_VALVE_KIT": {
+        "name": "Urinal Valve Replacement Kit",
+        "labor_template": "URINAL_FLUSH_VALVE_REPLACE",
+        "items": {
+            "comm.urinal_valve_sloan": 1,
+        },
+    },
+    "BIDET_SEAT_KIT": {
+        "name": "Bidet Seat Installation Kit",
+        "labor_template": "BIDET_SEAT_INSTALL",
+        "items": {
+            "toilet.bidet_seat_brondell": 1,
+        },
+    },
+    }
 
 
 @dataclass

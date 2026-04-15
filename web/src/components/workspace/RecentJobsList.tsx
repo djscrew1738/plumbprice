@@ -87,9 +87,11 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
   }, [loadRecentJobs])
 
   return (
-    <section className={cn(compact ? 'space-y-2' : 'shell-panel space-y-3 p-4', className)}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className={cn('font-semibold text-[color:var(--ink)]', compact ? 'text-sm' : 'text-base')}>{heading}</h2>
+    <section className={cn(compact ? 'space-y-2' : 'shell-panel space-y-3 p-5', className)}>
+      <div className="flex items-center justify-between gap-2 border-b border-[color:var(--line)] pb-3 mb-2">
+        <h2 className={cn('font-bold tracking-tight text-[color:var(--ink)]', compact ? 'text-xs' : 'text-lg')}>
+          {heading}
+        </h2>
       </div>
 
       {loading && (

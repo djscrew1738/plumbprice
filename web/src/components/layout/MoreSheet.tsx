@@ -66,8 +66,8 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
 
             <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] px-5 py-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
-                  Utilities
+                <p className="text-[11px] font-bold text-[color:var(--accent-strong)]">
+                  PlumbPrice AI
                 </p>
                 <h2 id="more-sheet-title" className="mt-1 text-lg font-semibold text-[color:var(--ink)]">
                   More destinations

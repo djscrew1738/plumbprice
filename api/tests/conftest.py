@@ -15,6 +15,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 from app.database import Base, get_db
 from app.main import app
 from app.config import settings
+from app.models.users import User
+from app.core.auth import get_current_user
 
 # Use an in-memory SQLite database for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -31,7 +33,18 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+async def override_get_current_user() -> User:
+    return User(
+        id=1,
+        email="test@example.com",
+        full_name="Test User",
+        is_active=True,
+        is_admin=True,
+    )
+
+
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_current_user] = override_get_current_user
 
 
 @pytest.fixture(scope="session")

@@ -1,6 +1,6 @@
 """Celery task: Analyze blueprint PDFs for fixture detection (Phase 4)."""
 
-from worker import app
+from worker.worker import app
 import structlog
 
 logger = structlog.get_logger()

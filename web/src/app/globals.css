@@ -257,11 +257,11 @@ body {
 }
 
 .chat-bubble-user {
-  @apply ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-[color:var(--accent)] px-4 py-3 text-white shadow-[0_8px_24px_hsl(var(--accent-hsl)/0.2)];
+  @apply ml-auto max-w-[85%] rounded-[1.25rem] rounded-tr-[0.25rem] bg-[color:var(--accent)] px-4 py-3 text-white shadow-[0_8px_24px_hsl(var(--accent-hsl)/0.15)];
 }
 
 .chat-bubble-assistant {
-  @apply max-w-[90%] rounded-2xl rounded-tl-sm border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3 text-[color:var(--ink)];
+  @apply max-w-[90%] rounded-[1.25rem] rounded-tl-[0.25rem] border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3 text-[color:var(--ink)] shadow-sm;
 }
 
 @keyframes slideUp {

@@ -7,6 +7,7 @@ import structlog
 from app.database import get_db
 from app.models.labor import LaborTemplate, MarkupRule
 from app.services.labor_engine import LABOR_TEMPLATES, list_template_codes, get_template
+from app.core.auth import get_current_user
 
 logger = structlog.get_logger()
 router = APIRouter()

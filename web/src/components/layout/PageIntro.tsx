@@ -25,7 +25,7 @@ export function PageIntro({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           {eyebrow && (
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
+            <p className="text-[11px] font-bold text-[color:var(--accent-strong)]">
               {eyebrow}
             </p>
           )}

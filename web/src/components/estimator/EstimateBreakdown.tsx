@@ -103,7 +103,7 @@ export function EstimateBreakdown({
 
           {assumptions.length > 0 && (
             <div className="card-sm p-4">
-              <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">Assumptions</h3>
+              <h3 className="mb-3 text-[10px] font-bold text-[color:var(--muted-ink)]">Assumptions</h3>
               <ul className="space-y-2">
                 {assumptions.map((assumption, index) => (
                   <li key={`assumption-${index}-${assumption.slice(0, 24)}`} className="flex gap-2 text-xs leading-relaxed text-[color:var(--muted-ink)]">

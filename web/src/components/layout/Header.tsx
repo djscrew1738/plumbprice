@@ -80,10 +80,10 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         </button>
         <div className="min-w-0 flex-1">
           <Link href="/" className="group inline-block">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)] group-hover:text-[color:var(--accent-strong)] transition-colors">
+            <p className="text-[11px] font-bold text-[color:var(--accent-strong)] transition-colors group-hover:text-[color:var(--accent-strong)]">
               PlumbPrice AI
             </p>
-            <h1 className="truncate text-lg font-semibold text-[color:var(--ink)] group-hover:text-[color:var(--accent-strong)] transition-colors">
+            <h1 className="truncate text-lg font-bold text-[color:var(--ink)] group-hover:text-[color:var(--accent-strong)] transition-colors">
               {meta.title}
             </h1>
           </Link>

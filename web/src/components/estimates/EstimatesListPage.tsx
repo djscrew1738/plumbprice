@@ -333,7 +333,7 @@ export function EstimatesListPage() {
                   <Icon size={14} className={color} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
+                  <div className="text-[10px] text-[color:var(--muted-ink)] font-bold tracking-tight">{label}</div>
                   <div className="text-sm font-bold text-[color:var(--ink)] truncate">{value}</div>
                 </div>
               </div>
@@ -472,7 +472,7 @@ export function EstimatesListPage() {
                 <thead>
                   <tr role="row" className="border-b border-[color:var(--line)] bg-[color:var(--panel-strong)]">
                     {['Title', 'Type', 'Status', 'Confidence', 'County', 'Total', 'Date', ''].map(h => (
-                      <th key={h} role="columnheader" className="px-4 py-3 text-left text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">{h}</th>
+                      <th key={h} role="columnheader" className="px-4 py-3 text-left text-[11px] font-bold text-[color:var(--muted-ink)] transition-colors group-hover:text-[color:var(--ink)]">{h}</th>
                     ))}
                   </tr>
                 </thead>

@@ -1,6 +1,6 @@
 """Celery task: Process uploaded documents for RAG ingestion (Phase 3)."""
 
-from worker import app
+from worker.worker import app
 import structlog
 
 logger = structlog.get_logger()

@@ -1,6 +1,6 @@
 """Celery task: Refresh supplier prices daily."""
 
-from worker import app
+from worker.worker import app
 import structlog
 import httpx
 import os

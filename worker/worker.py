@@ -8,11 +8,11 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 app = Celery(
     "plumbprice",
     broker=REDIS_URL,
-    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1"),
+    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1"),
     include=[
-        "tasks.supplier_refresh",
-        "tasks.document_processing",
-        "tasks.blueprint_analysis",
+        "worker.tasks.supplier_refresh",
+        "worker.tasks.document_processing",
+        "worker.tasks.blueprint_analysis",
     ],
 )
 
@@ -24,7 +24,7 @@ app.conf.update(
     enable_utc=True,
     beat_schedule={
         "refresh-supplier-prices-daily": {
-            "task": "tasks.supplier_refresh.refresh_all_suppliers",
+            "task": "worker.tasks.supplier_refresh.refresh_all_suppliers",
             "schedule": 86400.0,  # every 24 hours
         },
     },

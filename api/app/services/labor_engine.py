@@ -1198,6 +1198,59 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         notes="Remove old pan, inspect subfloor, install new acrylic base, reconnect drain. Tile work not included. If subfloor is rotted, add subfloor repair to scope.",
     ),
 
+    # ─── New High-Demand DFW Templates ───────────────────────────────────────
+    "RO_SYSTEM_INSTALL": LaborTemplateData(
+        code="RO_SYSTEM_INSTALL",
+        name="Reverse Osmosis System — Under Sink",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        applicable_assemblies=["RO_SYSTEM_KIT"],
+        notes="Includes faucet mount (stone hole drill extra), tank, and drain tie-in.",
+    ),
+
+    "FILTRATION_WHOLE_HOUSE": LaborTemplateData(
+        code="FILTRATION_WHOLE_HOUSE",
+        name="Whole House Water Filtration System",
+        category="service",
+        base_hours=3.5,
+        helper_required=True,
+        helper_hours=1.5,
+        applicable_assemblies=["WHOLE_HOUSE_FILTER_KIT"],
+        notes="Includes bypass loop and sediment pre-filter. DFW city water treatment.",
+    ),
+
+    "SEWER_LINE_REPLACE_FULL": LaborTemplateData(
+        code="SEWER_LINE_REPLACE_FULL",
+        name="Sewer Main Line Replacement (Yard — per 50 LF)",
+        category="service",
+        base_hours=12.0,
+        helper_required=True,
+        helper_hours=12.0,
+        disposal_hours=1.0,
+        applicable_assemblies=["SEWER_LINE_FULL_KIT"],
+        notes="Includes excavation, 4\" SCH40 PVC, cleanouts, and backfill. Grass/landscape restore extra.",
+    ),
+
+    "URINAL_FLUSH_VALVE_REPLACE": LaborTemplateData(
+        code="URINAL_FLUSH_VALVE_REPLACE",
+        name="Commercial Urinal Flush Valve Replace",
+        category="commercial",
+        base_hours=1.25,
+        helper_required=False,
+        applicable_assemblies=["URINAL_VALVE_KIT"],
+        notes="Sloan/Zurn manual or sensor valve. Includes shutoff and adjustment.",
+    ),
+
+    "BIDET_SEAT_INSTALL": LaborTemplateData(
+        code="BIDET_SEAT_INSTALL",
+        name="Bidet Seat / Washlet Installation",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        applicable_assemblies=["BIDET_SEAT_KIT"],
+        notes="Requires GFI outlet by others. Includes T-valve and seat mounting.",
+    ),
 }
 
 

@@ -16,10 +16,10 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-[72px] items-center justify-between border-b border-[color:var(--line)] px-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
+          <p className="text-[11px] font-bold text-[color:var(--accent-strong)]">
             PlumbPrice AI
           </p>
-          <p className="text-sm font-semibold text-[color:var(--ink)]">Field Pricing Shell</p>
+          <p className="text-sm font-bold text-[color:var(--ink)]">Estimator Dashboard</p>
         </div>
         {onClose && (
           <button onClick={onClose} className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] lg:hidden" aria-label="Close navigation">
@@ -30,7 +30,7 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
       <div className="flex min-h-0 flex-1 flex-col">
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           <div className="space-y-1">
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
+            <p className="px-3 text-[11px] font-bold text-[color:var(--muted-ink)]">
               Workspace
             </p>
             {PRIMARY_NAV.map(({ href, icon: Icon, label }) => {
@@ -55,7 +55,7 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
             })}
           </div>
           <div className="space-y-1">
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
+            <p className="px-3 text-[11px] font-bold text-[color:var(--muted-ink)]">
               Utilities
             </p>
             {SECONDARY_NAV.map(({ href, icon: Icon, label }) => {

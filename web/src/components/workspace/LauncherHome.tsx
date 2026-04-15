@@ -66,14 +66,14 @@ export function LauncherHome() {
     <div className="content-container py-5">
       {/* Hero panel */}
       <section className="shell-panel p-5 sm:p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-ink)]">
-          Field Pricing Launcher
+        <p className="text-[11px] font-bold text-[color:var(--accent-strong)]">
+          Estimator Dashboard
         </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-3xl">
-          {greeting}. Start pricing work.
+        <h2 className="mt-2 text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-3xl">
+          {greeting}. Ready to price a job?
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-[color:var(--muted-ink)] sm:text-base">
-          Run a quick quote from chat or attach documents when you need a fuller job package.
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--muted-ink)] sm:text-base">
+          Start a quick quote via chat or upload job files for a comprehensive pricing package.
         </p>
       </section>
 
