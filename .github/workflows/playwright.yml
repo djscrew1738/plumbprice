@@ -141,6 +141,16 @@ jobs:
           name: playwright-report
           path: web/playwright-report
 
+      - name: Upload Playwright traces & videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-videos
+          path: |
+            web/playwright-report/data/**
+            web/playwright-report/videos/**
+            web/test-results/**
+
       - name: Upload server logs
         uses: actions/upload-artifact@v4
         with:
