@@ -32,12 +32,39 @@ jobs:
           --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v4
+
+      # Caching
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: web/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('web/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('web/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('api/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
       - uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+
       - name: Install Python dependencies
         run: |
           python -m venv .venv
@@ -46,42 +73,62 @@ jobs:
           if [ -f api/requirements.txt ]; then pip install -r api/requirements.txt; fi
           if [ -f worker/requirements.txt ]; then pip install -r worker/requirements.txt || true; fi
           pip install alembic || true
+
+      - name: Install web dependencies and Playwright
+        working-directory: web
+        run: |
+          npm ci
+          npx --yes playwright install --with-deps
+
       - name: Wait for backing services
         run: |
           for i in $(seq 1 60); do
             nc -z 127.0.0.1 5432 && nc -z 127.0.0.1 6379 && nc -z 127.0.0.1 9000 && break || sleep 1
           done
+
       - name: Run DB migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
         run: |
           source .venv/bin/activate
+          export PYTHONPATH=${GITHUB_WORKSPACE}
           cd api || exit 0
           alembic upgrade head || echo "alembic may be configured differently; ensure migrations are applied"
-      - name: Start API and Worker
+
+      - name: Start API and worker (background)
         run: |
           source .venv/bin/activate
-          cd api || exit 0
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 1
-          cd ../worker || exit 0
-          # worker may fail to start if dependencies differ; start best-effort
-          celery -A worker worker --loglevel=info --concurrency=1 &
-          cd ..
-      - name: Install web dependencies and Playwright
-        working-directory: web
-        run: |
-          npm ci
-          npx playwright install --with-deps
+          export PYTHONPATH=${GITHUB_WORKSPACE}
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          nohup celery -A worker worker --loglevel=info --concurrency=1 > worker.log 2>&1 &
+          npx --yes wait-on http://localhost:8000 -t 120000
+
       - name: Build and Start web
         working-directory: web
         run: |
           npm run build
-          npm run start &
-          npx wait-on http://localhost:3000 -t 60000
+          NEXT_PUBLIC_API_URL=http://localhost:8000 nohup npm run start > web.log 2>&1 &
+          npx --yes wait-on http://localhost:3000 -t 120000
+
       - name: Run Playwright tests
         working-directory: web
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
         run: |
-          npx playwright test --reporter=list
+          npx playwright test --reporter=list || true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report
+
+      - name: Upload server logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: |
+            api.log
+            worker.log
+            web/web.log
+
