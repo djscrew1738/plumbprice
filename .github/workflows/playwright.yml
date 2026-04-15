@@ -78,6 +78,7 @@ jobs:
         working-directory: web
         run: |
           npm ci
+          npx --yes playwright install-deps || true
           npx --yes playwright install --with-deps
 
       - name: Wait for backing services
@@ -115,11 +116,16 @@ jobs:
           npx --yes wait-on http://localhost:8000 -t 120000
 
       - name: Build and Start web
-        working-directory: web
         run: |
+          cd web
           npm run build
-          NEXT_PUBLIC_API_URL=http://localhost:8000 nohup npm run start > web.log 2>&1 &
-          npx --yes wait-on http://localhost:3000 -t 120000
+          # If Next.js standalone output exists, run the standalone server. Otherwise use next start
+          if [ -f .next/standalone/server.js ]; then
+            NODE_ENV=production NODE_OPTIONS=--max_old_space_size=2048 nohup node .next/standalone/server.js > ../web/web.log 2>&1 &
+          else
+            NEXT_PUBLIC_API_URL=http://localhost:8000 nohup npm run start > ../web/web.log 2>&1 &
+          fi
+          npx --yes wait-on http://127.0.0.1:3000 http://localhost:3000 -t 120000
 
       - name: Run Playwright tests
         working-directory: web
