@@ -95,6 +95,17 @@ jobs:
           cd api || exit 0
           alembic upgrade head || echo "alembic may be configured differently; ensure migrations are applied"
 
+      - name: Seed DB (development fixtures)
+        run: |
+          source .venv/bin/activate
+          export PYTHONPATH=${GITHUB_WORKSPACE}
+          cd api || exit 0
+          if [ -f app/scripts/seed.py ] || [ -f app/scripts/seed_db.py ] || [ -f app/scripts/seed ]; then
+            python -m app.scripts.seed || python -m app.scripts.seed_db || echo "No seed script found or seed failed"
+          else
+            echo "No seed script present"
+          fi
+
       - name: Start API and worker (background)
         run: |
           source .venv/bin/activate
@@ -115,7 +126,8 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
         run: |
-          npx playwright test --reporter=list || true
+          # Run Playwright, produce HTML report with traces/videos on failures
+          npx --yes playwright test --reporter=list --reporter=html || true
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
