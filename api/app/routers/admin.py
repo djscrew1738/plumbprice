@@ -168,3 +168,59 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
         "labor_templates_count": len(LABOR_TEMPLATES),
         "canonical_items_count": len(CANONICAL_MAP),
     }
+
+
+@router.post('/import-templates')
+async def import_pricing_templates(db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    """Import pricing templates from web/templates/pricing into the database as PricingTemplate rows.
+    Requires admin user.
+    """
+    # Authorization check (expect current_user has is_admin attribute)
+    try:
+        if not getattr(current_user, 'is_admin', False):
+            raise HTTPException(status_code=403, detail='Admin access required')
+    except Exception:
+        raise HTTPException(status_code=403, detail='Admin access required')
+
+    from app.services.external_templates import list_pricing_templates, get_pricing_template
+    from app.models.pricing_template import PricingTemplate
+
+    templates = list_pricing_templates()
+    processed = 0
+    for t in templates:
+        full = get_pricing_template(t.get('id'))
+        if not full:
+            continue
+        # Upsert by template_id
+        result = await db.execute(select(PricingTemplate).where(PricingTemplate.template_id == full.get('id')))
+        existing = result.scalar_one_or_none()
+        if existing:
+            existing.name = full.get('name')
+            existing.description = full.get('description')
+            existing.sku = full.get('sku')
+            existing.base_price = full.get('base_price')
+            existing.parts_cost = full.get('parts_cost')
+            existing.labor_cost = full.get('labor_cost')
+            existing.tax_rate = full.get('tax_rate')
+            existing.region = full.get('region')
+            existing.tags = full.get('tags')
+            existing.source_file = full.get('_source_file')
+        else:
+            pt = PricingTemplate(
+                template_id=full.get('id'),
+                name=full.get('name') or full.get('id'),
+                description=full.get('description'),
+                sku=full.get('sku'),
+                base_price=full.get('base_price'),
+                parts_cost=full.get('parts_cost'),
+                labor_cost=full.get('labor_cost'),
+                tax_rate=full.get('tax_rate'),
+                region=full.get('region'),
+                tags=full.get('tags'),
+                source_file=full.get('_source_file'),
+            )
+            db.add(pt)
+        processed += 1
+
+    await db.commit()
+    return {"imported": processed}

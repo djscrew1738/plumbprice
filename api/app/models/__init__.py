@@ -7,6 +7,7 @@ from app.models.documents import UploadedDocument, DocumentChunk
 from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection
 from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
+from app.models.pricing_template import PricingTemplate
 
 __all__ = [
     "User", "Organization",
@@ -18,4 +19,5 @@ __all__ = [
     "BlueprintJob", "BlueprintPage", "BlueprintDetection",
     "AuditLog", "AssumptionLog",
     "TaxRate",
+    "PricingTemplate",
 ]

@@ -364,6 +364,22 @@ export function EstimatorPage() {
               </div>
             ) : (
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+                {/* Pricing template selector (populated from backend) */}
+                <select
+                  onChange={e => {
+                    const id = e.target.value
+                    if (!id) return
+                    fetch(`/api/v1/templates/pricing/${encodeURIComponent(id)}`).then(r => r.json()).then(tpl => {
+                      const prompt = `Price for ${tpl.name} (SKU: ${tpl.sku ?? 'N/A'}) in ${county}?`
+                      setInput(prompt)
+                    }).catch(() => {})
+                  }}
+                  className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[11px] font-medium text-[color:var(--muted-ink)]"
+                >
+                  <option value="">Select template…</option>
+                  {/* Options are filled client-side via a small inline script on mount */}
+                </select>
+
                 {SUGGESTIONS.map(suggestion => (
                   <button
                     key={suggestion.short}
@@ -445,16 +461,16 @@ export function EstimatorPage() {
 
             {!showUploadPlaceholder && messages.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center px-4 pb-8 text-center">
-                <div className="mb-5 flex size-14 items-center justify-center rounded-2xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
-                  <Zap size={26} />
+                <div className="mb-5 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[color:var(--accent-soft)] to-[color:var(--accent)]/10 text-[color:var(--accent-strong)] shadow-sm">
+                  <Zap size={32} />
                 </div>
 
-                <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">DFW Plumbing Estimator</h2>
-                <p className="mt-2 max-w-[320px] text-sm text-[color:var(--muted-ink)]">
-                  Real pricing with labor, materials, tax, and assumptions surfaced in one workspace.
+                <h2 className="text-2xl font-bold tracking-tight text-[color:var(--ink)]">Quick Quote</h2>
+                <p className="mt-2 max-w-[320px] text-sm leading-relaxed text-[color:var(--muted-ink)]">
+                  Describe the plumbing job in natural language. I&apos;ll generate a detailed estimate with local DFW pricing.
                 </p>
 
-                <div className="mb-8 mt-3 h-6 overflow-hidden">
+                <div className="mb-8 mt-4 h-6 overflow-hidden">
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={activeSuggestion}
@@ -462,14 +478,14 @@ export function EstimatorPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.3 }}
-                      className="text-xs font-medium text-[color:var(--accent-strong)]"
+                      className="text-xs font-bold text-[color:var(--accent-strong)]"
                     >
                       Try: &ldquo;{SUGGESTIONS[activeSuggestion].full}&rdquo;
                     </motion.p>
                   </AnimatePresence>
                 </div>
 
-                <div className="grid w-full max-w-sm grid-cols-2 gap-2.5">
+                <div className="grid w-full max-w-sm grid-cols-2 gap-3">
                   {SUGGESTIONS.map((suggestion, index) => (
                     <motion.button
                       key={suggestion.short}
@@ -478,13 +494,13 @@ export function EstimatorPage() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02 }}
+                      whileHover={{ scale: 1.02, backgroundColor: 'var(--panel-strong)' }}
                       whileTap={{ scale: 0.97 }}
-                      className="card text-left p-3"
+                      className="flex flex-col rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-3.5 text-left transition-colors"
                     >
-                      <div className="text-xs font-semibold text-[color:var(--ink)]">{suggestion.short}</div>
-                      <div className="mt-1 line-clamp-1 text-[10px] text-[color:var(--muted-ink)]">{suggestion.full}</div>
-                      <div className="mt-1.5 text-[11px] font-bold text-[color:var(--accent-strong)]">{suggestion.hint}</div>
+                      <div className="text-xs font-bold text-[color:var(--ink)]">{suggestion.short}</div>
+                      <div className="mt-1 line-clamp-1 text-[10px] leading-tight text-[color:var(--muted-ink)]">{suggestion.full}</div>
+                      <div className="mt-2 text-[11px] font-extrabold text-[color:var(--accent-strong)]">{suggestion.hint}</div>
                     </motion.button>
                   ))}
                 </div>
@@ -494,32 +510,35 @@ export function EstimatorPage() {
             {!showUploadPlaceholder && messages.map((message, index) => (
               <motion.div
                 key={message.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30, delay: index > messages.length - 3 ? 0.04 : 0 }}
-                className={cn('mb-5 flex gap-2.5 group', message.role === 'user' ? 'justify-end' : 'justify-start')}
+                className={cn('mb-6 flex gap-3 group', message.role === 'user' ? 'flex-row-reverse' : 'justify-start')}
               >
-                {message.role === 'assistant' && (
-                  <div className="mt-1 flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[9px] font-bold text-[color:var(--accent-strong)]">
-                    AI
-                  </div>
-                )}
+                <div className={cn(
+                  'mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold shadow-sm',
+                  message.role === 'assistant' 
+                    ? 'border border-[color:var(--accent)]/20 bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]' 
+                    : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)]'
+                )}>
+                  {message.role === 'assistant' ? 'AI' : 'U'}
+                </div>
 
-                <div className="flex max-w-[88%] flex-col gap-1">
-                  <div className={cn('relative text-sm leading-relaxed', message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant')}>
+                <div className={cn('flex max-w-[85%] flex-col gap-1.5', message.role === 'user' ? 'items-end' : 'items-start')}>
+                  <div className={cn('relative px-4 py-3 text-sm leading-relaxed shadow-sm transition-all', message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant')}>
                     {message.role === 'assistant' ? (
                       <>
-                        <div className="chat-prose pr-6">
+                        <div className="chat-prose pr-4">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                         <button
                           type="button"
                           onClick={() => copyMessage(message.id, message.content)}
-                          className="absolute right-2 top-2 rounded-lg p-1 text-[color:var(--muted-ink)] opacity-0 transition-all hover:bg-[color:var(--panel-strong)] group-hover:opacity-100"
+                          className="absolute right-2 top-2 rounded-lg p-1.5 text-[color:var(--muted-ink)] opacity-0 transition-all hover:bg-[color:var(--panel-strong)] group-hover:opacity-100"
                           title="Copy"
                           aria-label="Copy response"
                         >
-                          {copiedId === message.id ? <Check size={12} className="text-[hsl(var(--success))]" /> : <Copy size={12} />}
+                          {copiedId === message.id ? <Check size={13} className="text-[hsl(var(--success))]" /> : <Copy size={13} />}
                         </button>
                       </>
                     ) : (
@@ -527,7 +546,7 @@ export function EstimatorPage() {
                     )}
 
                     {message.estimate && message.confidence_label && (
-                      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[color:var(--line)] pt-2.5">
+                      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[color:var(--line)]/50 pt-3">
                         <ConfidenceBadge label={message.confidence_label} score={message.confidence || 0} size="sm" />
                         <button
                           type="button"
@@ -535,24 +554,18 @@ export function EstimatorPage() {
                             setSelectedEstimate(message)
                             setSheetOpen(true)
                           }}
-                          className="text-xs font-semibold text-[color:var(--accent-strong)] transition-colors hover:text-[color:var(--accent)]"
+                          className="text-xs font-bold text-[color:var(--accent-strong)] underline-offset-2 transition-colors hover:text-[color:var(--accent)] hover:underline"
                         >
-                          View summary
+                          View Full Breakdown
                         </button>
                       </div>
                     )}
                   </div>
 
-                  <span className={cn('text-[10px] text-[color:var(--muted-ink)] opacity-0 transition-opacity group-hover:opacity-100', message.role === 'user' ? 'text-right' : 'text-left')}>
+                  <span className="text-[10px] font-medium text-[color:var(--muted-ink)] opacity-0 transition-opacity group-hover:opacity-100">
                     {formatTime(message.timestamp)}
                   </span>
                 </div>
-
-                {message.role === 'user' && (
-                  <div className="mt-1 flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[9px] font-bold text-[color:var(--muted-ink)]">
-                    U
-                  </div>
-                )}
               </motion.div>
             ))}
 
@@ -561,12 +574,12 @@ export function EstimatorPage() {
             )}
 
             {!showUploadPlaceholder && loading && messages.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} className="flex gap-2.5">
-                <div className="flex size-[26px] shrink-0 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[9px] font-bold text-[color:var(--accent-strong)]">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} className="flex gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[color:var(--accent)]/20 bg-[color:var(--accent-soft)] text-[10px] font-bold text-[color:var(--accent-strong)] shadow-sm">
                   AI
                 </div>
-                <div className="chat-bubble-assistant px-4 py-3.5">
-                  <div className="flex items-center gap-2">
+                <div className="chat-bubble-assistant px-5 py-4">
+                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5">
                       <div className="typing-dot" />
                       <div className="typing-dot" />
@@ -575,7 +588,7 @@ export function EstimatorPage() {
                     <button
                       type="button"
                       onClick={handleStopGenerating}
-                      className="ml-2 inline-flex items-center gap-1 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[10px] font-medium text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
+                      className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
                     >
                       <Square size={9} />
                       Stop
