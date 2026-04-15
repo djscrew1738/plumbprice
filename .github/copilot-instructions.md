@@ -22,8 +22,18 @@ Frontend (Next.js)
 - Install & run dev: cd web && npm install && npm run dev
 - Run frontend tests (Jest): cd web && npm test
 - Run a single frontend test: cd web && npm test -- -t "test name substring"
+- Run E2E tests (Playwright): cd web && npm run test:e2e
+- Run E2E tests in UI mode (debug): cd web && npx playwright test --ui
 - Clean rebuild helper: ./scripts/rebuild-web-clean.sh
 - Lint frontend: cd web && npm run lint
+
+E2E Testing (Playwright)
+- Smoke tests: web/tests/e2e/home.spec.ts — homepage loads
+- Login flow: web/tests/e2e/login.spec.ts — login page and navigation
+- Projects/Estimates: web/tests/e2e/projects.spec.ts — projects, estimates, estimator pages
+- Navigation: web/tests/e2e/navigation.spec.ts — admin, blueprints, pipeline, suppliers, proposals
+- Config: web/playwright.config.cjs (CommonJS format, projects for chromium/firefox/webkit)
+- CI: .github/workflows/playwright.yml (runs on push, includes db seeding, artifact uploads)
 
 Docker / Compose
 - Start everything (recommended): docker compose up -d
@@ -67,18 +77,35 @@ Seeding & reset
 ---
 
 ## 4) Files, scripts, and helpers worth knowing (non-exhaustive)
-- docker-compose.yml — local composition of services used by Docker-based dev/test.
+- docker-compose.yml — local composition of services used by Docker-based dev/test
 - .env.example — required environment variables and defaults
+- .github/workflows/playwright.yml — E2E CI workflow (Playwright config, services, seeding, artifact uploads)
 - scripts/rebuild-web-clean.sh — clean/rebuild helper for the Next.js app
+- scripts/validate-env.sh — (future) environment validation script for dev setup
 - run_backend_optimizations.sh, start-api.sh — local helper scripts for backend operations
 - app.scripts.seed — seed script used to populate demo data
 - README.md — contains quick-start, architecture diagram, and common commands (use as canonical source for run commands)
+- web/playwright.config.cjs — Playwright configuration (CommonJS format, 3 project browsers defined)
+- web/tests/e2e/ — Playwright E2E test suite (smoke, login, projects, navigation)
 
 ---
 
-## 5) AI / assistant integration notes
-- No CLAUDE.md, AGENTS.md, or other assistant-specific files were detected in the repository root when these instructions were generated. If such files are later added, include their salient parts into this instructions file.
-- When interacting with the codebase, fetch README.md first for quick context (architecture and common commands are kept there).
+## 5) Areas for future improvement
+
+The following improvements are recommended to increase code quality, test coverage, and observability:
+
+1. **API Coverage Reporting** — Add pytest-cov to CI, track coverage trends, set 60% threshold
+2. **Frontend Component Tests** — Jest tests for EstimatorForm, ProjectCard, PipelineBoard, custom hooks
+3. **Celery Task Testing** — Create worker/tests/ with mock tasks, add /health/worker endpoint
+4. **Request/Response Logging** — Structured logging middleware for all API endpoints (method, path, status, latency, user_id)
+5. **Query Performance Monitoring** — SQLAlchemy event listeners for slow queries (>500ms), N+1 detection
+6. **Environment Validation Script** — scripts/validate-env.sh to check Python, Node, Docker, ports, .env
+7. **Auth Integration Tests** — Test protected routes, token refresh, JWT expiry, role-based access
+8. **Performance Baseline Detection** — Lighthouse for frontend, API benchmarks for heavy endpoints
+9. **API Error Documentation** — docs/API_ERRORS.md with all status codes and recovery strategies
+10. **TypeScript Strict Mode** — Enable strict in tsconfig.json, fix type errors, enforce in CI
+
+See IMPROVEMENT_SUGGESTIONS.md (in session files) for detailed breakdown, effort estimates, and ROI analysis.
 
 ---
 
