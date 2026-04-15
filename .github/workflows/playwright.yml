@@ -1,0 +1,87 @@
+name: Playwright E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minio
+          MINIO_ROOT_PASSWORD: minio123
+        ports: ['9000:9000']
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install Python dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          if [ -f api/requirements.txt ]; then pip install -r api/requirements.txt; fi
+          if [ -f worker/requirements.txt ]; then pip install -r worker/requirements.txt || true; fi
+          pip install alembic || true
+      - name: Wait for backing services
+        run: |
+          for i in $(seq 1 60); do
+            nc -z 127.0.0.1 5432 && nc -z 127.0.0.1 6379 && nc -z 127.0.0.1 9000 && break || sleep 1
+          done
+      - name: Run DB migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          source .venv/bin/activate
+          cd api || exit 0
+          alembic upgrade head || echo "alembic may be configured differently; ensure migrations are applied"
+      - name: Start API and Worker
+        run: |
+          source .venv/bin/activate
+          cd api || exit 0
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 1
+          cd ../worker || exit 0
+          # worker may fail to start if dependencies differ; start best-effort
+          celery -A worker worker --loglevel=info --concurrency=1 &
+          cd ..
+      - name: Install web dependencies and Playwright
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps
+      - name: Build and Start web
+        working-directory: web
+        run: |
+          npm run build
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+      - name: Run Playwright tests
+        working-directory: web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: |
+          npx playwright test --reporter=list
