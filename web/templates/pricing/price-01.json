@@ -1,0 +1,13 @@
+{
+  "id": "pp-001",
+  "name": "Basic Leak Repair",
+  "description": "Repair minor household leak (single joint).",
+  "sku": "BLR-001",
+  "base_price": 85.00,
+  "parts_cost": 15.00,
+  "labor_cost": 70.00,
+  "tax_rate": 0.07,
+  "region": "US-Northeast",
+  "tags": ["leak","repair","basic"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

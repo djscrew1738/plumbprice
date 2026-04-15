@@ -1,0 +1,13 @@
+{
+  "id": "pp-004",
+  "name": "Toilet Replacement (Standard)",
+  "description": "Removal and installation of standard toilet, includes wax ring.",
+  "sku": "TRS-004",
+  "base_price": 260.00,
+  "parts_cost": 95.00,
+  "labor_cost": 165.00,
+  "tax_rate": 0.07,
+  "region": "US-West",
+  "tags": ["toilet","replacement","standard"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

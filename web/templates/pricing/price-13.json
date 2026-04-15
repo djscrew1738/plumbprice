@@ -1,0 +1,13 @@
+{
+  "id": "pp-013",
+  "name": "Pipe Relining (Per Meter)",
+  "description": "Cured-in-place pipe relining priced per meter of mainline.",
+  "sku": "PRL-013",
+  "base_price": 120.00,
+  "parts_cost": 45.00,
+  "labor_cost": 75.00,
+  "tax_rate": 0.08,
+  "region": "US-Midwest",
+  "tags": ["relining","pipe","CIPP"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

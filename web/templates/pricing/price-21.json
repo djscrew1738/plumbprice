@@ -1,0 +1,13 @@
+{
+  "id": "pp-021",
+  "name": "Shutoff Valve Replacement",
+  "description": "Replace a household shutoff valve (angle stop or ball valve).",
+  "sku": "SVR-021",
+  "base_price": 110.00,
+  "parts_cost": 35.00,
+  "labor_cost": 75.00,
+  "tax_rate": 0.07,
+  "region": "US-Midwest",
+  "tags": ["valve","replacement"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

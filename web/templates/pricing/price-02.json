@@ -1,0 +1,13 @@
+{
+  "id": "pp-002",
+  "name": "Standard Drain Cleaning",
+  "description": "Snaking and cleaning of a single clogged drain.",
+  "sku": "SDC-002",
+  "base_price": 120.00,
+  "parts_cost": 10.00,
+  "labor_cost": 110.00,
+  "tax_rate": 0.06,
+  "region": "US-Midwest",
+  "tags": ["drain","cleaning","standard"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

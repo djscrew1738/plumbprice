@@ -1,0 +1,13 @@
+{
+  "id": "pp-017",
+  "name": "Hydro Jetting (Per Hour)",
+  "description": "High-pressure hydro jetting to clear stubborn blockages.",
+  "sku": "HJH-017",
+  "base_price": 200.00,
+  "parts_cost": 0.00,
+  "labor_cost": 200.00,
+  "tax_rate": 0.08,
+  "region": "US-South",
+  "tags": ["hydro-jet","drain","hourly"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

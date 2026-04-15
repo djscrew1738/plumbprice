@@ -1,0 +1,13 @@
+{
+  "id": "pp-024",
+  "name": "Commercial Grease Trap Service",
+  "description": "Grease trap pumping and inspection for small commercial sites.",
+  "sku": "CGT-024",
+  "base_price": 420.00,
+  "parts_cost": 0.00,
+  "labor_cost": 420.00,
+  "tax_rate": 0.09,
+  "region": "US-Commercial",
+  "tags": ["commercial","grease-trap"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

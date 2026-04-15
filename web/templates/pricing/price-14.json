@@ -1,0 +1,13 @@
+{
+  "id": "pp-014",
+  "name": "Emergency After-Hours Callout",
+  "description": "Emergency visit outside business hours (first hour).",
+  "sku": "EAC-014",
+  "base_price": 220.00,
+  "parts_cost": 0.00,
+  "labor_cost": 220.00,
+  "tax_rate": 0.10,
+  "region": "US-Any",
+  "tags": ["emergency","after-hours"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

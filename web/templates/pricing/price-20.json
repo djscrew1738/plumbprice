@@ -1,0 +1,13 @@
+{
+  "id": "pp-020",
+  "name": "Fixture Seal Replacement",
+  "description": "Replace seals/gaskets for leaking fixture connections.",
+  "sku": "FSR-020",
+  "base_price": 75.00,
+  "parts_cost": 12.50,
+  "labor_cost": 62.50,
+  "tax_rate": 0.06,
+  "region": "US-Any",
+  "tags": ["seal","gasket","repair"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

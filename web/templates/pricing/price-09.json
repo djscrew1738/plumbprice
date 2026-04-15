@@ -1,0 +1,13 @@
+{
+  "id": "pp-009",
+  "name": "Faucet Replacement (Single)",
+  "description": "Replace a single sink faucet; includes basic parts and labor.",
+  "sku": "FRS-009",
+  "base_price": 150.00,
+  "parts_cost": 50.00,
+  "labor_cost": 100.00,
+  "tax_rate": 0.06,
+  "region": "US-Northeast",
+  "tags": ["faucet","replacement"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

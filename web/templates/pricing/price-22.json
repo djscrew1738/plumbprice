@@ -1,0 +1,13 @@
+{
+  "id": "pp-022",
+  "name": "Whole-Home Plumbing Inspection",
+  "description": "Comprehensive inspection and written report for a single-family home.",
+  "sku": "WHI-022",
+  "base_price": 225.00,
+  "parts_cost": 0.00,
+  "labor_cost": 225.00,
+  "tax_rate": 0.07,
+  "region": "US-Any",
+  "tags": ["inspection","home","report"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

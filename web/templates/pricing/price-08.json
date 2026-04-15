@@ -1,0 +1,13 @@
+{
+  "id": "pp-008",
+  "name": "Garbage Disposal Install",
+  "description": "Install a standard garbage disposal unit, includes electrical hookup.",
+  "sku": "GDI-008",
+  "base_price": 240.00,
+  "parts_cost": 120.00,
+  "labor_cost": 120.00,
+  "tax_rate": 0.07,
+  "region": "US-Midwest",
+  "tags": ["disposal","installation"],
+  "created_at": "2026-04-15T20:01:09Z"
+}

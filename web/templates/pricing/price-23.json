@@ -1,0 +1,13 @@
+{
+  "id": "pp-023",
+  "name": "Annual Maintenance Plan (Plumbing)",
+  "description": "One-year maintenance plan (2 visits) for priority scheduling.",
+  "sku": "AMP-023",
+  "base_price": 299.00,
+  "parts_cost": 0.00,
+  "labor_cost": 299.00,
+  "tax_rate": 0.06,
+  "region": "US-Any",
+  "tags": ["maintenance","plan","annual"],
+  "created_at": "2026-04-15T20:01:09Z"
+}
