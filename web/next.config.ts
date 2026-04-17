@@ -8,7 +8,9 @@ const apiOrigin =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: {},
+  experimental: {
+    inlineCss: true,
+  },
   eslint: { ignoreDuringBuilds: true },
   async headers() {
     return [
@@ -16,8 +18,11 @@ const nextConfig: NextConfig = {
         // HTML pages: force CDN revalidation on every request
         source: '/((?!_next/static|_next/image|favicon.ico|icon|manifest|sw\\.js).*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-          { key: 'CDN-Cache-Control', value: 'max-age=0' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+          { key: 'CDN-Cache-Control', value: 'no-cache, no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-cache, no-store' },
         ],
       },
     ]
