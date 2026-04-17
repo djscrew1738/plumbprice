@@ -1110,6 +1110,209 @@ CANONICAL_MAP: dict[str, dict[str, dict]] = {
         "moore_supply":{"sku": "HBC-M",    "name": "Hose bib insulated cover",                        "cost": 4.75},
         "apex":        {"sku": "HBC-A",    "name": "Faucet cover insulated hose bib",                 "cost": 6.00},
     },
+
+    # ── Phase 4: Canonical Materials ──────────────────────────────────────────
+    # K. Construction
+    "fitting.sewer_wye_4in": {
+        "ferguson":    {"sku": "SWY-4",    "name": "PVC sewer wye 4\" SDR-35",                        "cost": 12.00},
+        "moore_supply":{"sku": "SWY4-M",   "name": "4\" SDR-35 sewer wye",                             "cost": 10.50},
+        "apex":        {"sku": "SWY4-A",   "name": "Sewer wye 4 inch PVC",                             "cost": 13.00},
+    },
+    "fitting.water_service_adapter_1in": {
+        "ferguson":    {"sku": "WSA-1",    "name": "Water service adapter 1\" meter to copper",        "cost": 18.00},
+        "moore_supply":{"sku": "WSA1-M",   "name": "1\" water service meter adapter",                  "cost": 15.50},
+        "apex":        {"sku": "WSA1-A",   "name": "Meter adapter 1\" water service",                  "cost": 19.50},
+    },
+    "safety.fire_sprinkler_head_pendent": {
+        "ferguson":    {"sku": "FSH-PD",   "name": "Fire sprinkler head pendent 155°F white",          "cost": 8.50},
+        "moore_supply":{"sku": "FSP-M",    "name": "Pendent sprinkler head 155F residential",          "cost": 7.50},
+        "apex":        {"sku": "FSP-A",    "name": "Residential fire sprinkler pendent 155",            "cost": 9.25},
+    },
+    "pipe.recirc_pex_1_2_per_ft": {
+        "ferguson":    {"sku": "RPX-12",   "name": "PEX-A recirc 1/2\" per foot insulated",            "cost": 1.25},
+        "moore_supply":{"sku": "RPX12-M",  "name": "1/2\" insulated PEX recirc per LF",                "cost": 1.10},
+        "apex":        {"sku": "RPX12-A",  "name": "Recirc PEX 1/2 inch per foot",                     "cost": 1.35},
+    },
+    "pump.recirc_1_25in": {
+        "ferguson":    {"sku": "RCP-125",  "name": "Recirculation pump 1-1/4\" bronze",                "cost": 165.00},
+        "moore_supply":{"sku": "RCP-M",    "name": "Bronze recirc pump 1-1/4\"",                       "cost": 148.00},
+        "apex":        {"sku": "RCP-A",    "name": "Recirc pump bronze 1.25 inch",                     "cost": 178.00},
+    },
+
+    # L. Commercial
+    "fixture.commercial_toilet_floor_mount": {
+        "ferguson":    {"sku": "CTF-FM",   "name": "Commercial toilet floor mount elongated",           "cost": 185.00},
+        "moore_supply":{"sku": "CTF-M",    "name": "Floor mount commercial toilet",                     "cost": 168.00},
+        "apex":        {"sku": "CTF-A",    "name": "Commercial floor mount toilet",                     "cost": 198.00},
+    },
+    "valve.flushometer_1_6gpf": {
+        "ferguson":    {"sku": "FM-16",    "name": "Flushometer 1.6 GPF manual chrome",                "cost": 145.00},
+        "moore_supply":{"sku": "FM16-M",   "name": "1.6 GPF manual flushometer",                       "cost": 132.00},
+        "apex":        {"sku": "FM16-A",   "name": "Chrome flushometer 1.6GPF",                        "cost": 155.00},
+    },
+    "fixture.wall_hung_toilet_carrier": {
+        "ferguson":    {"sku": "WTC-ADJ",  "name": "Wall hung toilet carrier adjustable",               "cost": 285.00},
+        "moore_supply":{"sku": "WTC-M",    "name": "Adjustable wall carrier for toilet",                "cost": 265.00},
+        "apex":        {"sku": "WTC-A",    "name": "Toilet wall carrier adjustable",                    "cost": 310.00},
+    },
+    "fixture.urinal_wall_mount": {
+        "ferguson":    {"sku": "UWM-05",   "name": "Wall mount urinal 0.5 GPF vitreous",               "cost": 135.00},
+        "moore_supply":{"sku": "UWM-M",    "name": "Vitreous urinal wall mount 0.5GPF",                "cost": 122.00},
+        "apex":        {"sku": "UWM-A",    "name": "Wall urinal 0.5GPF",                               "cost": 145.00},
+    },
+    "valve.urinal_flush_05gpf": {
+        "ferguson":    {"sku": "UFV-05",   "name": "Urinal flush valve 0.5 GPF",                       "cost": 125.00},
+        "moore_supply":{"sku": "UFV-M",    "name": "0.5 GPF urinal flush valve",                       "cost": 112.00},
+        "apex":        {"sku": "UFV-A",    "name": "Flush valve urinal 0.5GPF",                        "cost": 135.00},
+    },
+    "fixture.drinking_fountain_ada": {
+        "ferguson":    {"sku": "DF-ADA",   "name": "Drinking fountain ADA with bottle filler",          "cost": 485.00},
+        "moore_supply":{"sku": "DF-M",     "name": "ADA drinking fountain + bottle filler",             "cost": 445.00},
+        "apex":        {"sku": "DF-A",     "name": "ADA fountain + bottle filler combo",                "cost": 520.00},
+    },
+    "safety.eyewash_station_combo": {
+        "ferguson":    {"sku": "EWS-C",    "name": "Emergency eyewash/shower combo ANSI Z358.1",        "cost": 685.00},
+        "moore_supply":{"sku": "EWS-M",    "name": "ANSI eyewash shower combo station",                 "cost": 625.00},
+        "apex":        {"sku": "EWS-A",    "name": "Eyewash shower station ANSI combo",                 "cost": 745.00},
+    },
+    "fixture.mop_sink_24in": {
+        "ferguson":    {"sku": "MS-24",    "name": "Mop basin 24\" terrazzo w/faucet",                  "cost": 285.00},
+        "moore_supply":{"sku": "MS24-M",   "name": "24\" terrazzo mop sink with faucet",                "cost": 265.00},
+        "apex":        {"sku": "MS24-A",   "name": "Terrazzo mop basin 24 inch",                        "cost": 310.00},
+    },
+    "faucet.sensor_lavatory": {
+        "ferguson":    {"sku": "SFL-DC",   "name": "Sensor lavatory faucet battery/DC",                 "cost": 185.00},
+        "moore_supply":{"sku": "SFL-M",    "name": "Battery sensor faucet lavatory",                    "cost": 168.00},
+        "apex":        {"sku": "SFL-A",    "name": "Hands-free sensor faucet battery",                  "cost": 198.00},
+    },
+    "valve.commercial_prv_1_5in": {
+        "ferguson":    {"sku": "CPRV-15",  "name": "Commercial PRV 1-1/2\" with strainer",              "cost": 185.00},
+        "moore_supply":{"sku": "CP15-M",   "name": "1-1/2\" commercial PRV + strainer",                 "cost": 168.00},
+        "apex":        {"sku": "CP15-A",   "name": "PRV commercial 1.5 inch w/ strainer",               "cost": 198.00},
+    },
+    "valve.tmv_asse1017": {
+        "ferguson":    {"sku": "TMV-A1",   "name": "TMV ASSE 1017 point-of-use",                        "cost": 95.00},
+        "moore_supply":{"sku": "TMV-M",    "name": "Point-of-use TMV ASSE 1017",                        "cost": 85.00},
+        "apex":        {"sku": "TMV-A",    "name": "ASSE 1017 thermostatic mixing valve",                "cost": 102.00},
+    },
+    "fitting.roof_drain_4in_cast": {
+        "ferguson":    {"sku": "RD-4CI",   "name": "Roof drain 4\" cast iron with dome",                 "cost": 125.00},
+        "moore_supply":{"sku": "RD4-M",    "name": "4\" cast iron roof drain with strainer",             "cost": 112.00},
+        "apex":        {"sku": "RD4-A",    "name": "Cast iron roof drain 4 inch dome",                   "cost": 135.00},
+    },
+    "appliance.commercial_softener_100k": {
+        "ferguson":    {"sku": "CS-100K",  "name": "Commercial water softener 100K grain",               "cost": 1250.00},
+        "moore_supply":{"sku": "CS100-M",  "name": "100K grain commercial softener",                     "cost": 1150.00},
+        "apex":        {"sku": "CS100-A",  "name": "Water softener commercial 100000 grain",             "cost": 1350.00},
+    },
+    "valve.backflow_repair_kit_generic": {
+        "ferguson":    {"sku": "BRK-G",    "name": "Backflow repair kit (checks + relief) generic",      "cost": 65.00},
+        "moore_supply":{"sku": "BRK-M",    "name": "Generic backflow preventer repair kit",              "cost": 58.00},
+        "apex":        {"sku": "BRK-A",    "name": "Backflow repair kit universal",                      "cost": 72.00},
+    },
+
+    # M. Water Heater & Fixture Gaps
+    "valve.wh_gas_control": {
+        "ferguson":    {"sku": "GCV-WH",   "name": "WH gas control valve Honeywell universal",           "cost": 165.00},
+        "moore_supply":{"sku": "GCV-M",    "name": "Honeywell gas valve WH universal",                   "cost": 148.00},
+        "apex":        {"sku": "GCV-A",    "name": "Gas control valve Honeywell WH",                     "cost": 178.00},
+    },
+    "valve.tpr_3_4": {
+        "ferguson":    {"sku": "TPR-34",   "name": "T&P relief valve 3/4\" 150 PSI/210°F",               "cost": 14.00},
+        "moore_supply":{"sku": "TPR-M",    "name": "3/4\" T&P relief valve",                              "cost": 12.00},
+        "apex":        {"sku": "TPR-A",    "name": "TPR valve 3/4 inch",                                  "cost": 15.50},
+    },
+    "fixture.tub_drain_assembly": {
+        "ferguson":    {"sku": "TDA-UNI",  "name": "Tub drain assembly universal shoe/overflow",          "cost": 42.00},
+        "moore_supply":{"sku": "TDA-M",    "name": "Universal tub drain shoe & overflow",                 "cost": 38.00},
+        "apex":        {"sku": "TDA-A",    "name": "Tub drain assembly shoe overflow universal",           "cost": 45.00},
+    },
+    "fixture.shower_drain_square_4": {
+        "ferguson":    {"sku": "SDS-4",    "name": "Shower drain square 4\" SS strainer",                 "cost": 28.00},
+        "moore_supply":{"sku": "SDS4-M",   "name": "4\" square shower drain SS",                          "cost": 24.00},
+        "apex":        {"sku": "SDS4-A",   "name": "Square shower drain 4 inch stainless",                "cost": 30.00},
+    },
+    "fixture.floor_drain_4in": {
+        "ferguson":    {"sku": "FD-4",     "name": "Floor drain 4\" PVC with trap",                       "cost": 32.00},
+        "moore_supply":{"sku": "FD4-M",    "name": "4\" PVC floor drain with integral trap",              "cost": 28.00},
+        "apex":        {"sku": "FD4-A",    "name": "PVC floor drain 4 inch with trap",                    "cost": 35.00},
+    },
+
+    # N. Valves & Backflow
+    "valve.rpz_rebuild_kit": {
+        "ferguson":    {"sku": "RRK-G",    "name": "RPZ rebuild kit generic 3/4-1\"",                     "cost": 85.00},
+        "moore_supply":{"sku": "RRK-M",    "name": "RPZ rebuild kit universal",                           "cost": 78.00},
+        "apex":        {"sku": "RRK-A",    "name": "Rebuild kit RPZ generic",                             "cost": 92.00},
+    },
+    "valve.dcva_repair_kit": {
+        "ferguson":    {"sku": "DRK-G",    "name": "DCVA repair kit check valves 3/4-1\"",                "cost": 45.00},
+        "moore_supply":{"sku": "DRK-M",    "name": "DCVA check valve repair kit",                         "cost": 40.00},
+        "apex":        {"sku": "DRK-A",    "name": "Double check repair kit generic",                     "cost": 48.00},
+    },
+    "valve.earthquake_gas_shutoff": {
+        "ferguson":    {"sku": "EQV-1",    "name": "Earthquake gas shutoff valve 1\"",                     "cost": 65.00},
+        "moore_supply":{"sku": "EQV-M",    "name": "Seismic gas shutoff valve 1 inch",                    "cost": 58.00},
+        "apex":        {"sku": "EQV-A",    "name": "Earthquake valve gas 1\"",                             "cost": 72.00},
+    },
+    "fitting.gas_drip_leg_1_2": {
+        "ferguson":    {"sku": "GDL-12",   "name": "Gas drip leg assembly 1/2\" nipple + cap",             "cost": 6.00},
+        "moore_supply":{"sku": "GDL-M",    "name": "1/2\" gas drip leg assembly",                          "cost": 5.00},
+        "apex":        {"sku": "GDL-A",    "name": "Drip leg gas 1/2 inch",                                "cost": 6.50},
+    },
+    "valve.ball_3_4_full_port": {
+        "ferguson":    {"sku": "BV-34FP",  "name": "Ball valve 3/4\" full port brass",                     "cost": 12.00},
+        "moore_supply":{"sku": "BV34-M",   "name": "3/4\" full port brass ball valve",                     "cost": 10.50},
+        "apex":        {"sku": "BV34-A",   "name": "Brass ball valve 3/4 full port",                       "cost": 13.00},
+    },
+
+    # O. Appliance Connections
+    "pipe.washer_hose_ss_pair": {
+        "ferguson":    {"sku": "WHP-SS",   "name": "Washing machine hose pair braided SS 5ft",             "cost": 22.00},
+        "moore_supply":{"sku": "WHP-M",    "name": "Braided SS washer hoses pair 5 foot",                  "cost": 19.00},
+        "apex":        {"sku": "WHP-A",    "name": "Washer hose SS braided pair",                          "cost": 24.00},
+    },
+    "pipe.dw_supply_braided": {
+        "ferguson":    {"sku": "DWS-B",    "name": "Dishwasher supply line braided SS",                    "cost": 12.00},
+        "moore_supply":{"sku": "DWS-M",    "name": "Braided SS dishwasher supply",                         "cost": 10.00},
+        "apex":        {"sku": "DWS-A",    "name": "Dishwasher supply braided stainless",                  "cost": 13.00},
+    },
+    "pipe.gas_range_connector_48": {
+        "ferguson":    {"sku": "GRC-48",   "name": "Gas range connector coated SS 48\"",                   "cost": 28.00},
+        "moore_supply":{"sku": "GRC-M",    "name": "48\" coated SS gas range connector",                   "cost": 24.00},
+        "apex":        {"sku": "GRC-A",    "name": "Gas connector range 48 inch coated",                   "cost": 30.00},
+    },
+
+    # P. Specialty & Emerging
+    "valve.radiant_manifold_4loop": {
+        "ferguson":    {"sku": "RM-4L",    "name": "Radiant heat manifold 4-loop with gauges",             "cost": 165.00},
+        "moore_supply":{"sku": "RM4-M",    "name": "4-loop radiant manifold with T-gauges",               "cost": 148.00},
+        "apex":        {"sku": "RM4-A",    "name": "Radiant manifold 4 loop gauges",                      "cost": 178.00},
+    },
+    "pump.well_pressure_tank_32g": {
+        "ferguson":    {"sku": "WPT-32",   "name": "Well pressure tank 32 gallon bladder",                 "cost": 185.00},
+        "moore_supply":{"sku": "WPT-M",    "name": "32 gal bladder well pressure tank",                   "cost": 168.00},
+        "apex":        {"sku": "WPT-A",    "name": "Pressure tank well 32 gallon",                        "cost": 198.00},
+    },
+    "valve.trap_primer_3_4": {
+        "ferguson":    {"sku": "TP-34",    "name": "Trap primer valve 3/4\" supply-side",                   "cost": 42.00},
+        "moore_supply":{"sku": "TP34-M",   "name": "3/4\" trap primer valve",                              "cost": 38.00},
+        "apex":        {"sku": "TP34-A",   "name": "Trap primer 3/4 inch valve",                           "cost": 45.00},
+    },
+    "fitting.cleanout_two_way_4in": {
+        "ferguson":    {"sku": "CO2W-4",   "name": "Two-way cleanout 4\" PVC with plugs",                  "cost": 22.00},
+        "moore_supply":{"sku": "CO2W-M",   "name": "4\" PVC two-way cleanout",                             "cost": 19.00},
+        "apex":        {"sku": "CO2W-A",   "name": "PVC two-way cleanout 4 inch",                          "cost": 24.00},
+    },
+    "fixture.body_spray_pair": {
+        "ferguson":    {"sku": "BSP-2",    "name": "Shower body spray pair chrome",                        "cost": 85.00},
+        "moore_supply":{"sku": "BSP-M",    "name": "Chrome body spray pair shower",                        "cost": 78.00},
+        "apex":        {"sku": "BSP-A",    "name": "Body spray shower pair chrome",                        "cost": 92.00},
+    },
+    "valve.dual_flush_retrofit": {
+        "ferguson":    {"sku": "DFR-UNI",  "name": "Dual flush retrofit kit universal",                    "cost": 22.00},
+        "moore_supply":{"sku": "DFR-M",    "name": "Universal dual flush conversion kit",                  "cost": 19.00},
+        "apex":        {"sku": "DFR-A",    "name": "Dual flush retrofit universal",                        "cost": 24.00},
+    },
 }
 
 
@@ -2238,6 +2441,269 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
         "labor_template": "HOSE_BIB_WINTERIZE",
         "items": {
             "material.hose_bib_cover_insulated": 1,
+        },
+    },
+
+    # ── Phase 4: Material Assemblies ──────────────────────────────────────────
+
+    # K. Construction
+    "SEWER_TAP_KIT": {
+        "name": "Sewer Tap & Connection Kit",
+        "labor_template": "SEWER_TAP_CONNECTION",
+        "items": {
+            "fitting.sewer_wye_4in":  1,
+        },
+    },
+    "WATER_TAP_KIT": {
+        "name": "Water Service Tap Kit",
+        "labor_template": "WATER_TAP_CONNECTION",
+        "items": {
+            "fitting.water_service_adapter_1in": 1,
+        },
+    },
+    "SPRINKLER_HEAD_KIT": {
+        "name": "Residential Fire Sprinkler Kit (per head)",
+        "labor_template": "FIRE_SPRINKLER_RESIDENTIAL",
+        "items": {
+            "safety.fire_sprinkler_head_pendent": 1,
+        },
+    },
+    "RECIRC_LOOP_KIT": {
+        "name": "Tankless Recirculation Loop Kit",
+        "labor_template": "TANKLESS_RECIRCULATION_LOOP",
+        "items": {
+            "pipe.recirc_pex_1_2_per_ft": 60,
+            "pump.recirc_1_25in":         1,
+        },
+    },
+
+    # L. Commercial
+    "COMMERCIAL_TOILET_KIT": {
+        "name": "Commercial Floor Mount Toilet Kit",
+        "labor_template": "COMMERCIAL_TOILET_INSTALL",
+        "items": {
+            "fixture.commercial_toilet_floor_mount": 1,
+            "valve.flushometer_1_6gpf":             1,
+        },
+    },
+    "WALL_HUNG_TOILET_KIT": {
+        "name": "Wall-Hung Toilet with Carrier Kit",
+        "labor_template": "COMMERCIAL_WALL_HUNG_TOILET",
+        "items": {
+            "fixture.wall_hung_toilet_carrier":     1,
+            "valve.flushometer_1_6gpf":             1,
+        },
+    },
+    "URINAL_INSTALL_KIT": {
+        "name": "Commercial Urinal Install Kit",
+        "labor_template": "COMMERCIAL_URINAL_INSTALL",
+        "items": {
+            "fixture.urinal_wall_mount":            1,
+            "valve.urinal_flush_05gpf":             1,
+        },
+    },
+    "FOUNTAIN_KIT": {
+        "name": "Drinking Fountain / Bottle Filler Kit",
+        "labor_template": "DRINKING_FOUNTAIN_INSTALL",
+        "items": {
+            "fixture.drinking_fountain_ada":        1,
+        },
+    },
+    "EYEWASH_KIT": {
+        "name": "Emergency Eyewash/Shower Station Kit",
+        "labor_template": "EYE_WASH_STATION_INSTALL",
+        "items": {
+            "safety.eyewash_station_combo":         1,
+        },
+    },
+    "MOP_SINK_KIT": {
+        "name": "Mop/Service Sink Kit",
+        "labor_template": "MOP_SINK_INSTALL",
+        "items": {
+            "fixture.mop_sink_24in":                1,
+        },
+    },
+    "SENSOR_FAUCET_KIT": {
+        "name": "Hands-Free Sensor Faucet Kit",
+        "labor_template": "HANDS_FREE_FAUCET_INSTALL",
+        "items": {
+            "faucet.sensor_lavatory":               1,
+        },
+    },
+    "COMMERCIAL_PRV_KIT": {
+        "name": "Commercial PRV Kit",
+        "labor_template": "COMMERCIAL_PRV_INSTALL",
+        "items": {
+            "valve.commercial_prv_1_5in":           1,
+        },
+    },
+    "TMV_KIT": {
+        "name": "Thermostatic Mixing Valve Kit",
+        "labor_template": "TMV_INSTALL",
+        "items": {
+            "valve.tmv_asse1017":                   1,
+        },
+    },
+    "ROOF_DRAIN_KIT": {
+        "name": "Commercial Roof Drain Kit",
+        "labor_template": "ROOF_DRAIN_INSTALL",
+        "items": {
+            "fitting.roof_drain_4in_cast":          1,
+        },
+    },
+    "COMMERCIAL_SOFTENER_KIT": {
+        "name": "Commercial Water Softener Kit",
+        "labor_template": "COMMERCIAL_WATER_SOFTENER",
+        "items": {
+            "appliance.commercial_softener_100k":   1,
+        },
+    },
+    "BACKFLOW_REPAIR_KIT": {
+        "name": "Backflow Preventer Repair Kit",
+        "labor_template": "BACKFLOW_PREVENTER_REPAIR",
+        "items": {
+            "valve.backflow_repair_kit_generic":    1,
+        },
+    },
+
+    # M. Water Heater & Fixture Gaps
+    "WH_GAS_VALVE_KIT": {
+        "name": "WH Gas Control Valve Kit",
+        "labor_template": "WH_GAS_VALVE_REPLACE",
+        "items": {
+            "valve.wh_gas_control":                 1,
+        },
+    },
+    "TPR_VALVE_KIT": {
+        "name": "T&P Relief Valve Kit",
+        "labor_template": "TPR_VALVE_REPLACE",
+        "items": {
+            "valve.tpr_3_4":                        1,
+        },
+    },
+    "TUB_DRAIN_KIT": {
+        "name": "Tub Drain Assembly Kit",
+        "labor_template": "TUB_DRAIN_ASSEMBLY_REPLACE",
+        "items": {
+            "fixture.tub_drain_assembly":           1,
+        },
+    },
+    "SHOWER_DRAIN_KIT": {
+        "name": "Shower Drain Kit",
+        "labor_template": "SHOWER_DRAIN_REPLACE",
+        "items": {
+            "fixture.shower_drain_square_4":        1,
+        },
+    },
+    "FLOOR_DRAIN_KIT": {
+        "name": "Residential Floor Drain Kit",
+        "labor_template": "FLOOR_DRAIN_RESIDENTIAL",
+        "items": {
+            "fixture.floor_drain_4in":              1,
+        },
+    },
+
+    # N. Valves & Backflow
+    "RPZ_REBUILD_KIT": {
+        "name": "RPZ Rebuild Kit",
+        "labor_template": "RPZ_REBUILD",
+        "items": {
+            "valve.rpz_rebuild_kit":                1,
+        },
+    },
+    "DCVA_REPAIR_KIT": {
+        "name": "DCVA Repair Kit",
+        "labor_template": "DCVA_REPAIR",
+        "items": {
+            "valve.dcva_repair_kit":                1,
+        },
+    },
+    "EARTHQUAKE_VALVE_KIT": {
+        "name": "Earthquake Gas Shutoff Valve Kit",
+        "labor_template": "EARTHQUAKE_VALVE_INSTALL",
+        "items": {
+            "valve.earthquake_gas_shutoff":         1,
+        },
+    },
+    "DRIP_LEG_KIT": {
+        "name": "Gas Drip Leg Assembly Kit",
+        "labor_template": "GAS_DRIP_LEG_INSTALL",
+        "items": {
+            "fitting.gas_drip_leg_1_2":             1,
+        },
+    },
+    "BALL_VALVE_KIT": {
+        "name": "Ball Valve Upgrade Kit (per valve)",
+        "labor_template": "GATE_TO_BALL_VALVE_UPGRADE",
+        "items": {
+            "valve.ball_3_4_full_port":             1,
+        },
+    },
+
+    # O. Appliance Connections
+    "WASHER_HOSE_KIT": {
+        "name": "Washing Machine Hose Kit (pair)",
+        "labor_template": "WASHING_MACHINE_HOSE_REPLACE",
+        "items": {
+            "pipe.washer_hose_ss_pair":             1,
+        },
+    },
+    "DW_SUPPLY_KIT": {
+        "name": "Dishwasher Supply Line Kit",
+        "labor_template": "DISHWASHER_SUPPLY_INSTALL",
+        "items": {
+            "pipe.dw_supply_braided":               1,
+        },
+    },
+    "GAS_RANGE_CONNECTOR_KIT": {
+        "name": "Gas Range Connector Kit",
+        "labor_template": "GAS_RANGE_CONNECTOR_REPLACE",
+        "items": {
+            "pipe.gas_range_connector_48":          1,
+        },
+    },
+
+    # P. Specialty & Emerging
+    "RADIANT_LOOP_KIT": {
+        "name": "Radiant Floor Heat Plumbing Kit",
+        "labor_template": "RADIANT_FLOOR_LOOP",
+        "items": {
+            "valve.radiant_manifold_4loop":         1,
+        },
+    },
+    "WELL_TANK_KIT": {
+        "name": "Well Pressure Tank Kit",
+        "labor_template": "WELL_PRESSURE_TANK_REPLACE",
+        "items": {
+            "pump.well_pressure_tank_32g":          1,
+        },
+    },
+    "TRAP_PRIMER_KIT": {
+        "name": "Trap Primer Kit",
+        "labor_template": "TRAP_PRIMER_INSTALL",
+        "items": {
+            "valve.trap_primer_3_4":                1,
+        },
+    },
+    "EXTERIOR_CLEANOUT_KIT": {
+        "name": "Exterior Two-Way Cleanout Kit",
+        "labor_template": "CLEANOUT_INSTALL_EXTERIOR",
+        "items": {
+            "fitting.cleanout_two_way_4in":         1,
+        },
+    },
+    "BODY_SPRAY_KIT": {
+        "name": "Shower Body Spray Kit (pair)",
+        "labor_template": "SHOWER_BODY_SPRAY_INSTALL",
+        "items": {
+            "fixture.body_spray_pair":              1,
+        },
+    },
+    "DUAL_FLUSH_KIT": {
+        "name": "Dual Flush Conversion Kit",
+        "labor_template": "DUAL_FLUSH_CONVERSION",
+        "items": {
+            "valve.dual_flush_retrofit":            1,
         },
     },
     }
