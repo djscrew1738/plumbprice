@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -16,6 +17,9 @@ import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import './globals.css'
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+  }))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
@@ -85,6 +89,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             />
           }
         >
+          <QueryClientProvider client={queryClient}>
           <AuthProvider>
           <ToastProvider>
             <div className="flex min-h-dvh">
@@ -138,6 +143,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </ToastProvider>
           <ShortcutsDialog />
           </AuthProvider>
+          </QueryClientProvider>
         </ErrorBoundary>
       </body>
     </html>

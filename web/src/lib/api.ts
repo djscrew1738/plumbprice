@@ -279,6 +279,26 @@ export const suppliersApi = {
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
+export interface CanonicalItemSupplier {
+  id: number
+  sku?: string | null
+  name: string
+  cost: number
+  unit: string
+  confidence_score?: number
+  last_verified?: string | null
+}
+
+export interface CanonicalItem {
+  canonical_item: string
+  suppliers: Record<string, CanonicalItemSupplier>
+}
+
+export interface CanonicalItemsResponse {
+  count: number
+  items: CanonicalItem[]
+}
+
 export const adminApi = {
   listTemplates: () =>
     api.get('/admin/labor-templates'),
@@ -292,6 +312,13 @@ export const adminApi = {
     api.get('/admin/stats'),
   listAssemblies: () =>
     api.get('/admin/assemblies'),
+  listCanonicalItems: () =>
+    api.get<CanonicalItemsResponse>('/admin/canonical-items'),
+  updateCanonicalItem: (
+    item: string,
+    supplier: string,
+    body: { name: string; cost: number; unit: string; sku?: string },
+  ) => api.put(`/admin/canonical-items/${encodeURIComponent(item)}/${supplier}`, body),
 }
 
 // ─── Blueprints ─────────────────────────────────────────────────────────────
@@ -404,4 +431,21 @@ export const outcomesApi = {
 export const pricesApi = {
   getCache: () => api.get('/prices/cache'),
   refresh: () => api.post('/prices/refresh'),
+}
+
+// ─── Pricing Templates ───────────────────────────────────────────────────────
+
+export interface PricingTemplateSummary {
+  id: string
+  name: string
+  description?: string | null
+  sku?: string | null
+  base_price?: number | null
+  region?: string | null
+  tags?: string[]
+}
+
+export const templatesApi = {
+  list: () => api.get<PricingTemplateSummary[]>('/templates/pricing'),
+  get: (id: string) => api.get<PricingTemplateSummary & Record<string, unknown>>(`/templates/pricing/${encodeURIComponent(id)}`),
 }

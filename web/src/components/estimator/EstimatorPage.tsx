@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, RotateCcw, Zap, Copy, Check, FileUp, X, Square } from 'lucide-react'
-import { chatApi, estimatesApi, type EstimateDetailResponse } from '@/lib/api'
+import { chatApi, estimatesApi, templatesApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
 import { ConfidenceBadge } from './ConfidenceBadge'
 import { ChatSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
@@ -102,6 +102,7 @@ export function EstimatorPage() {
 
   const [blueprintName, setBlueprintName] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<number | null>(null)
+  const [pricingTemplates, setPricingTemplates] = useState<PricingTemplateSummary[]>([])
 
   const MAX_INPUT = 2000
 
@@ -133,6 +134,14 @@ export function EstimatorPage() {
   useEffect(() => {
     resumeErrorRef.current = error
   }, [error])
+
+  useEffect(() => {
+    let active = true
+    templatesApi.list().then(res => {
+      if (active) setPricingTemplates(res.data)
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -368,20 +377,31 @@ export function EstimatorPage() {
             ) : (
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
                 {/* Pricing template selector (populated from backend) */}
-                <select
-                  onChange={e => {
-                    const id = e.target.value
-                    if (!id) return
-                    fetch(`/api/v1/templates/pricing/${encodeURIComponent(id)}`).then(r => r.json()).then(tpl => {
-                      const prompt = `Price for ${tpl.name} (SKU: ${tpl.sku ?? 'N/A'}) in ${county}?`
-                      setInput(prompt)
-                    }).catch(() => {})
-                  }}
-                  className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[11px] font-medium text-[color:var(--muted-ink)]"
-                >
-                  <option value="">Select template…</option>
-                  {/* Options are filled client-side via a small inline script on mount */}
-                </select>
+                {pricingTemplates.length > 0 && (
+                  <select
+                    defaultValue=""
+                    onChange={async e => {
+                      const id = e.target.value
+                      if (!id) return
+                      e.target.value = ''
+                      try {
+                        const { data: tpl } = await templatesApi.get(id)
+                        const price = tpl.base_price != null ? ` (~$${tpl.base_price})` : ''
+                        const prompt = `Price for ${tpl.name} (SKU: ${tpl.sku ?? 'N/A'}) in ${county}?${price}`
+                        setInput(prompt)
+                        inputRef.current?.focus()
+                      } catch { /* ignore */ }
+                    }}
+                    className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[11px] font-medium text-[color:var(--muted-ink)]"
+                  >
+                    <option value="">Templates…</option>
+                    {pricingTemplates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{t.base_price != null ? ` — $${t.base_price}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
                 {SUGGESTIONS.map(suggestion => (
                   <button

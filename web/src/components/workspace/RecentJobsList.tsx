@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
 import type { EstimateListItem } from '@/lib/api'
 import { estimatesApi } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -63,28 +63,12 @@ interface RecentJobsListProps {
 }
 
 export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit = 5, className }: RecentJobsListProps) {
-  const [jobs, setJobs] = useState<EstimateListItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadRecentJobs = useCallback(async () => {
-    let isMounted = true
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await estimatesApi.list()
-      if (isMounted) setJobs(normalizeRecentJobs(response.data).slice(0, limit))
-    } catch {
-      if (isMounted) setError('Could not load recent jobs')
-    } finally {
-      if (isMounted) setLoading(false)
-    }
-    return () => { isMounted = false }
-  }, [limit])
-
-  useEffect(() => {
-    void loadRecentJobs()
-  }, [loadRecentJobs])
+  const { data, isLoading: loading, isError, refetch } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: () => estimatesApi.list(),
+  })
+  const jobs = data ? normalizeRecentJobs(data.data).slice(0, limit) : []
+  const error = isError ? 'Could not load recent jobs' : null
 
   return (
     <section className={cn(compact ? 'space-y-2' : 'shell-panel space-y-3 p-5', className)}>
@@ -109,7 +93,7 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
           <p className="text-[color:var(--muted-ink)]">{error}</p>
           <button
             type="button"
-            onClick={() => void loadRecentJobs()}
+            onClick={() => void refetch()}
             className="mt-2 flex items-center gap-1.5 text-[color:var(--accent-strong)] hover:underline"
           >
             <RefreshCw size={12} />

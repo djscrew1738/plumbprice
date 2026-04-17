@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { motion, type Variants } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { estimatesApi, sessionsApi, type EstimateListItem, type ChatSessionSummary } from '@/lib/api'
+import { estimatesApi, sessionsApi, type EstimateListItem } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -50,19 +50,16 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
 }
 
 export function LauncherHome() {
-  const [stats, setStats] = useState<{ count: number; totalValue: number; avgValue: number } | null>(null)
-  const [sessions, setSessions] = useState<ChatSessionSummary[] | null>(null)
-
-  useEffect(() => {
-    let active = true
-    estimatesApi.list({ limit: 50 }).then(res => {
-      if (active) setStats(computeWeeklyStats(res.data))
-    }).catch(() => { /* non-critical */ })
-    sessionsApi.list(5).then(res => {
-      if (active) setSessions(res.data)
-    }).catch(() => { /* non-critical */ })
-    return () => { active = false }
-  }, [])
+  const { data: estimatesData } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: () => estimatesApi.list(),
+  })
+  const { data: sessionsData } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: () => sessionsApi.list(5),
+  })
+  const stats = estimatesData ? computeWeeklyStats(estimatesData.data) : null
+  const sessions = sessionsData?.data ?? null
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
