@@ -325,6 +325,18 @@ async def get_cost_breakdown(
         "misc": estimate.misc_total or 0.0,
     }
 
+    # Add trip and permit from line items (not stored as top-level model fields)
+    trip_total = sum(
+        li.total_cost for li in estimate.line_items if li.line_type == "trip"
+    )
+    permit_total = sum(
+        li.total_cost for li in estimate.line_items if li.line_type == "permit"
+    )
+    if trip_total > 0:
+        category_amounts["trip"] = trip_total
+    if permit_total > 0:
+        category_amounts["permit"] = permit_total
+
     breakdown = {
         category: {
             "amount": amount,

@@ -1,5 +1,6 @@
 """Proposal Service — email delivery via Resend."""
 
+import html
 from datetime import datetime, timezone
 from typing import Optional
 import structlog
@@ -14,14 +15,18 @@ logger = structlog.get_logger()
 
 def _build_estimate_html(estimate: Estimate, recipient_name: Optional[str], message: Optional[str]) -> str:
     """Build a clean HTML email from an estimate."""
-    greeting = f"Hi {recipient_name}," if recipient_name else "Hello,"
-    custom_msg = f"<p>{message}</p>" if message else ""
+    safe_name = html.escape(recipient_name) if recipient_name else None
+    safe_msg = html.escape(message) if message else None
+
+    greeting = f"Hi {safe_name}," if safe_name else "Hello,"
+    custom_msg = f"<p>{safe_msg}</p>" if safe_msg else ""
 
     rows = ""
     for item in estimate.line_items:
+        desc = html.escape(str(item.description)) if item.description else ""
         rows += (
             f"<tr>"
-            f"<td style='padding:6px 12px;border-bottom:1px solid #f0f0f0'>{item.description}</td>"
+            f"<td style='padding:6px 12px;border-bottom:1px solid #f0f0f0'>{desc}</td>"
             f"<td style='padding:6px 12px;border-bottom:1px solid #f0f0f0;text-align:center'>{item.quantity}</td>"
             f"<td style='padding:6px 12px;border-bottom:1px solid #f0f0f0;text-align:right'>${item.total_cost:,.2f}</td>"
             f"</tr>"

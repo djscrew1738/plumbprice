@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class TaxRateBase(BaseModel):
@@ -13,6 +13,4 @@ class TaxRateCreate(TaxRateBase):
 
 class TaxRate(TaxRateBase):
     id: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

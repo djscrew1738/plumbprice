@@ -9,6 +9,9 @@ from typing import Dict, Any, List, Optional
 _project_root = Path(__file__).resolve().parents[3]
 _templates_dir = _project_root / "web" / "templates" / "pricing"
 
+# DFW region identifiers accepted for filtering
+_DFW_REGIONS = {"dfw", "dallas", "dallas-fort-worth", "dallas-fort worth", "north-texas", "north texas"}
+
 _TEMPLATES: Dict[str, Dict[str, Any]] = {}
 
 
@@ -34,10 +37,23 @@ def _load_templates() -> None:
 _load_templates()
 
 
-def list_pricing_templates() -> List[Dict[str, Any]]:
-    """Return a shallow list of templates (id, name, description, tags)."""
+def _is_dfw_template(tpl: Dict[str, Any]) -> bool:
+    """Return True if template has no region or its region matches DFW."""
+    region = tpl.get("region")
+    if not region:
+        return True
+    return region.lower().strip() in _DFW_REGIONS
+
+
+def list_pricing_templates(region_filter: bool = True) -> List[Dict[str, Any]]:
+    """Return a shallow list of templates (id, name, description, tags).
+    
+    When region_filter is True (default), only DFW-relevant templates are returned.
+    """
     out = []
     for tpl in _TEMPLATES.values():
+        if region_filter and not _is_dfw_template(tpl):
+            continue
         out.append({
             "id": tpl.get("id"),
             "name": tpl.get("name"),

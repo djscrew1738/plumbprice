@@ -291,6 +291,11 @@ class EstimateResult:
     assumptions: list[str]
     sources: list[str]
     pricing_trace: dict   # full deterministic trace
+    # Optional fields added for construction/service parity
+    city: Optional[str] = None
+    trip_total: float = 0.0
+    permit_total: float = 0.0
+    city_premium: float = 0.0
 
 
 class PricingEngine:
@@ -491,12 +496,16 @@ class PricingEngine:
             access_type=access,
             urgency_type=urgency,
             county=county,
+            city=city,
             tax_rate=tax_rate,
             labor_total=round(labor_cost, 2),
             materials_total=round(materials_cost, 2),
             tax_total=tax_amount,
             markup_total=round(materials_markup, 2),
             misc_total=round(misc_flat, 2),
+            trip_total=round(trip_cost, 2),
+            permit_total=round(permit_cost, 2),
+            city_premium=round(city_premium, 2),
             subtotal=subtotal,
             grand_total=grand_total,
             confidence_score=confidence,
@@ -533,7 +542,9 @@ class PricingEngine:
         fixture_count: int = 5,
         underground_lf: float = 0.0,
         county: str = "Dallas",
+        city: Optional[str] = None,
         preferred_supplier: Optional[str] = None,
+        include_trip_charge: bool = True,
     ) -> EstimateResult:
         """Calculate a new construction estimate."""
 
@@ -544,6 +555,19 @@ class PricingEngine:
 
         line_items = []
         labor_total = 0.0
+
+        # Trip charge
+        trip_cost = get_trip_charge(county) if include_trip_charge else 0.0
+        if trip_cost > 0:
+            line_items.append(LineItem(
+                line_type="trip",
+                description=f"Service Call / Trip Charge — {county} County",
+                quantity=1,
+                unit="visit",
+                unit_cost=trip_cost,
+                total_cost=trip_cost,
+                trace_json={"county": county, "city": city},
+            ))
 
         # Rough-in
         if rough_template:
@@ -612,8 +636,65 @@ class PricingEngine:
         materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
         misc_flat = markup_rules["misc_flat"]
 
-        subtotal = labor_total + materials_cost + materials_markup + misc_flat
+        # Permit cost (construction typically requires a plumbing permit)
+        permit_cost = get_permit_cost("WHOLE_HOUSE_REPIPE_PEX", county)
+
+        # City zone premium multiplier
+        city_mult = get_city_multiplier(city)
+
+        base_subtotal = (labor_total + materials_cost + materials_markup +
+                         misc_flat + trip_cost + permit_cost)
+        city_premium = round((labor_total + materials_markup + misc_flat + trip_cost)
+                              * (city_mult - 1.0), 2) if city_mult != 1.0 else 0.0
+
+        subtotal = round(base_subtotal + city_premium, 2)
         grand_total = round(subtotal + tax_amount, 2)
+
+        # Markup line
+        if materials_markup > 0:
+            line_items.append(LineItem(
+                line_type="markup",
+                description=f"Materials Markup ({int(markup_rules['materials_markup_pct']*100)}%)",
+                quantity=1, unit="lot",
+                unit_cost=materials_markup, total_cost=materials_markup,
+            ))
+
+        # Misc line
+        if misc_flat > 0:
+            line_items.append(LineItem(
+                line_type="misc",
+                description="Misc Supplies & Disposal",
+                quantity=1, unit="lot",
+                unit_cost=misc_flat, total_cost=misc_flat,
+            ))
+
+        # City premium line
+        if city_premium > 0:
+            line_items.append(LineItem(
+                line_type="misc",
+                description=f"Market Zone Adjustment — {city} (+{int((city_mult-1)*100)}%)",
+                quantity=1, unit="lot",
+                unit_cost=city_premium, total_cost=city_premium,
+                trace_json={"city": city, "multiplier": city_mult},
+            ))
+
+        # Permit line
+        if permit_cost > 0:
+            line_items.append(LineItem(
+                line_type="permit",
+                description=f"Permit — {county} County (plumbing)",
+                quantity=1, unit="permit",
+                unit_cost=permit_cost, total_cost=permit_cost,
+            ))
+
+        # Tax line
+        if tax_amount > 0:
+            line_items.append(LineItem(
+                line_type="tax",
+                description=f"Sales Tax — {county} County ({tax_rate*100:.2f}%)",
+                quantity=1, unit="lot",
+                unit_cost=tax_amount, total_cost=tax_amount,
+            ))
 
         return EstimateResult(
             template_code="CONSTRUCTION_ESTIMATE",
@@ -622,28 +703,39 @@ class PricingEngine:
             access_type="first_floor",
             urgency_type="standard",
             county=county,
+            city=city,
             tax_rate=tax_rate,
             labor_total=round(labor_total, 2),
             materials_total=round(materials_cost, 2),
             tax_total=tax_amount,
             markup_total=round(materials_markup, 2),
             misc_total=round(misc_flat, 2),
+            trip_total=round(trip_cost, 2),
+            permit_total=round(permit_cost, 2),
+            city_premium=round(city_premium, 2),
             subtotal=round(subtotal, 2),
             grand_total=grand_total,
             confidence_score=0.75,
             confidence_label="MEDIUM",
             line_items=line_items,
-            assumptions=[
+            assumptions=[a for a in [
                 f"Based on {bath_groups} bath group(s) and {fixture_count} fixtures",
                 "Material costs require itemized quote",
                 f"County: {county}, Tax rate: {tax_rate*100:.2f}%",
-            ],
+                f"Trip charge: ${trip_cost:.2f}" if trip_cost else None,
+                f"Permit: ${permit_cost:.2f}" if permit_cost else None,
+                f"City premium: {city} ({city_mult}x)" if city and city_mult != 1.0 else None,
+            ] if a is not None],
             sources=["Labor templates: ROUGH_IN_PER_BATH_GROUP, TOP_OUT_PER_FIXTURE, FINAL_SET_PER_FIXTURE"],
             pricing_trace={
                 "bath_groups": bath_groups,
                 "fixture_count": fixture_count,
                 "underground_lf": underground_lf,
                 "labor_total": labor_total,
+                "trip_cost": trip_cost,
+                "permit_cost": permit_cost,
+                "city_mult": city_mult,
+                "city_premium": city_premium,
                 "grand_total": grand_total,
             }
         )
@@ -772,12 +864,16 @@ class PricingEngine:
             access_type=result.access_type,
             urgency_type=result.urgency_type,
             county=result.county,
+            city=result.city,
             tax_rate=result.tax_rate,
             labor_total=round(result.labor_total * q, 2),
             materials_total=round(result.materials_total * q, 2),
             tax_total=round(result.tax_total * q, 2),
             markup_total=round(result.markup_total * q, 2),
             misc_total=round(result.misc_total * q, 2),
+            trip_total=round(trip_total, 2),
+            permit_total=round(permit_total, 2),
+            city_premium=round(result.city_premium * q, 2) if result.city_premium else 0.0,
             subtotal=round(
                 result.labor_total * q
                 + result.materials_total * q
