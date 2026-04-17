@@ -57,6 +57,7 @@ export interface ChatPriceRequest {
   preferred_supplier?: string
   job_type?: string
   conversation_id?: string
+  session_id?: number | null
   history?: ChatHistoryMessage[]
 }
 
@@ -65,6 +66,7 @@ export interface ChatPriceStreamEvent {
   // pricing event payload
   estimate?: EstimateBreakdownPayload | null
   estimate_id?: number | null
+  session_id?: number | null
   confidence?: number
   confidence_label?: string
   assumptions?: string[]
@@ -81,6 +83,7 @@ export interface ChatPriceResponse {
   answer: string
   estimate: EstimateBreakdownPayload | null
   estimate_id?: number | null
+  session_id?: number | null
   confidence: number
   confidence_label: string
   assumptions: string[]
@@ -310,11 +313,90 @@ export const blueprintsApi = {
 
 // ─── Proposals ──────────────────────────────────────────────────────────────
 
+export interface SendProposalRequest {
+  recipient_email: string
+  recipient_name?: string
+  message?: string
+}
+
+export interface SendProposalResponse {
+  success: boolean
+  proposal_id: number
+  sent: boolean
+  recipient: string
+}
+
 export const proposalsApi = {
-  create: (estimateId: number) =>
-    api.post(`/proposals/${estimateId}`),
-  getPdf: (proposalId: number) =>
-    api.get(`/proposals/${proposalId}/pdf`, { responseType: 'blob' }),
+  send: (estimateId: number, body: SendProposalRequest) =>
+    api.post<SendProposalResponse>(`/proposals/${estimateId}/send`, body),
+  listSends: (estimateId: number) =>
+    api.get<Array<{ id: number; recipient_email: string; recipient_name: string | null; sent_at: string | null; created_at: string }>>(`/proposals/${estimateId}/sends`),
+}
+
+// ─── Sessions ────────────────────────────────────────────────────────────────
+
+export interface ChatSessionSummary {
+  id: number
+  title: string | null
+  county: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ChatSessionDetail extends ChatSessionSummary {
+  messages: Array<{
+    id: number
+    role: 'user' | 'assistant'
+    content: string
+    estimate_id: number | null
+    created_at: string
+  }>
+}
+
+export const sessionsApi = {
+  list: (limit = 20) =>
+    api.get<ChatSessionSummary[]>('/sessions/', { params: { limit } }),
+  get: (id: number) =>
+    api.get<ChatSessionDetail>(`/sessions/${id}`),
+  delete: (id: number) =>
+    api.delete(`/sessions/${id}`),
+}
+
+// ─── Outcomes ────────────────────────────────────────────────────────────────
+
+export type OutcomeValue = 'won' | 'lost' | 'pending' | 'no_bid'
+
+export interface RecordOutcomeRequest {
+  outcome: OutcomeValue
+  final_price?: number
+  notes?: string
+}
+
+export interface OutcomeResponse {
+  id: number
+  estimate_id: number
+  outcome: OutcomeValue
+  final_price: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface OutcomeStats {
+  total: number
+  won: number
+  lost: number
+  pending: number
+  no_bid: number
+  win_rate: number | null
+  confidence_breakdown: Record<string, { count: number; won: number; win_rate: number | null }>
+}
+
+export const outcomesApi = {
+  record: (estimateId: number, body: RecordOutcomeRequest) =>
+    api.post<OutcomeResponse>(`/estimates/${estimateId}/outcome`, body),
+  stats: () =>
+    api.get<OutcomeStats>('/estimates/stats'),
 }
 
 // ─── Prices ─────────────────────────────────────────────────────────────────
