@@ -23,3 +23,5 @@ ipdb
 pytest-cov
 minio
 pymupdf
+sentry-sdk[fastapi]
+resend

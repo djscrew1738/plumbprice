@@ -78,6 +78,14 @@ class Settings(BaseSettings):
     celery_broker_url: str = Field(default="redis://localhost:6379/0", env="CELERY_BROKER_URL")
     celery_result_backend: str = Field(default="redis://localhost:6379/1", env="CELERY_RESULT_BACKEND")
 
+    # Observability
+    sentry_dsn: Optional[str] = Field(default=None, env="SENTRY_DSN")
+    sentry_traces_sample_rate: float = Field(default=0.1, env="SENTRY_TRACES_SAMPLE_RATE")
+
+    # Email (proposal delivery)
+    resend_api_key: Optional[str] = Field(default=None, env="RESEND_API_KEY")
+    email_from: str = Field(default="estimates@ctlplumbingllc.com", env="EMAIL_FROM")
+
     model_config = {
         "env_file": ".env" if os.getenv("ENVIRONMENT") != "test" else None,
         "env_file_encoding": "utf-8",

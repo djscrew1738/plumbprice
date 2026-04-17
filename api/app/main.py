@@ -1,3 +1,6 @@
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -11,6 +14,16 @@ import structlog
 import uuid
 
 from app.config import settings
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        environment=settings.environment,
+        release=settings.version,
+        send_default_pii=False,
+    )
 from app.database import init_db, AsyncSessionLocal
 from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
