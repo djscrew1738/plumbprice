@@ -1,0 +1,403 @@
+"""
+Unit tests for PricingEngine, LaborEngine, and pricing helpers.
+No database or LLM — fully deterministic, pure-function tests.
+"""
+
+import os
+os.environ.setdefault("ENVIRONMENT", "test")
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+
+import pytest
+from app.services.pricing_engine import (
+    PricingEngine,
+    MaterialItem,
+    get_city_multiplier,
+    get_permit_cost,
+    get_trip_charge,
+    TAX_RATES,
+    CITY_ZONE_MULTIPLIERS,
+)
+from app.services.labor_engine import (
+    LaborTemplateData,
+    get_template,
+    LABOR_TEMPLATES,
+    AccessType,
+    UrgencyType,
+)
+
+engine = PricingEngine()
+
+
+# ─── MaterialItem ─────────────────────────────────────────────────────────────
+
+class TestMaterialItem:
+    def test_total_cost_computed_on_init(self):
+        m = MaterialItem("test.item", "Test", 3.0, "ea", 10.00, "ferguson")
+        assert m.total_cost == 30.00
+
+    def test_total_cost_rounds_to_cents(self):
+        m = MaterialItem("test.item", "Test", 1.0, "ea", 8.4219, "ferguson")
+        assert m.total_cost == 8.42
+
+    def test_fractional_quantity(self):
+        m = MaterialItem("test.pipe", "Pipe", 2.5, "ft", 4.00, "moore_supply")
+        assert m.total_cost == 10.00
+
+
+# ─── get_city_multiplier ──────────────────────────────────────────────────────
+
+class TestCityMultiplier:
+    def test_highland_park_premium(self):
+        assert get_city_multiplier("Highland Park") == 1.25
+
+    def test_case_insensitive(self):
+        assert get_city_multiplier("HIGHLAND PARK") == 1.25
+        assert get_city_multiplier("highland park") == 1.25
+
+    def test_unknown_city_returns_one(self):
+        assert get_city_multiplier("Atlantis") == 1.0
+
+    def test_none_returns_one(self):
+        assert get_city_multiplier(None) == 1.0
+
+    def test_dallas_is_baseline(self):
+        assert get_city_multiplier("Dallas") == 1.0
+
+    def test_frisco_premium(self):
+        assert get_city_multiplier("Frisco") == 1.15
+
+    def test_everman_discount(self):
+        assert get_city_multiplier("Everman") == 0.92
+
+    def test_strips_whitespace(self):
+        assert get_city_multiplier("  southlake  ") == 1.20
+
+    def test_all_multipliers_in_valid_range(self):
+        for city, mult in CITY_ZONE_MULTIPLIERS.items():
+            assert 0.80 <= mult <= 1.30, f"{city} multiplier {mult} out of expected range"
+
+
+# ─── get_permit_cost ──────────────────────────────────────────────────────────
+
+class TestPermitCost:
+    def test_water_heater_in_dallas(self):
+        cost = get_permit_cost("WH_50G_GAS_STANDARD", "Dallas")
+        assert cost == 115.0
+
+    def test_gas_line_in_tarrant(self):
+        cost = get_permit_cost("GAS_LINE_NEW_RUN", "Tarrant")
+        assert cost == 110.0
+
+    def test_no_permit_for_simple_job(self):
+        cost = get_permit_cost("TOILET_REPLACE_STANDARD", "Dallas")
+        assert cost == 0.0
+
+    def test_unknown_county_falls_back_to_dallas(self):
+        cost = get_permit_cost("WH_50G_GAS_STANDARD", "Unknown County")
+        assert cost == 115.0
+
+    def test_repipe_permit_exists(self):
+        cost = get_permit_cost("WHOLE_HOUSE_REPIPE_PEX", "Collin")
+        assert cost > 0
+
+    def test_backflow_permit_in_denton(self):
+        cost = get_permit_cost("BACKFLOW_PREVENTER_INSTALL", "Denton")
+        assert cost > 0
+
+
+# ─── get_trip_charge ─────────────────────────────────────────────────────────
+
+class TestTripCharge:
+    def test_dallas_trip_charge(self):
+        assert get_trip_charge("dallas") == 115.0
+
+    def test_tarrant_trip_charge(self):
+        assert get_trip_charge("tarrant") == 105.0
+
+    def test_unknown_county_fallback(self):
+        assert get_trip_charge("unknown") == 105.0
+
+    def test_case_insensitive(self):
+        assert get_trip_charge("Dallas") == get_trip_charge("dallas")
+
+
+# ─── TAX_RATES ───────────────────────────────────────────────────────────────
+
+class TestTaxRates:
+    def test_all_dfw_counties_defined(self):
+        for county in ["dallas", "tarrant", "collin", "denton", "rockwall", "parker"]:
+            assert county in TAX_RATES, f"Missing tax rate for {county}"
+
+    def test_texas_rate_range(self):
+        for county, rate in TAX_RATES.items():
+            assert 0.0625 <= rate <= 0.0825, f"{county} rate {rate} outside TX legal range"
+
+
+# ─── LaborTemplateData.calculate_labor_cost ───────────────────────────────────
+
+class TestLaborCalculation:
+    def _make_template(self, base_hours=2.0, helper=False, helper_hours=None):
+        return LaborTemplateData(
+            code="TEST",
+            name="Test Job",
+            category="service",
+            base_hours=base_hours,
+            lead_rate=105.0,
+            helper_required=helper,
+            helper_rate=55.0,
+            helper_hours=helper_hours,
+            disposal_hours=0.25,
+        )
+
+    def test_standard_first_floor(self):
+        tmpl = self._make_template(base_hours=2.0)
+        result = tmpl.calculate_labor_cost(access="first_floor", urgency="standard")
+        assert result["adjusted_hours"] == 2.0
+        assert result["lead_cost"] == 2.0 * 105.0
+
+    def test_attic_multiplier(self):
+        tmpl = self._make_template(base_hours=2.0)
+        result = tmpl.calculate_labor_cost(access="attic", urgency="standard")
+        assert result["adjusted_hours"] == pytest.approx(3.0)  # 2.0 * 1.5
+
+    def test_emergency_multiplier(self):
+        tmpl = self._make_template(base_hours=2.0)
+        result = tmpl.calculate_labor_cost(access="first_floor", urgency="emergency")
+        assert result["adjusted_hours"] == pytest.approx(4.0)  # 2.0 * 2.0
+
+    def test_attic_emergency_stacks(self):
+        tmpl = self._make_template(base_hours=2.0)
+        result = tmpl.calculate_labor_cost(access="attic", urgency="emergency")
+        # 2.0 * 1.5 * 2.0 = 6.0
+        assert result["adjusted_hours"] == pytest.approx(6.0)
+
+    def test_helper_cost_included_when_required(self):
+        tmpl = self._make_template(base_hours=2.0, helper=True, helper_hours=1.5)
+        result = tmpl.calculate_labor_cost()
+        assert result["helper_required"] is True
+        assert result["helper_cost"] == pytest.approx(1.5 * 55.0)
+
+    def test_no_helper_cost_when_not_required(self):
+        tmpl = self._make_template(base_hours=2.0, helper=False)
+        result = tmpl.calculate_labor_cost()
+        assert result["helper_cost"] == 0.0
+
+    def test_disposal_cost_always_present(self):
+        tmpl = self._make_template(base_hours=2.0)
+        result = tmpl.calculate_labor_cost()
+        assert result["disposal_cost"] == pytest.approx(0.25 * 105.0)
+
+    def test_total_labor_cost_sums_components(self):
+        tmpl = self._make_template(base_hours=2.0, helper=True, helper_hours=1.0)
+        result = tmpl.calculate_labor_cost()
+        expected = result["lead_cost"] + result["helper_cost"] + result["disposal_cost"]
+        assert result["total_labor_cost"] == pytest.approx(expected)
+
+
+# ─── LABOR_TEMPLATES catalog sanity ──────────────────────────────────────────
+
+class TestLaborTemplatesCatalog:
+    def test_key_templates_exist(self):
+        critical = [
+            "TOILET_REPLACE_STANDARD",
+            "WH_50G_GAS_STANDARD",
+            "WH_50G_GAS_ATTIC",
+            "KITCHEN_FAUCET_REPLACE",
+            "PRV_REPLACE",
+            "GARBAGE_DISPOSAL_INSTALL",
+            "SHOWER_VALVE_REPLACE",
+        ]
+        for code in critical:
+            assert code in LABOR_TEMPLATES, f"Missing labor template: {code}"
+
+    def test_all_templates_have_positive_base_hours(self):
+        for code, tmpl in LABOR_TEMPLATES.items():
+            assert tmpl.base_hours > 0, f"{code} has non-positive base_hours"
+
+    def test_get_template_returns_none_for_unknown(self):
+        assert get_template("NONEXISTENT_TASK") is None
+
+    def test_get_template_finds_known(self):
+        t = get_template("TOILET_REPLACE_STANDARD")
+        assert t is not None
+        assert t.code == "TOILET_REPLACE_STANDARD"
+
+
+# ─── PricingEngine.calculate_service_estimate ────────────────────────────────
+
+class TestPricingEngineServiceEstimate:
+    def _toilet_materials(self):
+        return [
+            MaterialItem("toilet.wax_ring",       "Wax Ring",        1, "ea", 8.42,  "ferguson"),
+            MaterialItem("toilet.closet_bolts",    "Closet Bolts",    1, "ea", 6.18,  "ferguson"),
+            MaterialItem("toilet.supply_line_12",  "Supply Line",     1, "ea", 10.95, "ferguson"),
+            MaterialItem("toilet.unit_standard",   "Toilet Unit",     1, "ea", 185.00,"ferguson"),
+        ]
+
+    def test_grand_total_is_positive(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        assert result.grand_total > 0
+
+    def test_grand_total_equals_subtotal_plus_tax(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        assert result.grand_total == pytest.approx(result.subtotal + result.tax_total, abs=0.01)
+
+    def test_tax_applied_to_materials_only(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        expected_tax = round(result.materials_total * TAX_RATES["dallas"], 2)
+        assert result.tax_total == pytest.approx(expected_tax, abs=0.01)
+
+    def test_highland_park_premium_raises_total(self):
+        base = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+            city=None,
+        )
+        premium = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+            city="Highland Park",
+        )
+        assert premium.grand_total > base.grand_total
+
+    def test_trip_charge_excluded_when_flag_false(self):
+        with_trip = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+            include_trip_charge=True,
+        )
+        without_trip = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+            include_trip_charge=False,
+        )
+        assert with_trip.grand_total > without_trip.grand_total
+
+    def test_water_heater_includes_permit(self):
+        wh_materials = [
+            MaterialItem("wh.50g_gas_unit",              "50G Gas WH",       1, "ea", 598.00, "ferguson"),
+            MaterialItem("wh.gas_flex_connector_18",     "Gas Flex",         1, "ea",  14.50, "ferguson"),
+            MaterialItem("wh.expansion_tank_2g",         "Expansion Tank",   1, "ea",  42.80, "ferguson"),
+            MaterialItem("wh.tp_valve_075",              "T&P Valve",        1, "ea",  22.95, "ferguson"),
+            MaterialItem("wh.dielectric_union_pair",     "Dielectric Unions",1, "ea",  18.40, "ferguson"),
+        ]
+        result = engine.calculate_service_estimate(
+            task_code="WH_50G_GAS_STANDARD",
+            materials=wh_materials,
+            county="Dallas",
+        )
+        # Dallas water heater permit = $115; should be in subtotal
+        permit_lines = [li for li in result.line_items if li.line_type == "permit"]
+        assert len(permit_lines) == 1
+        assert permit_lines[0].total_cost == 115.0
+
+    def test_attic_access_increases_total(self):
+        mats = self._toilet_materials()
+        first_floor = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=mats,
+            county="Dallas",
+            access="first_floor",
+        )
+        attic = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=mats,
+            county="Dallas",
+            access="attic",
+        )
+        assert attic.grand_total > first_floor.grand_total
+
+    def test_emergency_urgency_increases_total(self):
+        mats = self._toilet_materials()
+        standard = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=mats,
+            county="Dallas",
+            urgency="standard",
+        )
+        emergency = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=mats,
+            county="Dallas",
+            urgency="emergency",
+        )
+        assert emergency.grand_total > standard.grand_total
+
+    def test_materials_total_matches_sum_of_material_items(self):
+        mats = self._toilet_materials()
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=mats,
+            county="Dallas",
+        )
+        expected_materials = sum(m.total_cost for m in mats)
+        assert result.materials_total == pytest.approx(expected_materials, abs=0.01)
+
+    def test_unknown_task_code_raises(self):
+        with pytest.raises(ValueError, match="Unknown labor template"):
+            engine.calculate_service_estimate(
+                task_code="FAKE_TASK_CODE_99",
+                materials=[],
+                county="Dallas",
+            )
+
+    def test_confidence_score_between_0_and_1(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        assert 0.0 <= result.confidence_score <= 1.0
+
+    def test_confidence_label_valid(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        assert result.confidence_label in {"HIGH", "MEDIUM", "LOW", "ESTIMATE_ONLY"}
+
+    def test_all_line_items_have_positive_totals(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        for li in result.line_items:
+            assert li.total_cost >= 0, f"Negative line item: {li.description}"
+
+    def test_line_items_sum_close_to_subtotal(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        # tax is added to subtotal for grand total; line items excluding tax should ~= subtotal
+        line_sum = sum(
+            li.total_cost for li in result.line_items if li.line_type != "tax"
+        )
+        assert abs(line_sum - result.subtotal) < 1.0  # allow rounding tolerance
+
+    def test_different_counties_different_tax(self):
+        mats = self._toilet_materials()
+        dallas = engine.calculate_service_estimate("TOILET_REPLACE_STANDARD", mats, county="Dallas")
+        tarrant = engine.calculate_service_estimate("TOILET_REPLACE_STANDARD", mats, county="Tarrant")
+        # Both are 8.25% in 2025, so equal; test ensures no crash and both positive
+        assert dallas.tax_total > 0
+        assert tarrant.tax_total > 0

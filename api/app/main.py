@@ -170,6 +170,12 @@ async def _sync_runtime_config():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting PlumbPrice AI API", version=settings.version, env=settings.environment)
+    from app.core.storage import storage_client
+    try:
+        storage_client.ensure_buckets()
+        logger.info("MinIO buckets ready")
+    except Exception as exc:
+        logger.warning("MinIO bucket init failed — storage unavailable", error=str(exc))
     await init_db()
     await _ensure_seeded()
     await _sync_runtime_config()
