@@ -1,11 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Copy, Check, Square } from 'lucide-react'
+import { Copy, Check, Square, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ChatMessage } from '@/types'
+import type { ChatMessage, LineItem } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import { InlineEstimateCard } from './InlineEstimateCard'
+import { InlineLineItemEditor } from './InlineLineItemEditor'
 import { ChatSkeleton } from '@/components/ui/Skeleton'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -17,18 +18,26 @@ interface ChatMessageListProps {
   messages: ChatMessage[]
   loading: boolean
   copiedId: string | null
+  editingMessageId: string | null
   onCopyMessage: (id: string, content: string) => void
   onViewBreakdown: (message: ChatMessage) => void
   onStopGenerating: () => void
+  onEditLineItems: (messageId: string) => void
+  onSaveLineItems: (messageId: string, lineItems: LineItem[]) => void
+  onCancelEditLineItems: () => void
 }
 
 export function ChatMessageList({
   messages,
   loading,
   copiedId,
+  editingMessageId,
   onCopyMessage,
   onViewBreakdown,
   onStopGenerating,
+  onEditLineItems,
+  onSaveLineItems,
+  onCancelEditLineItems,
 }: ChatMessageListProps) {
   return (
     <>
@@ -72,13 +81,35 @@ export function ChatMessageList({
               )}
 
               {message.estimate && message.confidence_label && (
-                <InlineEstimateCard
-                  confidenceLabel={message.confidence_label}
-                  confidenceScore={message.confidence || 0}
-                  onViewBreakdown={() => onViewBreakdown(message)}
-                />
+                <div>
+                  <InlineEstimateCard
+                    confidenceLabel={message.confidence_label}
+                    confidenceScore={message.confidence || 0}
+                    onViewBreakdown={() => onViewBreakdown(message)}
+                  />
+                  {editingMessageId !== message.id && message.estimate.line_items.length > 0 && (
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => onEditLineItems(message.id)}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-[color:var(--muted-ink)] transition-colors hover:text-[color:var(--accent-strong)]"
+                      >
+                        <Pencil size={10} />
+                        Edit Line Items
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
+
+            {editingMessageId === message.id && message.estimate && (
+              <InlineLineItemEditor
+                lineItems={message.estimate.line_items}
+                onSave={(lineItems) => onSaveLineItems(message.id, lineItems)}
+                onCancel={onCancelEditLineItems}
+              />
+            )}
 
             <span className="text-[10px] font-medium text-[color:var(--muted-ink)] opacity-40 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
               {formatTime(message.timestamp)}

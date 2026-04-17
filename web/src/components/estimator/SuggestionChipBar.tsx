@@ -1,6 +1,6 @@
 'use client'
 
-import { FileUp } from 'lucide-react'
+import { FileUp, BookOpen } from 'lucide-react'
 import type { PricingTemplateSummary } from '@/lib/api'
 import type { Suggestion } from './SuggestionGrid'
 
@@ -11,6 +11,7 @@ interface SuggestionChipBarProps {
   pricingTemplates: PricingTemplateSummary[]
   onSendMessage: (text: string) => void
   onTemplateSelect: (id: string) => void
+  onOpenTemplateBrowser: () => void
 }
 
 export function SuggestionChipBar({
@@ -20,6 +21,7 @@ export function SuggestionChipBar({
   pricingTemplates,
   onSendMessage,
   onTemplateSelect,
+  onOpenTemplateBrowser,
 }: SuggestionChipBarProps) {
   return (
     <div className="border-b border-[color:var(--line)] bg-[hsl(var(--panel-hsl)/0.95)] backdrop-blur-xl px-3 py-2.5">
@@ -31,23 +33,36 @@ export function SuggestionChipBar({
       ) : (
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
           {pricingTemplates.length > 0 && (
-            <select
-              defaultValue=""
-              onChange={e => {
-                const id = e.target.value
-                if (!id) return
-                e.target.value = ''
-                onTemplateSelect(id)
-              }}
-              className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[11px] font-medium text-[color:var(--muted-ink)]"
-            >
-              <option value="">Templates…</option>
-              {pricingTemplates.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name}{t.base_price != null ? ` — $${t.base_price}` : ''}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                defaultValue=""
+                onChange={e => {
+                  const id = e.target.value
+                  if (!id) return
+                  e.target.value = ''
+                  onTemplateSelect(id)
+                }}
+                className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[11px] font-medium text-[color:var(--muted-ink)]"
+              >
+                <option value="">Templates…</option>
+                {pricingTemplates.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}{t.base_price != null ? ` — $${t.base_price}` : ''}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={onOpenTemplateBrowser}
+                className="shrink-0 snap-start rounded-full border border-[color:var(--accent)]/30 bg-[color:var(--accent-soft)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--accent-strong)] transition-colors hover:bg-[color:var(--accent)]/20"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <BookOpen size={11} />
+                  Browse
+                </span>
+              </button>
+            </>
           )}
 
           {suggestions.map(suggestion => (

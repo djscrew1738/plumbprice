@@ -225,6 +225,8 @@ export const estimatesApi = {
     api.post('/estimates/construction', body),
   updateStatus: (id: number, status: string) =>
     api.patch<{ id: number; status: string }>(`/estimates/${id}/status`, { status }),
+  updateLineItems: (id: number, lineItems: LineItemPayload[]) =>
+    api.put(`/estimates/${id}/line-items`, { line_items: lineItems }),
   delete: (id: number) =>
     api.delete(`/estimates/${id}`),
   duplicate: (id: number) =>
@@ -233,6 +235,10 @@ export const estimatesApi = {
     api.get(`/estimates/${id}/cost-breakdown`),
   getVersions: (id: number) =>
     api.get(`/estimates/${id}/versions`),
+  getVersion: (id: number, versionId: string) =>
+    api.get(`/estimates/${id}/versions/${versionId}`),
+  diffVersions: (id: number, v1: string, v2: string) =>
+    api.get(`/estimates/${id}/versions/diff`, { params: { v1, v2 } }),
 }
 
 // ─── Projects / Pipeline ──────────────────────────────────────────────────────
@@ -324,18 +330,25 @@ export const adminApi = {
 // ─── Blueprints ─────────────────────────────────────────────────────────────
 
 export const blueprintsApi = {
-  upload: (file: File) => {
+  upload: (file: File, metadata?: Record<string, string>) => {
     const form = new FormData()
     form.append('file', file)
+    if (metadata) {
+      Object.entries(metadata).forEach(([k, v]) => form.append(k, v))
+    }
     return api.post('/blueprints/upload', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120_000,
     })
   },
+  list: () =>
+    api.get('/blueprints/'),
   getStatus: (jobId: string) =>
     api.get(`/blueprints/${jobId}/status`),
   getTakeoff: (jobId: string) =>
     api.get(`/blueprints/${jobId}/takeoff`),
+  delete: (jobId: string) =>
+    api.delete(`/blueprints/${jobId}`),
 }
 
 // ─── Proposals ──────────────────────────────────────────────────────────────
@@ -353,11 +366,39 @@ export interface SendProposalResponse {
   recipient: string
 }
 
+export interface ProposalListItem {
+  id: number
+  estimate_id: number
+  customer_name: string | null
+  recipient_email: string | null
+  status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'declined'
+  grand_total: number
+  scope_summary: string | null
+  pdf_url: string | null
+  created_at: string
+  sent_at: string | null
+}
+
+export interface ProposalDetail extends ProposalListItem {
+  estimate_ref: string | null
+  message: string | null
+}
+
 export const proposalsApi = {
   send: (estimateId: number, body: SendProposalRequest) =>
     api.post<SendProposalResponse>(`/proposals/${estimateId}/send`, body),
   listSends: (estimateId: number) =>
-    api.get<Array<{ id: number; recipient_email: string; recipient_name: string | null; sent_at: string | null; created_at: string }>>(`/proposals/${estimateId}/sends`),
+    api.get<Array<{ id: number; recipient_email: string; recipient_name: string | null; sent_at: string | null; created_at: string; status?: string }>>(`/proposals/${estimateId}/sends`),
+  generate: (body: { estimate_id: number }) =>
+    api.post<ProposalDetail>('/proposals/generate', body),
+  list: (params?: { status?: string; search?: string }) =>
+    api.get<ProposalListItem[]>('/proposals/', { params }),
+  get: (id: number) =>
+    api.get<ProposalDetail>(`/proposals/${id}`),
+  resend: (id: number) =>
+    api.post<SendProposalResponse>(`/proposals/${id}/send`, {}),
+  downloadPdf: (id: number) =>
+    api.get(`/proposals/${id}/pdf`, { responseType: 'blob' }),
 }
 
 // ─── Sessions ────────────────────────────────────────────────────────────────
@@ -366,6 +407,8 @@ export interface ChatSessionSummary {
   id: number
   title: string | null
   county: string | null
+  message_count?: number
+  last_message_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -387,6 +430,8 @@ export const sessionsApi = {
     api.get<ChatSessionDetail>(`/sessions/${id}`),
   delete: (id: number) =>
     api.delete(`/sessions/${id}`),
+  getMessages: (id: number) =>
+    api.get<ChatSessionDetail['messages']>(`/sessions/${id}/messages`),
 }
 
 // ─── Outcomes ────────────────────────────────────────────────────────────────
@@ -426,11 +471,68 @@ export const outcomesApi = {
     api.get<OutcomeStats>('/estimates/stats'),
 }
 
+// ─── Analytics ───────────────────────────────────────────────────────────────
+
+export interface OutcomeListItem {
+  id: number
+  estimate_id: number
+  outcome: OutcomeValue
+  final_price: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  estimate_title: string | null
+  estimate_grand_total: number | null
+  job_type: string | null
+  confidence_score: number | null
+  county: string | null
+}
+
+export const analyticsApi = {
+  getEstimateStats: async () => (await api.get<OutcomeStats>('/estimates/stats')).data,
+  getOutcomes: async () => (await api.get<OutcomeListItem[]>('/outcomes/')).data,
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────
+
+export const notificationsApi = {
+  list: async () => (await api.get('/notifications/')).data,
+  markRead: async (id: string) => (await api.patch(`/notifications/${id}/read`)).data,
+  markAllRead: async () => (await api.post('/notifications/mark-all-read')).data,
+  dismiss: async (id: string) => (await api.delete(`/notifications/${id}`)).data,
+}
+
 // ─── Prices ─────────────────────────────────────────────────────────────────
 
+export interface PriceCacheStats {
+  cached_items: number
+  hit_rate: number
+  stale_count: number
+  last_refresh: string | null
+}
+
+export interface PriceHistoryEntry {
+  price: number
+  date: string
+  supplier?: string
+  change_pct?: number
+}
+
+export interface PriceHistoryResponse {
+  item_id: string
+  entries: PriceHistoryEntry[]
+  min_price: number
+  max_price: number
+  avg_price: number
+  trend: 'up' | 'down' | 'stable'
+}
+
 export const pricesApi = {
-  getCache: () => api.get('/prices/cache'),
-  refresh: () => api.post('/prices/refresh'),
+  getCacheStats: async () => (await api.get<PriceCacheStats>('/prices/cache')).data,
+  refresh: async (supplierId?: string) =>
+    (await api.post('/prices/refresh', supplierId ? { supplier_id: supplierId } : {})).data,
+  getHistory: async (itemId: string) =>
+    (await api.get<PriceHistoryResponse>(`/prices/history/${encodeURIComponent(itemId)}`)).data,
 }
 
 // ─── Pricing Templates ───────────────────────────────────────────────────────
@@ -448,4 +550,65 @@ export interface PricingTemplateSummary {
 export const templatesApi = {
   list: () => api.get<PricingTemplateSummary[]>('/templates/pricing'),
   get: (id: string) => api.get<PricingTemplateSummary & Record<string, unknown>>(`/templates/pricing/${encodeURIComponent(id)}`),
+}
+
+// ─── User / Profile ─────────────────────────────────────────────────────────
+
+export const userApi = {
+  getProfile: async () => (await api.get('/auth/me')).data,
+  updateProfile: async (data: { name?: string; email?: string; phone?: string }) =>
+    (await api.patch('/auth/profile', data)).data,
+  changePassword: async (data: { current_password: string; new_password: string }) =>
+    (await api.post('/auth/change-password', data)).data,
+}
+
+// ─── Organization ───────────────────────────────────────────────────────────
+
+export const orgApi = {
+  get: async () => (await api.get('/organization/')).data,
+  update: async (data: { name?: string; address?: string; phone?: string; logo_url?: string }) =>
+    (await api.patch('/organization/', data)).data,
+  listUsers: async () => (await api.get('/organization/users')).data,
+  inviteUser: async (data: { email: string; role: string }) =>
+    (await api.post('/organization/invite', data)).data,
+  updateUserRole: async (userId: string, role: string) =>
+    (await api.patch(`/organization/users/${userId}/role`, { role })).data,
+  removeUser: async (userId: string) =>
+    (await api.delete(`/organization/users/${userId}`)).data,
+}
+
+// ─── Documents ──────────────────────────────────────────────────────────────
+
+export interface DocumentItem {
+  id: string
+  name: string
+  doc_type: string
+  status: string
+  supplier_id?: string | null
+  supplier_name?: string | null
+  created_at: string
+}
+
+export async function uploadDocument(file: File, docType: string, supplierId?: string) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('doc_type', docType)
+  if (supplierId) formData.append('supplier_id', supplierId)
+  const res = await api.post('/documents/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120_000,
+  })
+  return res.data
+}
+
+export async function listDocuments() {
+  return (await api.get<DocumentItem[]>('/documents/')).data
+}
+
+export async function getDocument(id: string) {
+  return (await api.get<DocumentItem>(`/documents/${id}`)).data
+}
+
+export async function deleteDocument(id: string) {
+  return (await api.delete(`/documents/${id}`)).data
 }
