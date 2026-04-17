@@ -1,46 +1,61 @@
+import io
+import os
+import uuid
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
-import uuid
-import os
-from typing import Optional
 
+from app.core.auth import get_current_user
 from app.database import get_db
-from app.core.storage import storage_client
 from app.models.documents import UploadedDocument
+from app.models.users import User
+from app.core.storage import storage_client
 from app.config import settings
 from worker.tasks.document_processing import process_document
 
 logger = structlog.get_logger()
 router = APIRouter()
 
+_ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "text/plain",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+}
+_MAX_FILE_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    doc_type: str = Form(...), # price_sheet, spec, code, manual
+    doc_type: str = Form(...),  # price_sheet, spec, code, manual
     supplier_id: Optional[int] = Form(None),
-    organization_id: Optional[int] = Form(None),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Upload a document for RAG processing (Phase 3)."""
-    # 1. Generate unique filename
-    ext = os.path.splitext(file.filename)[1]
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    
-    # 2. Upload to MinIO
+    """Upload a document for RAG processing."""
+    if file.content_type not in _ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported file type: {file.content_type}")
+
     content = await file.read()
+    if len(content) > _MAX_FILE_BYTES:
+        raise HTTPException(status_code=413, detail="File exceeds 50 MB limit")
+
+    ext = os.path.splitext(file.filename or "file")[1]
+    unique_filename = f"{uuid.uuid4()}{ext}"
+
     success = storage_client.upload_file(
         settings.minio_bucket_documents,
         unique_filename,
         io.BytesIO(content),
         len(content),
-        content_type=file.content_type
+        content_type=file.content_type,
     )
-    
     if not success:
         raise HTTPException(status_code=500, detail="Failed to upload file to storage")
 
-    # 3. Save to DB
     doc = UploadedDocument(
         filename=unique_filename,
         original_filename=file.filename,
@@ -50,20 +65,70 @@ async def upload_document(
         storage_path=unique_filename,
         status="pending",
         supplier_id=supplier_id,
-        organization_id=organization_id
+        organization_id=current_user.organization_id,
     )
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
 
-    # 4. Trigger background processing
     process_document.delay(doc.id, doc.storage_path, doc.doc_type)
 
+    logger.info("document.uploaded", doc_id=doc.id, user_id=current_user.id, doc_type=doc_type)
     return {
         "id": doc.id,
         "filename": doc.original_filename,
         "status": doc.status,
-        "created_at": doc.created_at
+        "created_at": doc.created_at,
     }
 
-import io # Needed for io.BytesIO
+
+@router.get("/")
+async def list_documents(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List documents belonging to the current user's organization."""
+    from sqlalchemy import select
+
+    q = select(UploadedDocument).where(
+        UploadedDocument.organization_id == current_user.organization_id
+    ).order_by(UploadedDocument.created_at.desc())
+    result = await db.execute(q)
+    docs = result.scalars().all()
+    return [
+        {
+            "id": d.id,
+            "filename": d.original_filename,
+            "doc_type": d.doc_type,
+            "status": d.status,
+            "file_size": d.file_size,
+            "created_at": d.created_at,
+        }
+        for d in docs
+    ]
+
+
+@router.delete("/{doc_id}")
+async def delete_document(
+    doc_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a document (organization-scoped)."""
+    from sqlalchemy import select
+
+    result = await db.execute(
+        select(UploadedDocument).where(
+            UploadedDocument.id == doc_id,
+            UploadedDocument.organization_id == current_user.organization_id,
+        )
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    storage_client.delete_file(settings.minio_bucket_documents, doc.storage_path)
+    await db.delete(doc)
+    await db.commit()
+    logger.info("document.deleted", doc_id=doc_id, user_id=current_user.id)
+    return {"deleted": doc_id}

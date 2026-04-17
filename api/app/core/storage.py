@@ -46,6 +46,14 @@ class StorageClient:
             logger.error("minio.upload_failed", bucket=bucket_name, object=object_name, error=str(e))
             return False
 
+    def delete_file(self, bucket_name: str, object_name: str) -> bool:
+        try:
+            self.client.remove_object(bucket_name, object_name)
+            return True
+        except Exception as e:
+            logger.error("minio.delete_failed", bucket=bucket_name, object=object_name, error=str(e))
+            return False
+
     def download_file(self, bucket_name: str, object_name: str) -> io.BytesIO:
         try:
             response = self.client.get_object(bucket_name, object_name)

@@ -66,45 +66,66 @@ class RAGService:
             logger.error("rag.ingest_failed", document_id=doc_id, error=str(e))
             return {"status": "error", "error": str(e)}
 
-    async def retrieve(self, db: AsyncSession, query: str, top_k: int = 5, supplier_id: Optional[int] = None) -> List[dict]:
-        """
-        Retrieve relevant chunks using cosine similarity via pgvector.
-        """
+    _SQL_ALL = text("""
+        SELECT dc.content, dc.metadata_json, ud.original_filename, ud.doc_type,
+               (dc.embedding <=> CAST(:vector AS vector)) AS distance
+        FROM document_chunks dc
+        JOIN uploaded_documents ud ON dc.document_id = ud.id
+        WHERE ud.status = 'complete'
+        ORDER BY distance ASC
+        LIMIT :limit
+    """)
+
+    _SQL_BY_SUPPLIER = text("""
+        SELECT dc.content, dc.metadata_json, ud.original_filename, ud.doc_type,
+               (dc.embedding <=> CAST(:vector AS vector)) AS distance
+        FROM document_chunks dc
+        JOIN uploaded_documents ud ON dc.document_id = ud.id
+        WHERE ud.status = 'complete'
+          AND ud.supplier_id = :supplier_id
+        ORDER BY distance ASC
+        LIMIT :limit
+    """)
+
+    _RELEVANCE_THRESHOLD = 0.30  # minimum similarity score (1 - cosine distance)
+
+    async def retrieve(
+        self,
+        db: AsyncSession,
+        query: str,
+        top_k: int = 5,
+        supplier_id: Optional[int] = None,
+    ) -> List[dict]:
+        """Retrieve relevant chunks using cosine similarity via pgvector."""
         query_embedding = await self.embed(query)
         if not query_embedding:
             return []
 
-        # Convert list to pgvector compatible string format: '[0.1, 0.2, ...]'
-        vector_str = str(query_embedding)
+        # pgvector expects '[0.1,0.2,...]' — use json.dumps for reliable serialisation
+        import json as _json
+        vector_str = _json.dumps(query_embedding)
 
-        # Standard cosine similarity query for pgvector: <=> is cosine distance
-        # We want (1 - distance) for similarity if needed, but distance is fine for ordering.
-        sql = text(f"""
-            SELECT dc.content, dc.metadata_json, ud.original_filename, ud.doc_type,
-                   (dc.embedding <=> :vector) as distance
-            FROM document_chunks dc
-            JOIN uploaded_documents ud ON dc.document_id = ud.id
-            WHERE ud.status = 'complete'
-            {"AND ud.supplier_id = :supplier_id" if supplier_id else ""}
-            ORDER BY distance ASC
-            LIMIT :limit
-        """)
-
-        params = {"vector": vector_str, "limit": top_k}
-        if supplier_id:
-            params["supplier_id"] = supplier_id
+        if supplier_id is not None:
+            sql = self._SQL_BY_SUPPLIER
+            params: dict = {"vector": vector_str, "limit": top_k, "supplier_id": supplier_id}
+        else:
+            sql = self._SQL_ALL
+            params = {"vector": vector_str, "limit": top_k}
 
         result = await db.execute(sql, params)
         rows = result.fetchall()
 
         results = []
         for row in rows:
+            score = 1.0 - float(row[4])  # convert cosine distance → similarity
+            if score < self._RELEVANCE_THRESHOLD:
+                continue
             results.append({
                 "content": row[0],
                 "metadata": row[1],
                 "source": row[2],
                 "doc_type": row[3],
-                "score": 1 - row[4] # Convert distance to similarity score
+                "score": round(score, 4),
             })
 
         return results
