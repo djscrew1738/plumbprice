@@ -72,7 +72,7 @@ export function PipelinePage() {
     void queryClient.invalidateQueries({ queryKey: pipelineKeys.all })
   }, [queryClient])
 
-  const stageKeys = STAGES.map(s => s.key)
+  const stageKeys = useMemo(() => STAGES.map(s => s.key), [])
   const projects = data?.projects ?? []
   const summary  = data?.summary  ?? {}
 
@@ -103,9 +103,12 @@ export function PipelinePage() {
     setJobTypeFilter('')
   }, [])
 
-  const totalPipelineValue = projects
-    .filter(p => p.status !== 'lost')
-    .reduce((s, p) => s + (p.latest_estimate_total ?? 0), 0)
+  const totalPipelineValue = useMemo(() =>
+    projects
+      .filter(p => p.status !== 'lost')
+      .reduce((s, p) => s + (p.latest_estimate_total ?? 0), 0),
+    [projects]
+  )
 
   const closedCount = (summary['won'] ?? 0) + (summary['lost'] ?? 0)
   const winRate = closedCount > 0 ? Math.round(((summary['won'] ?? 0) / closedCount) * 100) : null

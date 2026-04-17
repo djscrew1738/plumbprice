@@ -4,8 +4,10 @@ import {
   ArrowLeft, Zap, Copy, Download, Printer, Mail, Trash2, RefreshCw,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import dynamic from 'next/dynamic'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+
+const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 import { cn, formatCurrency } from '@/lib/utils'
 import type { OutcomeValue } from '@/lib/api'
 

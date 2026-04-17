@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useId } from 'react'
+import { useState, useMemo, useId, memo } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface BarDatum {
@@ -22,7 +22,7 @@ const PADDING_TOP = 24
 const PADDING_BOTTOM = 28
 const GRID_LINES = 4
 
-export function BarChart({
+export const BarChart = memo(function BarChart({
   data,
   height = 200,
   barColor = 'var(--accent)',
@@ -152,4 +152,4 @@ export function BarChart({
       </svg>
     </div>
   )
-}
+})

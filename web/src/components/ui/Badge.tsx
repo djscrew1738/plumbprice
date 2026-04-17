@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
@@ -36,7 +37,7 @@ export interface BadgeProps
   dot?: boolean
 }
 
-export function Badge({ className, variant, size, dot, children, ...props }: BadgeProps) {
+export const Badge = memo(function Badge({ className, variant, size, dot, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(badgeVariants({ variant, size, className }))}
@@ -47,6 +48,6 @@ export function Badge({ className, variant, size, dot, children, ...props }: Bad
       {children}
     </span>
   )
-}
+})
 
 export { badgeVariants }

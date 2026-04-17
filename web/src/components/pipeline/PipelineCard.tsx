@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, type DragEvent } from 'react'
+import { useState, useCallback, memo, type DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
@@ -18,7 +18,9 @@ import {
   DropdownItem,
   DropdownSeparator,
 } from '@/components/ui/DropdownMenu'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import dynamic from 'next/dynamic'
+
+const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 import { useToast } from '@/components/ui/Toast'
 
 const STAGE_LABELS: Record<string, string> = {
@@ -51,7 +53,7 @@ export interface PipelineCardProps {
   onDeleted?: (id: number) => void
 }
 
-export function PipelineCard({ project, delay, stageKeys, onMove, onDeleted }: PipelineCardProps) {
+export const PipelineCard = memo(function PipelineCard({ project, delay, stageKeys, onMove, onDeleted }: PipelineCardProps) {
   const router = useRouter()
   const toast = useToast()
   const [moving, setMoving] = useState(false)
@@ -282,4 +284,4 @@ export function PipelineCard({ project, delay, stageKeys, onMove, onDeleted }: P
       />
     </>
   )
-}
+})

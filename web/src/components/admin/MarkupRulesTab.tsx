@@ -3,8 +3,10 @@
 import { motion } from 'framer-motion'
 import { Save, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import dynamic from 'next/dynamic'
 import { Input } from '@/components/ui/Input'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+
+const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 import { Skeleton } from '@/components/ui/Skeleton'
 
 interface MarkupRule { job_type: string; materials_markup_pct: number; misc_disposal_flat: number }

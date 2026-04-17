@@ -15,7 +15,9 @@ import { OutcomeRecorderCard, type SentProposal } from './OutcomeRecorderCard'
 import { ProposalSendModal } from './ProposalSendModal'
 import { EstimateActionsBar } from './EstimateActionsBar'
 import { VersionTimeline } from './VersionTimeline'
-import { VersionDiffModal } from './VersionDiffModal'
+import dynamic from 'next/dynamic'
+
+const VersionDiffModal = dynamic(() => import('./VersionDiffModal').then(m => ({ default: m.VersionDiffModal })), { ssr: false })
 
 interface EstimateDetail {
   id: number

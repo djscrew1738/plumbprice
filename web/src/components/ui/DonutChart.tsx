@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useId } from 'react'
+import { useState, useMemo, useId, memo } from 'react'
 import { cn, formatCurrency } from '@/lib/utils'
 
 export interface DonutSegment {
@@ -17,7 +17,7 @@ export interface DonutChartProps {
   showLegend?: boolean
 }
 
-export function DonutChart({
+export const DonutChart = memo(function DonutChart({
   data,
   size = 200,
   thickness = 30,
@@ -143,4 +143,4 @@ export function DonutChart({
       )}
     </div>
   )
-}
+})

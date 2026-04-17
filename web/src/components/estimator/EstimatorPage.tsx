@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FileUp, X } from 'lucide-react'
-import { chatApi, estimatesApi, templatesApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
+import { chatApi, estimatesApi, sessionsApi, templatesApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import type { ChatMessage, EstimateBreakdown as EstimateBreakdownType, LineItem } from '@/types'
 import { WorkspaceEntryBar, type WorkspaceEntryMode } from '@/components/workspace/WorkspaceEntryBar'
@@ -16,6 +16,7 @@ import { SuggestionGrid } from './SuggestionGrid'
 import { SuggestionChipBar } from './SuggestionChipBar'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatInputBar } from './ChatInputBar'
+import { TemplateBrowser } from './TemplateBrowser'
 
 const SUGGESTIONS = [
   { short: 'Toilet replace', full: 'How much to replace a toilet first floor Dallas?', hint: '$285–$485' },
@@ -87,6 +88,7 @@ export function EstimatorPage() {
   const searchParams = useSearchParams()
   const estimateId = searchParams.get('estimateId')
   const entryParam = searchParams.get('entry')
+  const sessionParam = searchParams.get('session')
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -103,6 +105,8 @@ export function EstimatorPage() {
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [pricingTemplates, setPricingTemplates] = useState<PricingTemplateSummary[]>([])
   const [keyboardOffset, setKeyboardOffset] = useState(0)
+  const [templateBrowserOpen, setTemplateBrowserOpen] = useState(false)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
 
   const MAX_INPUT = 2000
 
@@ -223,6 +227,49 @@ export function EstimatorPage() {
     }
   }, [estimateId])
 
+  // Resume from a previous chat session via ?session={id}
+  useEffect(() => {
+    if (!sessionParam || estimateId) return
+    const sid = Number(sessionParam)
+    if (!sid || isNaN(sid)) return
+
+    let isMounted = true
+    async function resumeSession() {
+      try {
+        setLoading(true)
+        const { data } = await sessionsApi.get(sid)
+        if (!isMounted) return
+
+        setSessionId(sid)
+        if (data.county) setCounty(normalizeCounty(data.county))
+
+        const resumed: ChatMessage[] = (data.messages ?? []).map((m) => ({
+          id: crypto.randomUUID(),
+          role: m.role,
+          content: m.content,
+          timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+        }))
+        setMessages(resumed)
+      } catch {
+        if (!isMounted) return
+        resumeErrorRef.current('Could not load session', `Session #${sid} was unavailable.`)
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: `Could not load session #${sid}.`,
+            timestamp: new Date(),
+          },
+        ])
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+
+    void resumeSession()
+    return () => { isMounted = false }
+  }, [sessionParam, estimateId])
+
   useEffect(() => {
     if (messages.length > 0 || uploadMode) {
       return
@@ -267,6 +314,58 @@ export function EstimatorPage() {
       inputRef.current?.focus()
     } catch { /* ignore */ }
   }, [county])
+
+  const handleTemplateBrowserSelect = useCallback((template: PricingTemplateSummary) => {
+    const price = template.base_price != null ? ` (~$${template.base_price})` : ''
+    const tags = template.tags?.length ? ` [${template.tags.join(', ')}]` : ''
+    const prompt = `Price for ${template.name}${tags} in ${county}?${price}`
+    setInput(prompt)
+    setTemplateBrowserOpen(false)
+    inputRef.current?.focus()
+  }, [county])
+
+  const handleEditLineItems = useCallback((messageId: string) => {
+    setEditingMessageId(messageId)
+  }, [])
+
+  const handleSaveLineItems = useCallback((messageId: string, lineItems: LineItem[]) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.estimate) return m
+      const laborTotal = lineItems.filter(i => i.line_type === 'labor').reduce((s, i) => s + i.total_cost, 0)
+      const materialsTotal = lineItems.filter(i => i.line_type === 'material').reduce((s, i) => s + i.total_cost, 0)
+      const markupTotal = lineItems.filter(i => i.line_type === 'markup').reduce((s, i) => s + i.total_cost, 0)
+      const taxTotal = lineItems.filter(i => i.line_type === 'tax').reduce((s, i) => s + i.total_cost, 0)
+      const miscTotal = lineItems.filter(i => i.line_type === 'misc').reduce((s, i) => s + i.total_cost, 0)
+      const subtotal = laborTotal + materialsTotal + markupTotal + miscTotal
+      const grandTotal = subtotal + taxTotal
+
+      const updated: ChatMessage = {
+        ...m,
+        estimate: {
+          labor_total: laborTotal,
+          materials_total: materialsTotal,
+          markup_total: markupTotal,
+          tax_total: taxTotal,
+          misc_total: miscTotal,
+          subtotal,
+          grand_total: grandTotal,
+          line_items: lineItems,
+        },
+      }
+
+      // Keep workspace rail in sync
+      if (selectedEstimate?.id === messageId) {
+        setSelectedEstimate(updated)
+      }
+
+      return updated
+    }))
+    setEditingMessageId(null)
+  }, [selectedEstimate])
+
+  const handleCancelEditLineItems = useCallback(() => {
+    setEditingMessageId(null)
+  }, [])
 
   const sendMessage = useCallback(async (text?: string) => {
     const message = (text ?? input).trim()
@@ -372,20 +471,20 @@ export function EstimatorPage() {
     }
   }, [input, loading, county, uploadMode, uploadedFile, messages])
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       void sendMessage()
     }
-  }
+  }, [sendMessage])
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setMessages([])
     setSelectedEstimate(null)
     setSheetOpen(false)
     setSessionId(null)
     inputRef.current?.focus()
-  }
+  }, [])
 
   return (
     <div className="flex flex-col" style={{ height: `calc(100dvh - 54px - ${keyboardOffset}px)` }}>
@@ -406,6 +505,7 @@ export function EstimatorPage() {
             pricingTemplates={pricingTemplates}
             onSendMessage={(text) => void sendMessage(text)}
             onTemplateSelect={handleTemplateSelect}
+            onOpenTemplateBrowser={() => setTemplateBrowserOpen(true)}
           />
 
           <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
@@ -486,9 +586,13 @@ export function EstimatorPage() {
                 messages={messages}
                 loading={loading}
                 copiedId={copiedId}
+                editingMessageId={editingMessageId}
                 onCopyMessage={copyMessage}
                 onViewBreakdown={handleViewBreakdown}
                 onStopGenerating={handleStopGenerating}
+                onEditLineItems={handleEditLineItems}
+                onSaveLineItems={handleSaveLineItems}
+                onCancelEditLineItems={handleCancelEditLineItems}
               />
             )}
 
@@ -518,6 +622,12 @@ export function EstimatorPage() {
           onSheetOpenChange={setSheetOpen}
         />
       </div>
+
+      <TemplateBrowser
+        open={templateBrowserOpen}
+        onClose={() => setTemplateBrowserOpen(false)}
+        onSelect={handleTemplateBrowserSelect}
+      />
     </div>
   )
 }

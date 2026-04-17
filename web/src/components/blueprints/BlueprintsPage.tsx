@@ -10,8 +10,10 @@ import {
   RefreshCw, ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import dynamic from 'next/dynamic'
 import { Badge } from '@/components/ui/Badge'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+
+const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { blueprintsApi } from '@/lib/api'

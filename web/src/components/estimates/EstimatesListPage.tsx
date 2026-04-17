@@ -169,27 +169,27 @@ export function EstimatesListPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [sortOpen])
 
-  const handleStatusChange = (id: number, status: string) => {
+  const handleStatusChange = useCallback((id: number, status: string) => {
     queryClient.setQueryData<Estimate[]>(['estimates', { filter }], prev =>
       prev?.map(e => e.id === id ? { ...e, status } : e)
     )
-  }
+  }, [queryClient, filter])
 
-  const handleDeleteConfirm = (id: number) => {
+  const handleDeleteConfirm = useCallback((id: number) => {
     setConfirmDelete(null)
     deleteMutation.mutate(id, {
       onSuccess: () => toast.success('Estimate deleted'),
       onError: () => toast.error('Failed to delete', 'Please try again.'),
     })
-  }
+  }, [deleteMutation, toast])
 
-  const handleDuplicate = (id: number, e: React.MouseEvent) => {
+  const handleDuplicate = useCallback((id: number, e: React.MouseEvent) => {
     e.stopPropagation()
     duplicateMutation.mutate(id, {
       onSuccess: (copy) => toast.success('Estimate duplicated', copy.title || `Estimate #${copy.id}`),
       onError: () => toast.error('Could not duplicate', 'Please try again.'),
     })
-  }
+  }, [duplicateMutation, toast])
 
   const visible = useMemo(() => {
     let list = estimates.filter(e => {
@@ -205,8 +205,10 @@ export function EstimatesListPage() {
     return list
   }, [estimates, search, sortBy])
 
-  const totalValue = visible.reduce((s, e) => s + (e.grand_total || 0), 0)
-  const avgValue   = visible.length > 0 ? totalValue / visible.length : 0
+  const { totalValue, avgValue } = useMemo(() => {
+    const total = visible.reduce((s, e) => s + (e.grand_total || 0), 0)
+    return { totalValue: total, avgValue: visible.length > 0 ? total / visible.length : 0 }
+  }, [visible])
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Sort'
 
