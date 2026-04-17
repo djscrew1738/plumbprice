@@ -2,10 +2,12 @@
 
 import { motion, type Variants } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target } from 'lucide-react'
+import Link from 'next/link'
+import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target, BarChart3 } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { BarChart } from '@/components/ui/BarChart'
 import { estimatesApi, sessionsApi, outcomesApi, type EstimateListItem } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -30,6 +32,21 @@ function computeWeeklyStats(jobs: EstimateListItem[]) {
   const totalValue = recent.reduce((sum, j) => sum + (j.grand_total ?? 0), 0)
   const avgValue = recent.length > 0 ? totalValue / recent.length : 0
   return { count: recent.length, totalValue, avgValue }
+}
+
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function computeDailyActivity(jobs: EstimateListItem[]) {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+  const counts = new Array<number>(7).fill(0)
+  for (const j of jobs) {
+    const ts = new Date(j.created_at).getTime()
+    if (ts >= cutoff) {
+      const day = (new Date(j.created_at).getDay() + 6) % 7 // Mon=0
+      counts[day]++
+    }
+  }
+  return DAY_LABELS.map((label, i) => ({ label, value: counts[i] }))
 }
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
@@ -64,6 +81,7 @@ export function LauncherHome() {
     staleTime: 60_000,
   })
   const stats = estimatesData ? computeWeeklyStats(estimatesData.data) : null
+  const dailyActivity = estimatesData ? computeDailyActivity(estimatesData.data) : null
   const sessions = sessionsData?.data ?? null
   const outcomeStats = outcomeStatsData?.data ?? null
 
@@ -157,6 +175,27 @@ export function LauncherHome() {
         </motion.div>
       </motion.section>
 
+      {/* Weekly activity chart */}
+      {dailyActivity && dailyActivity.some(d => d.value > 0) && (
+        <motion.section
+          className="mt-4"
+          aria-label="Weekly activity"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+        >
+          <div className="shell-panel p-4">
+            <div className="mb-3 flex items-center gap-2 border-b border-[color:var(--line)] pb-2">
+              <BarChart3 size={14} className="text-[color:var(--accent-strong)]" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--ink)]">
+                Estimates This Week
+              </h2>
+            </div>
+            <BarChart data={dailyActivity} height={180} barColor="var(--accent-strong)" />
+          </div>
+        </motion.section>
+      )}
+
       {/* Recent jobs */}
       <section className="mt-5">
         <RecentJobsList heading="Recent jobs" />
@@ -171,9 +210,9 @@ export function LauncherHome() {
           <ul className="space-y-1.5">
             {sessions.map(s => (
               <li key={s.id}>
-                <a
+                <Link
                   href="/estimator"
-                  className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-2 transition-colors hover:bg-[color:var(--panel-strong)]"
+                  className="flex min-h-[44px] items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-2 transition-colors hover:bg-[color:var(--panel-strong)]"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-xs font-medium text-[color:var(--ink)]">
@@ -185,7 +224,7 @@ export function LauncherHome() {
                     </p>
                   </div>
                   <MessageSquare size={13} className="shrink-0 text-[color:var(--muted-ink)]" />
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

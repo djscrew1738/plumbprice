@@ -6,6 +6,7 @@ import {
   Calendar, MapPin, FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { DonutChart } from '@/components/ui/DonutChart'
 import { cn, formatCurrency } from '@/lib/utils'
 import { format, isValid } from 'date-fns'
 
@@ -46,26 +47,41 @@ export function CostBreakdownCard({
     { label: 'Tax',       value: taxTotal,        icon: CircleDollarSign, bg: 'bg-white/[0.03] border-white/[0.08]'   },
   ]
 
+  const donutData = [
+    { label: 'Labor',     value: laborTotal,     color: 'hsl(var(--info))' },
+    { label: 'Materials', value: materialsTotal,  color: 'hsl(210 80% 55%)' },
+    { label: 'Tax',       value: taxTotal,        color: 'hsl(40 90% 55%)' },
+    { label: 'Markup',    value: markupTotal,     color: 'hsl(155 60% 48%)' },
+  ].filter(d => d.value > 0)
+
   return (
     <>
-      {/* Summary cards */}
+      {/* Summary cards + donut chart */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start"
       >
-        {costCards.map(({ label, value, icon: Icon, bg }) => (
-          <div key={label} className="card p-3.5 flex items-center gap-3">
-            <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center border shrink-0', bg)}>
-              <Icon size={13} className="text-[color:var(--accent)]" />
+        <div className="grid grid-cols-2 gap-3">
+          {costCards.map(({ label, value, icon: Icon, bg }) => (
+            <div key={label} className="card p-3.5 flex items-center gap-3">
+              <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center border shrink-0', bg)}>
+                <Icon size={13} className="text-[color:var(--accent)]" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
+                <div className="text-sm font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(value)}</div>
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
-              <div className="text-sm font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(value)}</div>
-            </div>
+          ))}
+        </div>
+
+        {donutData.length > 0 && (
+          <div className="card p-4 flex items-center justify-center">
+            <DonutChart data={donutData} size={180} thickness={26} showLegend={false} />
           </div>
-        ))}
+        )}
       </motion.div>
 
       {/* Metadata row */}
