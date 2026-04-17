@@ -898,6 +898,218 @@ CANONICAL_MAP: dict[str, dict[str, dict]] = {
         "moore_supply":{"sku": "WLS-3",     "name": "WiFi leak sensor 3-pack",                             "cost": 58.00},
         "apex":        {"sku": "LS3-A",     "name": "Leak sensor pack of 3 WiFi",                          "cost": 72.00},
     },
+
+    # ── Phase 3: Canonical Materials ──────────────────────────────────────────
+    # B. Water Line & Supply
+    "pipe.copper_repair_coupling_3_4": {
+        "ferguson":    {"sku": "CRC-34",   "name": "Copper repair coupling 3/4\" ProPress",     "cost": 12.50},
+        "moore_supply":{"sku": "CRC34-M",  "name": "3/4\" copper ProPress repair coupling",     "cost": 11.00},
+        "apex":        {"sku": "CPR34-A",  "name": "Copper press coupling 3/4\" repair",        "cost": 13.75},
+    },
+    "pipe.pex_crimp_ring_3_4_10pk": {
+        "ferguson":    {"sku": "PCR-34-10","name": "PEX crimp ring 3/4\" 10-pack",               "cost": 5.50},
+        "moore_supply":{"sku": "PCR34M",   "name": "3/4\" PEX copper crimp rings 10pk",          "cost": 4.75},
+        "apex":        {"sku": "PR34-A10", "name": "PEX crimp ring 3/4\" bag of 10",             "cost": 6.00},
+    },
+    "pipe.pex_coupling_3_4": {
+        "ferguson":    {"sku": "PXC-34",   "name": "PEX expansion coupling 3/4\"",               "cost": 4.25},
+        "moore_supply":{"sku": "PEC34-M",  "name": "3/4\" PEX-A expansion coupling",             "cost": 3.80},
+        "apex":        {"sku": "PEC34-A",  "name": "PEX coupling 3/4\" expansion",               "cost": 4.50},
+    },
+    "pipe.pex_1in_per_ft": {
+        "ferguson":    {"sku": "PEX-1-FT", "name": "PEX-A tubing 1\" per foot red/blue",         "cost": 1.85},
+        "moore_supply":{"sku": "PX1-M",    "name": "1\" PEX-A tubing per LF",                    "cost": 1.65},
+        "apex":        {"sku": "PX1-A",    "name": "PEX 1\" tubing per foot",                    "cost": 2.00},
+    },
+    "pipe.main_line_copper_1in_per_ft": {
+        "ferguson":    {"sku": "CU-1-FT",  "name": "Type K copper 1\" per foot",                 "cost": 8.50},
+        "moore_supply":{"sku": "CK1-M",    "name": "1\" Type K copper per LF",                   "cost": 7.75},
+        "apex":        {"sku": "CK1-A",    "name": "Copper Type K 1\" per foot",                 "cost": 9.25},
+    },
+    "valve.manifold_pex_8_port": {
+        "ferguson":    {"sku": "PM-8P",    "name": "PEX manifold 8-port brass with valves",      "cost": 145.00},
+        "moore_supply":{"sku": "PXMN8-M",  "name": "8-port PEX manifold brass",                  "cost": 132.00},
+        "apex":        {"sku": "PM8-A",    "name": "Brass PEX manifold 8-port",                  "cost": 155.00},
+    },
+    "pump.pressure_booster": {
+        "ferguson":    {"sku": "PBP-20",   "name": "Water pressure booster pump 20GPM",          "cost": 385.00},
+        "moore_supply":{"sku": "WPB20-M",  "name": "Booster pump 20 GPM constant pressure",     "cost": 365.00},
+        "apex":        {"sku": "BP20-A",   "name": "Pressure booster pump 20GPM",                "cost": 410.00},
+    },
+    "valve.main_shutoff_1in_ball": {
+        "ferguson":    {"sku": "MSV-1B",   "name": "Main shutoff ball valve 1\" full port",       "cost": 28.00},
+        "moore_supply":{"sku": "BV1FP-M",  "name": "1\" full port ball valve main shutoff",       "cost": 25.00},
+        "apex":        {"sku": "MSB1-A",   "name": "Ball valve 1\" full port shutoff",            "cost": 30.00},
+    },
+    "valve.thermal_expansion_3_4": {
+        "ferguson":    {"sku": "TEV-34",   "name": "Thermal expansion valve 3/4\" potable",       "cost": 42.00},
+        "moore_supply":{"sku": "TEV34-M",  "name": "3/4\" thermal expansion relief valve",        "cost": 38.00},
+        "apex":        {"sku": "TEV34-A",  "name": "Thermal expansion valve 3/4\"",               "cost": 45.00},
+    },
+
+    # C. Drain & Waste
+    "fitting.cleanout_cap_4in": {
+        "ferguson":    {"sku": "CC-4",     "name": "Cleanout cap 4\" PVC with plug",              "cost": 6.50},
+        "moore_supply":{"sku": "CC4-M",    "name": "4\" PVC cleanout cap",                        "cost": 5.75},
+        "apex":        {"sku": "CC4-A",    "name": "PVC cleanout cap 4 inch",                     "cost": 7.00},
+    },
+    "fitting.vent_boot_3in": {
+        "ferguson":    {"sku": "VB-3",     "name": "Roof vent boot 3\" neoprene/aluminum",        "cost": 18.00},
+        "moore_supply":{"sku": "RVB3-M",   "name": "3\" roof vent pipe boot",                     "cost": 15.50},
+        "apex":        {"sku": "VB3-A",    "name": "Vent boot 3\" roof flashing",                 "cost": 19.50},
+    },
+    "valve.aav_studor_1_5in": {
+        "ferguson":    {"sku": "AAV-15",   "name": "Studor AAV 1-1/2\" DFU 20",                   "cost": 22.00},
+        "moore_supply":{"sku": "AAV15-M",  "name": "1-1/2\" air admittance valve 20 DFU",         "cost": 19.50},
+        "apex":        {"sku": "AAV15-A",  "name": "AAV Studor vent 1.5 inch",                    "cost": 24.00},
+    },
+    "pump.ejector_sewage_05hp": {
+        "ferguson":    {"sku": "EP-05HP",  "name": "Sewage ejector pump 1/2 HP 2\" discharge",    "cost": 285.00},
+        "moore_supply":{"sku": "SEP05-M",  "name": "1/2HP sewage ejector pump",                   "cost": 265.00},
+        "apex":        {"sku": "EP05-A",   "name": "Ejector pump 1/2 HP sewage",                  "cost": 310.00},
+    },
+    "fitting.ejector_basin_18x30": {
+        "ferguson":    {"sku": "EB-1830",  "name": "Ejector basin 18\"x30\" with sealed lid",     "cost": 85.00},
+        "moore_supply":{"sku": "EB18-M",   "name": "18x30 sewage ejector basin",                  "cost": 78.00},
+        "apex":        {"sku": "EB1830-A", "name": "Sewage ejector pit basin 18x30",              "cost": 92.00},
+    },
+
+    # D. Bathroom Fixture
+    "valve.shower_diverter_universal": {
+        "ferguson":    {"sku": "SD-UNI",   "name": "Shower diverter valve universal",              "cost": 28.00},
+        "moore_supply":{"sku": "SDV-M",    "name": "Universal tub/shower diverter",                "cost": 25.00},
+        "apex":        {"sku": "SDU-A",    "name": "Diverter valve universal shower",              "cost": 30.00},
+    },
+    "faucet.roman_tub_2_handle": {
+        "ferguson":    {"sku": "RTF-2H",   "name": "Roman tub faucet 2-handle with sprayer",      "cost": 185.00},
+        "moore_supply":{"sku": "RTF2-M",   "name": "2-handle roman tub filler w/sprayer",         "cost": 165.00},
+        "apex":        {"sku": "RTF2-A",   "name": "Roman tub faucet deck mount 2H",              "cost": 198.00},
+    },
+    "fixture.barrier_free_linear_drain_36": {
+        "ferguson":    {"sku": "LD-36BF",  "name": "Linear drain 36\" barrier-free ADA",           "cost": 125.00},
+        "moore_supply":{"sku": "LD36-M",   "name": "36\" linear shower drain ADA",                 "cost": 112.00},
+        "apex":        {"sku": "LD36-A",   "name": "Linear drain 36 inch barrier free",            "cost": 135.00},
+    },
+    "valve.thermostatic_shower_ada": {
+        "ferguson":    {"sku": "TSV-ADA",  "name": "Thermostatic shower valve ADA anti-scald",     "cost": 165.00},
+        "moore_supply":{"sku": "TSA-M",    "name": "ADA thermostatic shower valve",                "cost": 148.00},
+        "apex":        {"sku": "TSA-A",    "name": "Thermostatic valve ADA shower",                "cost": 178.00},
+    },
+    "fixture.bidet_sprayer_ss": {
+        "ferguson":    {"sku": "BS-SS",    "name": "Handheld bidet sprayer kit stainless",         "cost": 32.00},
+        "moore_supply":{"sku": "BSK-M",    "name": "Bidet sprayer kit SS with T-adapter",          "cost": 28.00},
+        "apex":        {"sku": "BSK-A",    "name": "SS bidet sprayer with hose and holder",        "cost": 35.00},
+    },
+
+    # E. Kitchen & Appliance
+    "appliance.instant_hot_dispenser": {
+        "ferguson":    {"sku": "IHW-15",   "name": "Instant hot water dispenser 2/3 gallon",       "cost": 165.00},
+        "moore_supply":{"sku": "IHD-M",    "name": "Under-sink instant hot dispenser",             "cost": 148.00},
+        "apex":        {"sku": "IHD-A",    "name": "Instant hot water dispenser w/faucet",         "cost": 178.00},
+    },
+    "pipe.fridge_water_line_braided_6ft": {
+        "ferguson":    {"sku": "FWL-6B",   "name": "Refrigerator water line braided SS 6ft",       "cost": 14.00},
+        "moore_supply":{"sku": "RWL6-M",   "name": "6ft braided SS fridge water line",             "cost": 12.00},
+        "apex":        {"sku": "FWL6-A",   "name": "Braided fridge water line 6 foot",             "cost": 15.50},
+    },
+    "valve.saddle_self_piercing_1_4": {
+        "ferguson":    {"sku": "SV-SP14",  "name": "Saddle valve self-piercing 1/4\" outlet",      "cost": 6.00},
+        "moore_supply":{"sku": "SPV-M",    "name": "Self-piercing saddle valve 1/4\"",              "cost": 5.25},
+        "apex":        {"sku": "SPV-A",    "name": "Saddle valve 1/4\" self-pierce",                "cost": 6.50},
+    },
+    "appliance.disposal_3_4hp": {
+        "ferguson":    {"sku": "GD-34HP",  "name": "Garbage disposal 3/4 HP continuous feed",      "cost": 145.00},
+        "moore_supply":{"sku": "GD34-M",   "name": "3/4HP continuous feed disposal",               "cost": 132.00},
+        "apex":        {"sku": "GD34-A",   "name": "Disposal 3/4 HP InSinkErator",                 "cost": 155.00},
+    },
+    "faucet.commercial_sprayer_wall": {
+        "ferguson":    {"sku": "CSF-WM",   "name": "Pre-rinse sprayer faucet wall mount",          "cost": 185.00},
+        "moore_supply":{"sku": "PRS-M",    "name": "Commercial pre-rinse sprayer wall mount",      "cost": 168.00},
+        "apex":        {"sku": "PRS-A",    "name": "Wall mount pre-rinse sprayer faucet",          "cost": 198.00},
+    },
+
+    # F. Outdoor & Yard
+    "pipe.perf_drain_4in_per_ft": {
+        "ferguson":    {"sku": "PD4-FT",   "name": "Perforated drain pipe 4\" per foot",            "cost": 1.25},
+        "moore_supply":{"sku": "PDP4-M",   "name": "4\" perforated drain per LF",                   "cost": 1.10},
+        "apex":        {"sku": "PDP4-A",   "name": "Perf drain 4 inch per foot",                    "cost": 1.40},
+    },
+    "material.drain_gravel_per_ton": {
+        "ferguson":    {"sku": "DG-TON",   "name": "Drain rock/gravel per ton",                     "cost": 45.00},
+        "moore_supply":{"sku": "DRK-M",    "name": "Drain gravel 3/4\" per ton",                    "cost": 40.00},
+        "apex":        {"sku": "DG-A",     "name": "French drain gravel per ton",                   "cost": 48.00},
+    },
+    "material.filter_fabric_per_ft": {
+        "ferguson":    {"sku": "FF-FT",    "name": "Landscape filter fabric per LF",                "cost": 0.55},
+        "moore_supply":{"sku": "LFF-M",    "name": "Filter fabric landscape per foot",              "cost": 0.48},
+        "apex":        {"sku": "FF-A",     "name": "Geotextile filter fabric per LF",               "cost": 0.60},
+    },
+    "pump.sump_1_3hp": {
+        "ferguson":    {"sku": "SP-13HP",  "name": "Sump pump 1/3 HP submersible",                  "cost": 125.00},
+        "moore_supply":{"sku": "SP13-M",   "name": "1/3 HP submersible sump pump",                  "cost": 112.00},
+        "apex":        {"sku": "SP13-A",   "name": "Sump pump submersible 1/3HP",                   "cost": 135.00},
+    },
+    "valve.sump_check_1_5in": {
+        "ferguson":    {"sku": "SCV-15",   "name": "Sump pump check valve 1-1/2\"",                 "cost": 18.00},
+        "moore_supply":{"sku": "SCV15-M",  "name": "1-1/2\" sump check valve",                      "cost": 15.50},
+        "apex":        {"sku": "SCV15-A",  "name": "Check valve sump 1.5 inch",                     "cost": 19.50},
+    },
+    "fixture.outdoor_shower_mixer": {
+        "ferguson":    {"sku": "OSM-HW",   "name": "Outdoor shower mixer valve H/C",                "cost": 85.00},
+        "moore_supply":{"sku": "OSM-M",    "name": "H/C outdoor shower mixing valve",               "cost": 78.00},
+        "apex":        {"sku": "OSM-A",    "name": "Outdoor shower mixer hot/cold",                  "cost": 92.00},
+    },
+    "fitting.sprinkler_repair_coupling": {
+        "ferguson":    {"sku": "SRC-1",    "name": "Sprinkler repair coupling 1\" PVC slip",         "cost": 3.50},
+        "moore_supply":{"sku": "SRC1-M",   "name": "1\" PVC sprinkler repair coupling",              "cost": 3.00},
+        "apex":        {"sku": "SRC1-A",   "name": "PVC repair coupling sprinkler 1\"",              "cost": 3.75},
+    },
+    "fitting.rain_barrel_diverter": {
+        "ferguson":    {"sku": "RBD-FF",   "name": "Rain barrel first-flush diverter kit",           "cost": 28.00},
+        "moore_supply":{"sku": "RBD-M",    "name": "First-flush downspout diverter",                 "cost": 24.00},
+        "apex":        {"sku": "RBD-A",    "name": "Diverter kit rain barrel first flush",            "cost": 30.00},
+    },
+
+    # G. Gas System
+    "pipe.csst_3_4_per_ft": {
+        "ferguson":    {"sku": "CSST-34",  "name": "CSST gas flex 3/4\" per foot",                   "cost": 5.50},
+        "moore_supply":{"sku": "GF34-M",   "name": "3/4\" CSST gas tubing per LF",                   "cost": 4.85},
+        "apex":        {"sku": "GF34-A",   "name": "Gas flex CSST 3/4\" per foot",                   "cost": 5.75},
+    },
+    "fitting.gas_termination_3_4": {
+        "ferguson":    {"sku": "GT-34",    "name": "Gas termination fitting 3/4\" w/valve",           "cost": 22.00},
+        "moore_supply":{"sku": "GTF34-M",  "name": "3/4\" gas termination with valve",                "cost": 19.50},
+        "apex":        {"sku": "GTF34-A",  "name": "Gas termination 3/4\" brass w/valve",             "cost": 24.00},
+    },
+    "fitting.gas_cap_3_4": {
+        "ferguson":    {"sku": "GC-34",    "name": "Gas cap 3/4\" brass test plug",                   "cost": 5.00},
+        "moore_supply":{"sku": "GC34-M",   "name": "3/4\" brass gas cap/plug",                        "cost": 4.25},
+        "apex":        {"sku": "GC34-A",   "name": "Brass gas cap 3/4 inch",                          "cost": 5.50},
+    },
+
+    # H. Water Treatment
+    "appliance.water_softener_48k": {
+        "ferguson":    {"sku": "WS-48K",   "name": "Water softener 48,000 grain",                    "cost": 485.00},
+        "moore_supply":{"sku": "WS48-M",   "name": "48K grain water softener",                       "cost": 445.00},
+        "apex":        {"sku": "WS48-A",   "name": "Water softener 48000 grain",                     "cost": 520.00},
+    },
+    "appliance.uv_system_12gpm": {
+        "ferguson":    {"sku": "UV-12G",   "name": "UV disinfection system 12 GPM",                  "cost": 285.00},
+        "moore_supply":{"sku": "UV12-M",   "name": "12 GPM UV water treatment",                      "cost": 265.00},
+        "apex":        {"sku": "UV12-A",   "name": "UV water system 12GPM Viqua",                    "cost": 310.00},
+    },
+    "filter.sediment_whole_house_20in": {
+        "ferguson":    {"sku": "SF-20WH",  "name": "Sediment filter housing 20\" whole-house",        "cost": 65.00},
+        "moore_supply":{"sku": "SFH20-M",  "name": "20\" whole house filter housing",                 "cost": 58.00},
+        "apex":        {"sku": "SF20-A",   "name": "Whole house sediment filter 20 inch",             "cost": 72.00},
+    },
+
+    # J. Maintenance
+    "material.hose_bib_cover_insulated": {
+        "ferguson":    {"sku": "HBC-INS",  "name": "Insulated hose bib cover faucet sock",           "cost": 5.50},
+        "moore_supply":{"sku": "HBC-M",    "name": "Hose bib insulated cover",                        "cost": 4.75},
+        "apex":        {"sku": "HBC-A",    "name": "Faucet cover insulated hose bib",                 "cost": 6.00},
+    },
 }
 
 
@@ -1756,6 +1968,276 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
         "items": {
             "safety.auto_shutoff_valve_1in":   1,
             "safety.leak_sensor_3pk":          1,
+        },
+    },
+
+    # ── Phase 3: Material Assemblies ──────────────────────────────────────────
+
+    # B. Water Line & Supply
+    "COPPER_REPAIR_KIT": {
+        "name": "Copper Water Line Repair Kit",
+        "labor_template": "WATER_LINE_REPAIR_COPPER",
+        "items": {
+            "pipe.copper_repair_coupling_3_4": 2,
+        },
+    },
+    "PEX_REPAIR_KIT": {
+        "name": "PEX Water Line Repair Kit",
+        "labor_template": "WATER_LINE_REPAIR_PEX",
+        "items": {
+            "pipe.pex_coupling_3_4":          2,
+            "pipe.pex_crimp_ring_3_4_10pk":   1,
+        },
+    },
+    "MAIN_LINE_REPLACE_KIT": {
+        "name": "Main Water Line Replace Kit (per 50 LF)",
+        "labor_template": "WATER_LINE_REPLACE_MAIN_STREET",
+        "items": {
+            "pipe.main_line_copper_1in_per_ft": 50,
+        },
+    },
+    "MANIFOLD_KIT": {
+        "name": "PEX Manifold System Kit",
+        "labor_template": "MANIFOLD_INSTALL_PEX",
+        "items": {
+            "valve.manifold_pex_8_port":      1,
+            "pipe.pex_1in_per_ft":            20,
+        },
+    },
+    "PRESSURE_BOOSTER_KIT": {
+        "name": "Pressure Booster Pump Kit",
+        "labor_template": "PRESSURE_BOOSTER_INSTALL",
+        "items": {
+            "pump.pressure_booster":          1,
+        },
+    },
+    "MAIN_SHUTOFF_KIT": {
+        "name": "Main Shutoff Valve Replace Kit",
+        "labor_template": "SHUT_OFF_VALVE_MAIN",
+        "items": {
+            "valve.main_shutoff_1in_ball":    1,
+        },
+    },
+    "THERMAL_EXPANSION_KIT": {
+        "name": "Thermal Expansion Valve Kit",
+        "labor_template": "THERMAL_EXPANSION_VALVE",
+        "items": {
+            "valve.thermal_expansion_3_4":    1,
+        },
+    },
+
+    # C. Drain & Waste
+    "CLEANOUT_CAP_KIT": {
+        "name": "Cleanout Cap Replace Kit",
+        "labor_template": "CLEANOUT_CAP_REPLACE",
+        "items": {
+            "fitting.cleanout_cap_4in":       1,
+        },
+    },
+    "VENT_PIPE_KIT": {
+        "name": "Roof Vent Pipe Repair Kit",
+        "labor_template": "VENT_PIPE_REPAIR_ROOF",
+        "items": {
+            "fitting.vent_boot_3in":          1,
+        },
+    },
+    "AAV_KIT": {
+        "name": "Air Admittance Valve Kit",
+        "labor_template": "AAV_INSTALL",
+        "items": {
+            "valve.aav_studor_1_5in":         1,
+        },
+    },
+    "EJECTOR_PUMP_KIT": {
+        "name": "Sewage Ejector Pump System Kit",
+        "labor_template": "EJECTOR_PUMP_INSTALL",
+        "items": {
+            "pump.ejector_sewage_05hp":       1,
+            "fitting.ejector_basin_18x30":    1,
+        },
+    },
+
+    # D. Bathroom Fixture
+    "DIVERTER_KIT": {
+        "name": "Shower Diverter Repair Kit",
+        "labor_template": "SHOWER_DIVERTER_REPAIR",
+        "items": {
+            "valve.shower_diverter_universal": 1,
+        },
+    },
+    "ROMAN_TUB_KIT": {
+        "name": "Roman Tub Faucet Replace Kit",
+        "labor_template": "ROMAN_TUB_FAUCET_REPLACE",
+        "items": {
+            "faucet.roman_tub_2_handle":      1,
+        },
+    },
+    "CLAWFOOT_TUB_KIT": {
+        "name": "Clawfoot Tub Plumbing Kit",
+        "labor_template": "CLAW_FOOT_TUB_PLUMBING",
+        "items": {},
+    },
+    "BARRIER_FREE_SHOWER_KIT": {
+        "name": "ADA Barrier-Free Shower Kit",
+        "labor_template": "BARRIER_FREE_SHOWER_INSTALL",
+        "items": {
+            "fixture.barrier_free_linear_drain_36": 1,
+            "valve.thermostatic_shower_ada":        1,
+        },
+    },
+    "STEAM_SHOWER_KIT": {
+        "name": "Steam Shower Plumbing Kit",
+        "labor_template": "STEAM_SHOWER_VALVE_INSTALL",
+        "items": {},
+    },
+    "BIDET_SPRAYER_KIT": {
+        "name": "Handheld Bidet Sprayer Kit",
+        "labor_template": "BIDET_SPRAYER_INSTALL",
+        "items": {
+            "fixture.bidet_sprayer_ss":       1,
+        },
+    },
+
+    # E. Kitchen & Appliance
+    "INSTANT_HOT_KIT": {
+        "name": "Instant Hot Water Dispenser Kit",
+        "labor_template": "INSTANT_HOT_WATER_INSTALL",
+        "items": {
+            "appliance.instant_hot_dispenser": 1,
+        },
+    },
+    "FRIDGE_LINE_KIT": {
+        "name": "Refrigerator Water Line Kit",
+        "labor_template": "REFRIGERATOR_LINE_INSTALL",
+        "items": {
+            "pipe.fridge_water_line_braided_6ft": 1,
+            "valve.saddle_self_piercing_1_4":     1,
+        },
+    },
+    "DISPOSAL_HP_KIT": {
+        "name": "Garbage Disposal High-Power Kit",
+        "labor_template": "GARBAGE_DISPOSAL_REPLACE_HP",
+        "items": {
+            "appliance.disposal_3_4hp":       1,
+        },
+    },
+    "PREP_SINK_KIT": {
+        "name": "Prep/Island Sink Install Kit",
+        "labor_template": "PREP_SINK_INSTALL",
+        "items": {
+            "valve.aav_studor_1_5in":         1,
+        },
+    },
+    "SPRAYER_FAUCET_KIT": {
+        "name": "Commercial Pre-Rinse Faucet Kit",
+        "labor_template": "COMMERCIAL_SPRAYER_FAUCET",
+        "items": {
+            "faucet.commercial_sprayer_wall":  1,
+        },
+    },
+
+    # F. Outdoor & Yard
+    "FRENCH_DRAIN_KIT": {
+        "name": "French Drain Kit (per 25 LF)",
+        "labor_template": "FRENCH_DRAIN_INSTALL",
+        "items": {
+            "pipe.perf_drain_4in_per_ft":     25,
+            "material.drain_gravel_per_ton":  1,
+            "material.filter_fabric_per_ft":  25,
+        },
+    },
+    "SUMP_PUMP_REPLACE_KIT": {
+        "name": "Sump Pump Replace Kit",
+        "labor_template": "SUMP_PUMP_REPLACE",
+        "items": {
+            "pump.sump_1_3hp":                1,
+            "valve.sump_check_1_5in":         1,
+        },
+    },
+    "OUTDOOR_SHOWER_KIT": {
+        "name": "Outdoor Shower Plumbing Kit",
+        "labor_template": "OUTDOOR_SHOWER_INSTALL",
+        "items": {
+            "fixture.outdoor_shower_mixer":   1,
+        },
+    },
+    "SPRINKLER_REPAIR_KIT": {
+        "name": "Sprinkler Line Repair Kit",
+        "labor_template": "SPRINKLER_LINE_REPAIR",
+        "items": {
+            "fitting.sprinkler_repair_coupling": 2,
+        },
+    },
+    "RAIN_BARREL_KIT": {
+        "name": "Rain Barrel Hookup Kit",
+        "labor_template": "RAIN_BARREL_HOOKUP",
+        "items": {
+            "fitting.rain_barrel_diverter":   1,
+        },
+    },
+
+    # G. Gas System
+    "GAS_POOL_HEATER_KIT": {
+        "name": "Gas Line Pool Heater Kit",
+        "labor_template": "GAS_LINE_POOL_HEATER",
+        "items": {
+            "pipe.csst_3_4_per_ft":           40,
+            "fitting.gas_termination_3_4":    1,
+        },
+    },
+    "GAS_GENERATOR_KIT": {
+        "name": "Gas Line Generator Kit",
+        "labor_template": "GAS_LINE_GENERATOR",
+        "items": {
+            "pipe.csst_3_4_per_ft":           50,
+            "fitting.gas_termination_3_4":    1,
+        },
+    },
+    "GAS_TANKLESS_UPGRADE_KIT": {
+        "name": "Gas Line Tankless WH Upgrade Kit",
+        "labor_template": "GAS_LINE_TANKLESS_WH",
+        "items": {
+            "pipe.csst_3_4_per_ft":           20,
+            "fitting.gas_termination_3_4":    1,
+        },
+    },
+    "GAS_CAP_KIT": {
+        "name": "Gas Appliance Disconnect & Cap Kit",
+        "labor_template": "GAS_APPLIANCE_DISCONNECT",
+        "items": {
+            "fitting.gas_cap_3_4":            1,
+        },
+    },
+
+    # H. Water Treatment
+    "WATER_SOFTENER_REPLACE_KIT": {
+        "name": "Water Softener Replace Kit",
+        "labor_template": "WATER_SOFTENER_REPLACE",
+        "items": {
+            "appliance.water_softener_48k":   1,
+        },
+    },
+    "UV_SYSTEM_KIT": {
+        "name": "UV Disinfection System Kit",
+        "labor_template": "UV_DISINFECTION_INSTALL",
+        "items": {
+            "appliance.uv_system_12gpm":      1,
+        },
+    },
+    "SEDIMENT_FILTER_KIT": {
+        "name": "Sediment Filter Install Kit",
+        "labor_template": "SEDIMENT_FILTER_INSTALL",
+        "items": {
+            "filter.sediment_whole_house_20in": 1,
+        },
+    },
+
+    # J. Maintenance
+    "HOSE_BIB_COVER_KIT": {
+        "name": "Hose Bib Winterization Kit (per bib)",
+        "labor_template": "HOSE_BIB_WINTERIZE",
+        "items": {
+            "material.hose_bib_cover_insulated": 1,
         },
     },
     }

@@ -97,6 +97,15 @@ _PERMIT_REQUIRED: dict[str, str] = {
     "SEWER_LINER_CIPP":             "sewer",
     "SEWER_BELLY_REPAIR":           "sewer",
     "IRRIGATION_BACKFLOW_INSTALL":  "backflow",
+    # ── Phase 3: additional permit-required templates ──
+    "GAS_LINE_POOL_HEATER":         "gas",
+    "GAS_LINE_GENERATOR":           "gas",
+    "GAS_LINE_TANKLESS_WH":         "gas",
+    "GAS_METER_UPGRADE_COORD":      "gas",
+    "EJECTOR_PUMP_INSTALL":         "sewer",
+    "SEWER_LINE_REPLACE_FULL":      "sewer",
+    "WATER_LINE_REPLACE_MAIN_STREET": "repipe",
+    "BARRIER_FREE_SHOWER_INSTALL":  "general",
 }
 
 # ─── Trip / Service Call Charge ───────────────────────────────────────────────

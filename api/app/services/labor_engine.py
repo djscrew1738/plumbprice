@@ -1927,6 +1927,736 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
             "DFW insurance companies increasingly offer premium discounts for these."
         ),
     ),
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Phase 3: Comprehensive DFW Expansion (2025-2026)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # ── A. Diagnostic & Inspection Services ────────────────────────────────────
+
+    "LEAK_DETECTION_ELECTRONIC": LaborTemplateData(
+        code="LEAK_DETECTION_ELECTRONIC",
+        name="Electronic Leak Detection — Full Survey",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Electronic leak detection with listening discs, correlation equipment. "
+            "Covers slab, walls, yard. DFW expansive clay soil causes frequent slab movement."
+        ),
+    ),
+
+    "SMOKE_TEST_SEWER": LaborTemplateData(
+        code="SMOKE_TEST_SEWER",
+        name="Sewer Smoke Test — Odor Source Location",
+        category="service",
+        base_hours=1.5,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Smoke machine test to locate sewer gas entry points. "
+            "Common in DFW homes with dried-out P-traps or cracked vent stacks."
+        ),
+    ),
+
+    "HYDROSTATIC_TEST_SEWER": LaborTemplateData(
+        code="HYDROSTATIC_TEST_SEWER",
+        name="Hydrostatic Sewer Test — Under Slab",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.25,
+        applicable_assemblies=[],
+        notes=(
+            "Fill sewer system to slab level to locate under-slab leaks. "
+            "Required by many DFW home inspectors during real estate transactions."
+        ),
+    ),
+
+    "THERMAL_IMAGING_LEAK": LaborTemplateData(
+        code="THERMAL_IMAGING_LEAK",
+        name="Thermal Imaging Leak Survey",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="FLIR or similar thermal camera to locate moisture behind walls, under slab.",
+    ),
+
+    "VIDEO_CALL_DIAGNOSTIC": LaborTemplateData(
+        code="VIDEO_CALL_DIAGNOSTIC",
+        name="Remote Video Diagnostic Consultation",
+        category="service",
+        base_hours=0.5,
+        lead_rate=105.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Video call diagnosis for simple issues. No truck roll. Credits toward service if job booked.",
+    ),
+
+    "SECOND_OPINION_INSPECTION": LaborTemplateData(
+        code="SECOND_OPINION_INSPECTION",
+        name="Second Opinion Inspection — On-Site",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="On-site evaluation of work recommended by another plumber. Written assessment provided.",
+    ),
+
+    # ── B. Water Line & Supply ─────────────────────────────────────────────────
+
+    "WATER_LINE_REPAIR_COPPER": LaborTemplateData(
+        code="WATER_LINE_REPAIR_COPPER",
+        name="Copper Water Line Spot Repair",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["COPPER_REPAIR_KIT"],
+        notes="Spot repair on copper supply line using ProPress or solder. DFW copper corrosion common.",
+    ),
+
+    "WATER_LINE_REPAIR_PEX": LaborTemplateData(
+        code="WATER_LINE_REPAIR_PEX",
+        name="PEX Water Line Repair",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["PEX_REPAIR_KIT"],
+        notes="Repair or splice PEX supply line with expansion fittings.",
+    ),
+
+    "WATER_LINE_REPLACE_MAIN_STREET": LaborTemplateData(
+        code="WATER_LINE_REPLACE_MAIN_STREET",
+        name="Main Water Line Replace — Street to House",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=1.0,
+        applicable_assemblies=["MAIN_LINE_REPLACE_KIT"],
+        notes=(
+            "Full replacement of main water line from meter to house. "
+            "Typically 50-100 LF. May require city permit and meter adapter."
+        ),
+    ),
+
+    "MANIFOLD_INSTALL_PEX": LaborTemplateData(
+        code="MANIFOLD_INSTALL_PEX",
+        name="PEX Manifold System Install",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["MANIFOLD_KIT"],
+        notes="Install central PEX manifold with individual fixture shutoffs. Typical in DFW repipes.",
+    ),
+
+    "PRESSURE_BOOSTER_INSTALL": LaborTemplateData(
+        code="PRESSURE_BOOSTER_INSTALL",
+        name="Water Pressure Booster Pump — Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["PRESSURE_BOOSTER_KIT"],
+        notes="Davey or Grundfos booster pump for low-pressure areas. Common in elevated DFW lots.",
+    ),
+
+    "SHUT_OFF_VALVE_MAIN": LaborTemplateData(
+        code="SHUT_OFF_VALVE_MAIN",
+        name="Main Shutoff Valve Replace",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["MAIN_SHUTOFF_KIT"],
+        notes="Replace main water shutoff valve (gate to ball valve upgrade). Requires city meter shutoff.",
+    ),
+
+    "THERMAL_EXPANSION_VALVE": LaborTemplateData(
+        code="THERMAL_EXPANSION_VALVE",
+        name="Thermal Expansion Relief Valve — Install",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["THERMAL_EXPANSION_KIT"],
+        notes="Thermal expansion valve on closed-loop systems. DFW code requirement with PRV + check valve.",
+    ),
+
+    # ── C. Drain & Waste Expanded ──────────────────────────────────────────────
+
+    "DRAIN_CLEAN_LAUNDRY": LaborTemplateData(
+        code="DRAIN_CLEAN_LAUNDRY",
+        name="Laundry Drain Clearing",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Laundry standpipe/drain clearing. Lint buildup is #1 cause in DFW.",
+    ),
+
+    "DRAIN_CLEAN_DOUBLE_KITCHEN": LaborTemplateData(
+        code="DRAIN_CLEAN_DOUBLE_KITCHEN",
+        name="Double Kitchen Sink Drain Clearing",
+        category="service",
+        base_hours=1.25,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Double-bowl kitchen sink drain clearing including disposal side. Grease buildup common.",
+    ),
+
+    "CLEANOUT_CAP_REPLACE": LaborTemplateData(
+        code="CLEANOUT_CAP_REPLACE",
+        name="Cleanout Cap Replace",
+        category="service",
+        base_hours=0.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["CLEANOUT_CAP_KIT"],
+        notes="Replace missing or broken cleanout cap. Prevents sewer gas and pest entry.",
+    ),
+
+    "VENT_PIPE_REPAIR_ROOF": LaborTemplateData(
+        code="VENT_PIPE_REPAIR_ROOF",
+        name="Roof Vent Pipe Repair & Reflash",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["VENT_PIPE_KIT"],
+        notes=(
+            "Repair or replace roof vent pipe and boot/flashing. "
+            "DFW heat and UV degrade rubber boots — common roof leak source."
+        ),
+    ),
+
+    "AAV_INSTALL": LaborTemplateData(
+        code="AAV_INSTALL",
+        name="Air Admittance Valve (Studor Vent) Install",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["AAV_KIT"],
+        notes="Install AAV/Studor vent for island sinks or locations without vent stack access.",
+    ),
+
+    "EJECTOR_PUMP_INSTALL": LaborTemplateData(
+        code="EJECTOR_PUMP_INSTALL",
+        name="Sewage Ejector Pump System Install",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["EJECTOR_PUMP_KIT"],
+        notes="Below-grade sewage ejector with basin, pump, check valve, and vent. Permit required.",
+    ),
+
+    # ── D. Bathroom Fixture Expanded ───────────────────────────────────────────
+
+    "SHOWER_DOOR_PLUMBING_PREP": LaborTemplateData(
+        code="SHOWER_DOOR_PLUMBING_PREP",
+        name="Shower Door Plumbing Prep — Rough-In",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Rough-in prep for frameless shower door (drain positioning, curb prep). Plumbing side only.",
+    ),
+
+    "SHOWER_DIVERTER_REPAIR": LaborTemplateData(
+        code="SHOWER_DIVERTER_REPAIR",
+        name="Tub/Shower Diverter Repair or Replace",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["DIVERTER_KIT"],
+        notes="Repair or replace tub spout diverter or in-wall diverter valve.",
+    ),
+
+    "ROMAN_TUB_FAUCET_REPLACE": LaborTemplateData(
+        code="ROMAN_TUB_FAUCET_REPLACE",
+        name="Roman Tub Faucet — Replace",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["ROMAN_TUB_KIT"],
+        notes="Deck-mount Roman tub filler with hand sprayer. Access panel required for valve body.",
+    ),
+
+    "CLAW_FOOT_TUB_PLUMBING": LaborTemplateData(
+        code="CLAW_FOOT_TUB_PLUMBING",
+        name="Clawfoot Tub Plumbing Hookup",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["CLAWFOOT_TUB_KIT"],
+        notes="Supply, drain, and overflow hookup for freestanding clawfoot tub. Floor-mount or wall-mount filler.",
+    ),
+
+    "BARRIER_FREE_SHOWER_INSTALL": LaborTemplateData(
+        code="BARRIER_FREE_SHOWER_INSTALL",
+        name="ADA Barrier-Free Shower — Plumbing Install",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=1.0,
+        applicable_assemblies=["BARRIER_FREE_SHOWER_KIT"],
+        notes=(
+            "Zero-threshold shower with linear drain, thermostatic valve, grab bars. "
+            "ADA compliant. Growing demand in DFW aging-in-place market."
+        ),
+    ),
+
+    "STEAM_SHOWER_VALVE_INSTALL": LaborTemplateData(
+        code="STEAM_SHOWER_VALVE_INSTALL",
+        name="Steam Shower Generator — Plumbing Connection",
+        category="service",
+        base_hours=4.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["STEAM_SHOWER_KIT"],
+        notes="Plumbing connections for steam generator: cold water supply, steam line, condensate drain.",
+    ),
+
+    "BIDET_SPRAYER_INSTALL": LaborTemplateData(
+        code="BIDET_SPRAYER_INSTALL",
+        name="Handheld Bidet Sprayer — Install",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["BIDET_SPRAYER_KIT"],
+        notes="T-adapter install at toilet supply for handheld bidet sprayer with holder.",
+    ),
+
+    # ── E. Kitchen & Appliance ─────────────────────────────────────────────────
+
+    "INSTANT_HOT_WATER_INSTALL": LaborTemplateData(
+        code="INSTANT_HOT_WATER_INSTALL",
+        name="Instant Hot Water Dispenser — Install",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["INSTANT_HOT_KIT"],
+        notes="Under-sink instant hot water dispenser (InSinkErator or similar) with dedicated faucet.",
+    ),
+
+    "REFRIGERATOR_LINE_INSTALL": LaborTemplateData(
+        code="REFRIGERATOR_LINE_INSTALL",
+        name="Refrigerator Water/Ice Line — Install",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["FRIDGE_LINE_KIT"],
+        notes="Braided SS line from cold water supply to refrigerator with saddle or angle stop valve.",
+    ),
+
+    "DISHWASHER_DRAIN_REPAIR": LaborTemplateData(
+        code="DISHWASHER_DRAIN_REPAIR",
+        name="Dishwasher Drain Issue — Repair",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Diagnose and repair dishwasher drain problem: air gap, high loop, blocked hose.",
+    ),
+
+    "GARBAGE_DISPOSAL_REPLACE_HP": LaborTemplateData(
+        code="GARBAGE_DISPOSAL_REPLACE_HP",
+        name="Garbage Disposal — Replace (3/4-1 HP Upgrade)",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["DISPOSAL_HP_KIT"],
+        notes="Upgrade to high-power disposal (3/4 HP or 1 HP). May require wiring upgrade.",
+    ),
+
+    "PREP_SINK_INSTALL": LaborTemplateData(
+        code="PREP_SINK_INSTALL",
+        name="Kitchen Prep/Island Sink — Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["PREP_SINK_KIT"],
+        notes="Island or prep sink install with AAV vent (no vent stack on island). DFW kitchen remodel staple.",
+    ),
+
+    "COMMERCIAL_SPRAYER_FAUCET": LaborTemplateData(
+        code="COMMERCIAL_SPRAYER_FAUCET",
+        name="Commercial Pre-Rinse Faucet — Install",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["SPRAYER_FAUCET_KIT"],
+        notes="Wall or deck mount commercial-style pre-rinse sprayer faucet. Popular in DFW luxury kitchens.",
+    ),
+
+    # ── F. Outdoor & Yard Expanded ─────────────────────────────────────────────
+
+    "FRENCH_DRAIN_INSTALL": LaborTemplateData(
+        code="FRENCH_DRAIN_INSTALL",
+        name="French Drain Install (per 25 LF)",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["FRENCH_DRAIN_KIT"],
+        notes=(
+            "Excavate, install perforated pipe, gravel, filter fabric per 25 LF. "
+            "Essential in DFW black clay soil areas for foundation drainage."
+        ),
+    ),
+
+    "SUMP_PUMP_REPLACE": LaborTemplateData(
+        code="SUMP_PUMP_REPLACE",
+        name="Sump Pump — Replace",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["SUMP_PUMP_REPLACE_KIT"],
+        notes="Replace existing sump pump (pump only, basin reuse). Check valve and discharge line.",
+    ),
+
+    "POOL_PLUMBING_REPAIR": LaborTemplateData(
+        code="POOL_PLUMBING_REPAIR",
+        name="Pool Plumbing Line — Repair",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=[],
+        notes="Repair pool supply/return plumbing line. Pressure test and locate leak. PVC schedule 40.",
+    ),
+
+    "OUTDOOR_SHOWER_INSTALL": LaborTemplateData(
+        code="OUTDOOR_SHOWER_INSTALL",
+        name="Outdoor Shower — Plumbing Install",
+        category="service",
+        base_hours=4.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["OUTDOOR_SHOWER_KIT"],
+        notes="Hot and cold supply lines, mixing valve, drain. Freeze protection required in DFW.",
+    ),
+
+    "SPRINKLER_LINE_REPAIR": LaborTemplateData(
+        code="SPRINKLER_LINE_REPAIR",
+        name="Irrigation/Sprinkler Line Repair",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["SPRINKLER_REPAIR_KIT"],
+        notes="Locate and repair broken sprinkler line or fitting. DFW freeze damage and lawn equipment hits.",
+    ),
+
+    "RAIN_BARREL_HOOKUP": LaborTemplateData(
+        code="RAIN_BARREL_HOOKUP",
+        name="Rain Barrel / Rainwater Collection Hookup",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["RAIN_BARREL_KIT"],
+        notes="Connect rain barrel to downspout with first-flush diverter and overflow. DFW water conservation.",
+    ),
+
+    # ── G. Gas System Expanded ─────────────────────────────────────────────────
+
+    "GAS_LINE_POOL_HEATER": LaborTemplateData(
+        code="GAS_LINE_POOL_HEATER",
+        name="Gas Line — Pool/Spa Heater",
+        category="service",
+        base_hours=4.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_POOL_HEATER_KIT"],
+        notes="New gas line run to pool heater. Typically 3/4\" CSST, 30-60 LF. BTU load calculation required.",
+    ),
+
+    "GAS_LINE_GENERATOR": LaborTemplateData(
+        code="GAS_LINE_GENERATOR",
+        name="Gas Line — Standby Generator",
+        category="service",
+        base_hours=5.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_GENERATOR_KIT"],
+        notes=(
+            "Gas line to standby generator (Generac/Kohler). "
+            "May require meter upgrade. Growing DFW demand after 2021 winter storm."
+        ),
+    ),
+
+    "GAS_LINE_TANKLESS_WH": LaborTemplateData(
+        code="GAS_LINE_TANKLESS_WH",
+        name="Gas Line Upgrade — Tankless Water Heater",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_TANKLESS_UPGRADE_KIT"],
+        notes="Upsize gas line from 1/2\" to 3/4\" for tankless WH BTU requirements. Common DFW upgrade.",
+    ),
+
+    "GAS_METER_UPGRADE_COORD": LaborTemplateData(
+        code="GAS_METER_UPGRADE_COORD",
+        name="Gas Meter Upgrade Coordination",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Coordinate gas meter upgrade with Atmos Energy. On-site meeting, paperwork, verification.",
+    ),
+
+    "GAS_APPLIANCE_DISCONNECT": LaborTemplateData(
+        code="GAS_APPLIANCE_DISCONNECT",
+        name="Gas Appliance Safe Disconnect & Cap",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_CAP_KIT"],
+        notes="Safely disconnect gas appliance, cap line, pressure test. Per appliance.",
+    ),
+
+    # ── H. Water Treatment Expanded ────────────────────────────────────────────
+
+    "WATER_SOFTENER_REPLACE": LaborTemplateData(
+        code="WATER_SOFTENER_REPLACE",
+        name="Water Softener — Replace",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["WATER_SOFTENER_REPLACE_KIT"],
+        notes="Remove old unit, install new softener. DFW hard water (15-25 gpg) makes this high-demand.",
+    ),
+
+    "WATER_SOFTENER_REPAIR": LaborTemplateData(
+        code="WATER_SOFTENER_REPAIR",
+        name="Water Softener — Repair/Rebuild",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Diagnose and repair water softener: control valve, brine tank, resin bed, timer.",
+    ),
+
+    "UV_DISINFECTION_INSTALL": LaborTemplateData(
+        code="UV_DISINFECTION_INSTALL",
+        name="UV Water Disinfection System — Install",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["UV_SYSTEM_KIT"],
+        notes="Whole-house UV disinfection (Viqua/Sterilight). Point-of-entry install with pre-filter.",
+    ),
+
+    "SEDIMENT_FILTER_INSTALL": LaborTemplateData(
+        code="SEDIMENT_FILTER_INSTALL",
+        name="Whole-House Sediment Filter — Install",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["SEDIMENT_FILTER_KIT"],
+        notes="Install sediment/carbon filter housing on main line. DFW lake water source = sediment issues.",
+    ),
+
+    "WATER_TESTING_SERVICE": LaborTemplateData(
+        code="WATER_TESTING_SERVICE",
+        name="Comprehensive Water Quality Test",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="On-site water quality test: hardness, pH, chlorine, TDS, iron, bacteria. Lab send-out for metals.",
+    ),
+
+    # ── I. Emergency & After-Hours ─────────────────────────────────────────────
+
+    "EMERGENCY_WATER_SHUTOFF": LaborTemplateData(
+        code="EMERGENCY_WATER_SHUTOFF",
+        name="Emergency Main Water Shutoff Response",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.25, "emergency": 2.0},
+        applicable_assemblies=[],
+        notes="Emergency response to locate and shut main water valve. Includes basic assessment.",
+    ),
+
+    "EMERGENCY_GAS_SHUTOFF": LaborTemplateData(
+        code="EMERGENCY_GAS_SHUTOFF",
+        name="Emergency Gas Shutoff Response",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.25, "emergency": 2.0},
+        applicable_assemblies=[],
+        notes="Emergency gas shutoff at meter or appliance. Includes gas leak check. Call Atmos Energy first.",
+    ),
+
+    "EMERGENCY_SEWER_BACKUP": LaborTemplateData(
+        code="EMERGENCY_SEWER_BACKUP",
+        name="Emergency Sewer Backup Response",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.5,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.25, "emergency": 2.0},
+        applicable_assemblies=[],
+        notes="Emergency sewer backup: machine clear main line, extract standing water. DFW clay soil = root intrusion.",
+    ),
+
+    "FLOOD_DAMAGE_MITIGATION": LaborTemplateData(
+        code="FLOOD_DAMAGE_MITIGATION",
+        name="Flood Water Mitigation & Pump-Out",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.25, "emergency": 2.0},
+        applicable_assemblies=[],
+        notes="Emergency water extraction, temporary repairs, source shutoff. Coordinate with restoration company.",
+    ),
+
+    "AFTER_HOURS_DIAGNOSTIC": LaborTemplateData(
+        code="AFTER_HOURS_DIAGNOSTIC",
+        name="After-Hours Diagnostic Visit",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        urgency_multipliers={"standard": 1.5, "same_day": 1.75, "emergency": 2.5},
+        applicable_assemblies=[],
+        notes="After-hours (6pm-8am, weekends, holidays) diagnostic visit. Higher rate reflects overtime.",
+    ),
+
+    # ── J. Maintenance & Preventive ────────────────────────────────────────────
+
+    "PLUMBING_INSPECTION_ANNUAL": LaborTemplateData(
+        code="PLUMBING_INSPECTION_ANNUAL",
+        name="Annual Plumbing Inspection",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Full-home plumbing inspection: water heater, fixtures, supply lines, drains, "
+            "hose bibs, shutoff valves. Written report with priority recommendations."
+        ),
+    ),
+
+    "WINTERIZATION_SERVICE": LaborTemplateData(
+        code="WINTERIZATION_SERVICE",
+        name="Winter Pipe Protection Service",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Insulate exposed pipes, install freeze-proof covers on hose bibs, "
+            "check attic/crawl space exposure. Critical in DFW after 2021 Uri freeze event."
+        ),
+    ),
+
+    "DE_WINTERIZATION_SERVICE": LaborTemplateData(
+        code="DE_WINTERIZATION_SERVICE",
+        name="Spring De-Winterization Service",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Remove winterization, test all fixtures, check for freeze damage, restore irrigation.",
+    ),
+
+    "WATER_HEATER_ANNUAL_SERVICE": LaborTemplateData(
+        code="WATER_HEATER_ANNUAL_SERVICE",
+        name="Water Heater Annual Maintenance",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Flush tank, check anode rod, test T&P valve, inspect flue/venting. Extends WH life 3-5 years.",
+    ),
+
+    "FIXTURE_CAULK_RESEAL": LaborTemplateData(
+        code="FIXTURE_CAULK_RESEAL",
+        name="Bathtub/Shower Caulk Reseal",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Remove old caulk, clean, apply new silicone sealant around tub, shower, or sink.",
+    ),
+
+    "WHOLE_HOUSE_SHUTOFF_TEST": LaborTemplateData(
+        code="WHOLE_HOUSE_SHUTOFF_TEST",
+        name="Whole-House Shutoff Valve Test",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Test and exercise all shutoff valves (main, WH, fixtures, irrigation). Identify seized valves.",
+    ),
+
+    "HOSE_BIB_WINTERIZE": LaborTemplateData(
+        code="HOSE_BIB_WINTERIZE",
+        name="Hose Bib Winterization (per bib)",
+        category="service",
+        base_hours=0.25,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["HOSE_BIB_COVER_KIT"],
+        notes="Install insulated cover, disconnect hose, shut interior valve. Per hose bib.",
+    ),
 }
 
 
