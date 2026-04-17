@@ -24,6 +24,9 @@ vi.mock('@/lib/api', () => ({
   sessionsApi: {
     list: vi.fn().mockResolvedValue({ data: [] }),
   },
+  outcomesApi: {
+    stats: vi.fn().mockResolvedValue({ data: { total: 0, won: 0, lost: 0, pending: 0, no_bid: 0, win_rate: null, confidence_breakdown: {} } }),
+  },
 }))
 
 function makeWrapper() {

@@ -2,11 +2,11 @@
 
 import { motion, type Variants } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare } from 'lucide-react'
+import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { estimatesApi, sessionsApi, type EstimateListItem } from '@/lib/api'
+import { estimatesApi, sessionsApi, outcomesApi, type EstimateListItem } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -58,8 +58,14 @@ export function LauncherHome() {
     queryKey: ['sessions'],
     queryFn: () => sessionsApi.list(5),
   })
+  const { data: outcomeStatsData } = useQuery({
+    queryKey: ['outcome-stats'],
+    queryFn: () => outcomesApi.stats(),
+    staleTime: 60_000,
+  })
   const stats = estimatesData ? computeWeeklyStats(estimatesData.data) : null
   const sessions = sessionsData?.data ?? null
+  const outcomeStats = outcomeStatsData?.data ?? null
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
@@ -80,16 +86,17 @@ export function LauncherHome() {
       </section>
 
       {/* This-week stats */}
-      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="This week's activity">
+      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="This week's activity">
         {stats === null ? (
           <>
+            <Skeleton variant="stat-card" />
             <Skeleton variant="stat-card" />
             <Skeleton variant="stat-card" />
             <Skeleton variant="stat-card" />
           </>
         ) : (
           <motion.div
-            className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-3"
+            className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             variants={staggerContainer}
             initial="hidden"
             animate="show"
@@ -108,6 +115,17 @@ export function LauncherHome() {
               icon={TrendingUp}
               label="Average job value"
               value={stats.avgValue > 0 ? formatCurrency(stats.avgValue) : '—'}
+            />
+            <StatCard
+              icon={Target}
+              label="Win rate (all time)"
+              value={
+                outcomeStats === null
+                  ? '—'
+                  : outcomeStats.win_rate === null
+                    ? `${outcomeStats.total} recorded`
+                    : `${Math.round(outcomeStats.win_rate * 100)}% (${outcomeStats.won}/${outcomeStats.total})`
+              }
             />
           </motion.div>
         )}
