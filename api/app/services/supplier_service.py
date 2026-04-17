@@ -1313,6 +1313,141 @@ CANONICAL_MAP: dict[str, dict[str, dict]] = {
         "moore_supply":{"sku": "DFR-M",    "name": "Universal dual flush conversion kit",                  "cost": 19.00},
         "apex":        {"sku": "DFR-A",    "name": "Dual flush retrofit universal",                        "cost": 24.00},
     },
+
+    # ── Phase 5: Canonical Materials ──────────────────────────────────────────
+    # Q. Pipe Materials
+    "fitting.no_hub_coupling_4in": {
+        "ferguson":    {"sku": "NHC-4",    "name": "No-hub coupling 4\" stainless band",                   "cost": 8.50},
+        "moore_supply":{"sku": "NHC4-M",   "name": "4\" SS no-hub coupling",                               "cost": 7.50},
+        "apex":        {"sku": "NHC4-A",   "name": "No-hub coupling 4 inch stainless",                     "cost": 9.25},
+    },
+    "fitting.fernco_4x4_pvc_ci": {
+        "ferguson":    {"sku": "FC-44",    "name": "Fernco 4x4 PVC-to-cast iron coupling",                "cost": 6.50},
+        "moore_supply":{"sku": "FC44-M",   "name": "4x4 Fernco PVC to CI",                                 "cost": 5.75},
+        "apex":        {"sku": "FC44-A",   "name": "Fernco coupling 4\" PVC/CI",                            "cost": 7.00},
+    },
+    "fitting.dielectric_union_3_4": {
+        "ferguson":    {"sku": "DU-34",    "name": "Dielectric union 3/4\" FIP",                            "cost": 12.00},
+        "moore_supply":{"sku": "DU34-M",   "name": "3/4\" dielectric union",                                "cost": 10.50},
+        "apex":        {"sku": "DU34-A",   "name": "Dielectric union 3/4 inch",                             "cost": 13.00},
+    },
+    "fitting.galv_pex_adapter_3_4": {
+        "ferguson":    {"sku": "GPA-34",   "name": "Galvanized-to-PEX adapter 3/4\" MIP x PEX",            "cost": 8.00},
+        "moore_supply":{"sku": "GPA-M",    "name": "3/4\" MIP to PEX transition adapter",                   "cost": 7.00},
+        "apex":        {"sku": "GPA-A",    "name": "Galv to PEX adapter 3/4",                                "cost": 8.75},
+    },
+    "fitting.cpvc_to_pex_adapter_3_4": {
+        "ferguson":    {"sku": "CPA-34",   "name": "CPVC-to-PEX transition adapter 3/4\"",                  "cost": 6.50},
+        "moore_supply":{"sku": "CPA-M",    "name": "3/4\" CPVC to PEX push-fit adapter",                    "cost": 5.75},
+        "apex":        {"sku": "CPA-A",    "name": "CPVC PEX adapter 3/4 push-fit",                         "cost": 7.00},
+    },
+    "pipe.cpvc_3_4_per_ft": {
+        "ferguson":    {"sku": "CPVC-34",  "name": "CPVC 3/4\" per foot SDR-11",                            "cost": 0.85},
+        "moore_supply":{"sku": "CPV34-M",  "name": "3/4\" CPVC SDR-11 per LF",                              "cost": 0.75},
+        "apex":        {"sku": "CPV34-A",  "name": "CPVC pipe 3/4 per foot",                                "cost": 0.92},
+    },
+
+    # S. Smart Plumbing
+    "appliance.smart_water_monitor": {
+        "ferguson":    {"sku": "SWM-FL",   "name": "Smart water monitor ultrasonic WiFi",                   "cost": 165.00},
+        "moore_supply":{"sku": "SWM-M",    "name": "WiFi ultrasonic water monitor",                         "cost": 148.00},
+        "apex":        {"sku": "SWM-A",    "name": "Water monitor smart ultrasonic",                        "cost": 178.00},
+    },
+    "valve.smart_shutoff_1in": {
+        "ferguson":    {"sku": "SSV-1",    "name": "Smart auto shutoff valve 1\" WiFi",                     "cost": 385.00},
+        "moore_supply":{"sku": "SSV-M",    "name": "1\" WiFi auto shutoff valve",                           "cost": 365.00},
+        "apex":        {"sku": "SSV-A",    "name": "Smart shutoff 1 inch WiFi",                             "cost": 410.00},
+    },
+    "safety.leak_sensor_5pk_wifi": {
+        "ferguson":    {"sku": "LS-5PK",   "name": "WiFi leak sensor 5-pack with hub",                     "cost": 95.00},
+        "moore_supply":{"sku": "WLS-5",    "name": "Leak sensor WiFi 5pk + hub",                            "cost": 85.00},
+        "apex":        {"sku": "LS5-A",    "name": "Leak sensor pack 5 WiFi hub",                           "cost": 102.00},
+    },
+    "fixture.smart_toilet_bidet": {
+        "ferguson":    {"sku": "ST-BD",    "name": "Smart toilet integrated bidet heated",                  "cost": 685.00},
+        "moore_supply":{"sku": "STB-M",    "name": "Integrated bidet smart toilet",                         "cost": 625.00},
+        "apex":        {"sku": "STB-A",    "name": "Smart toilet bidet integrated",                         "cost": 745.00},
+    },
+    "faucet.touchless_kitchen": {
+        "ferguson":    {"sku": "TFK-SS",   "name": "Touchless kitchen faucet pull-down SS",                 "cost": 225.00},
+        "moore_supply":{"sku": "TFK-M",    "name": "SS pull-down touchless kitchen faucet",                 "cost": 205.00},
+        "apex":        {"sku": "TFK-A",    "name": "Kitchen faucet touchless pulldown SS",                  "cost": 245.00},
+    },
+    "appliance.tankless_pou_electric": {
+        "ferguson":    {"sku": "TPE-4G",   "name": "Point-of-use tankless WH electric 4GPM",               "cost": 185.00},
+        "moore_supply":{"sku": "TPE-M",    "name": "Electric POU tankless 4 GPM",                           "cost": 168.00},
+        "apex":        {"sku": "TPE-A",    "name": "Tankless POU electric 4GPM",                            "cost": 198.00},
+    },
+
+    # U. Medical
+    "fitting.medical_gas_outlet_o2": {
+        "ferguson":    {"sku": "MGO-O2",   "name": "Medical gas outlet O2 DISS chrome",                     "cost": 125.00},
+        "moore_supply":{"sku": "MGO-M",    "name": "O2 medical gas outlet DISS",                            "cost": 112.00},
+        "apex":        {"sku": "MGO-A",    "name": "Medical O2 gas outlet chrome DISS",                     "cost": 135.00},
+    },
+
+    # V. Restaurant
+    "fixture.restaurant_floor_drain_12in": {
+        "ferguson":    {"sku": "RFD-12",   "name": "Restaurant floor drain 12\" SS with basket",            "cost": 125.00},
+        "moore_supply":{"sku": "RFD-M",    "name": "12\" SS restaurant floor drain",                        "cost": 112.00},
+        "apex":        {"sku": "RFD-A",    "name": "Floor drain restaurant 12\" stainless",                 "cost": 135.00},
+    },
+    "fixture.handwash_station_wall": {
+        "ferguson":    {"sku": "HWS-W",    "name": "Handwash station wall mount with faucet",               "cost": 185.00},
+        "moore_supply":{"sku": "HWS-M",    "name": "Wall mount handwash sink station",                      "cost": 168.00},
+        "apex":        {"sku": "HWS-A",    "name": "Handwash station wall faucet combo",                    "cost": 198.00},
+    },
+    "fitting.ice_machine_filter_head": {
+        "ferguson":    {"sku": "IMF-H",    "name": "Ice machine water filter head + cartridge",             "cost": 65.00},
+        "moore_supply":{"sku": "IMF-M",    "name": "Water filter head for ice machine",                     "cost": 58.00},
+        "apex":        {"sku": "IMF-A",    "name": "Ice machine filter head cartridge",                     "cost": 72.00},
+    },
+
+    # W. Aging-in-Place
+    "fixture.ada_toilet_comfort": {
+        "ferguson":    {"sku": "ACT-EL",   "name": "ADA comfort height toilet elongated",                   "cost": 225.00},
+        "moore_supply":{"sku": "ACT-M",    "name": "Comfort height ADA toilet elongated",                   "cost": 205.00},
+        "apex":        {"sku": "ACT-A",    "name": "Elongated ADA comfort toilet",                          "cost": 245.00},
+    },
+    "fitting.lever_handle_pair": {
+        "ferguson":    {"sku": "LHP-CH",   "name": "Lever handle pair chrome ADA retrofit",                 "cost": 28.00},
+        "moore_supply":{"sku": "LHP-M",    "name": "Chrome ADA lever handle pair",                          "cost": 24.00},
+        "apex":        {"sku": "LHP-A",    "name": "ADA lever handle pair chrome",                          "cost": 30.00},
+    },
+    "valve.anti_scald_pressure_balance": {
+        "ferguson":    {"sku": "ASV-PB",   "name": "Anti-scald pressure balance valve cartridge",           "cost": 65.00},
+        "moore_supply":{"sku": "ASV-M",    "name": "Pressure balance anti-scald cartridge",                 "cost": 58.00},
+        "apex":        {"sku": "ASV-A",    "name": "Anti-scald valve pressure balance",                     "cost": 72.00},
+    },
+
+    # X. DFW Slab & Climate
+    "material.foundation_soaker_100ft": {
+        "ferguson":    {"sku": "FS-100",   "name": "Foundation soaker hose 100ft kit",                      "cost": 45.00},
+        "moore_supply":{"sku": "FSH-M",    "name": "100ft foundation soaker hose",                          "cost": 40.00},
+        "apex":        {"sku": "FSH-A",    "name": "Soaker hose foundation 100 foot",                       "cost": 48.00},
+    },
+    "material.pipe_insulation_foam_3_4_50ft": {
+        "ferguson":    {"sku": "PIF-34",   "name": "Pipe insulation foam 3/4\" 50ft",                       "cost": 18.00},
+        "moore_supply":{"sku": "PIF-M",    "name": "3/4\" foam pipe insulation 50ft",                       "cost": 15.50},
+        "apex":        {"sku": "PIF-A",    "name": "Foam insulation pipe 3/4 50 ft",                        "cost": 19.50},
+    },
+
+    # Y. Tankless Extended
+    "pipe.tankless_vent_concentric_kit": {
+        "ferguson":    {"sku": "TVC-K",    "name": "Tankless concentric vent kit 4\" wall",                 "cost": 125.00},
+        "moore_supply":{"sku": "TVC-M",    "name": "Concentric vent kit 4\" tankless",                      "cost": 112.00},
+        "apex":        {"sku": "TVC-A",    "name": "Tankless vent concentric 4 inch kit",                   "cost": 135.00},
+    },
+    "fitting.condensate_neutralizer": {
+        "ferguson":    {"sku": "CN-TK",    "name": "Condensate neutralizer kit tankless WH",                "cost": 42.00},
+        "moore_supply":{"sku": "CN-M",     "name": "Tankless condensate neutralizer",                       "cost": 38.00},
+        "apex":        {"sku": "CN-A",     "name": "Neutralizer condensate tankless",                       "cost": 45.00},
+    },
+    "appliance.power_vent_wh_50g": {
+        "ferguson":    {"sku": "PVW-50",   "name": "Power vent WH 50 gallon natural gas",                   "cost": 785.00},
+        "moore_supply":{"sku": "PVW-M",    "name": "50G natural gas power vent WH",                         "cost": 725.00},
+        "apex":        {"sku": "PVW-A",    "name": "Water heater 50G power vent gas",                       "cost": 850.00},
+    },
 }
 
 
@@ -2704,6 +2839,201 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
         "labor_template": "DUAL_FLUSH_CONVERSION",
         "items": {
             "valve.dual_flush_retrofit":            1,
+        },
+    },
+
+    # ── Phase 5: Material Assemblies ─────────────────────────────────────────
+    # Q. Pipe Materials
+    "CAST_IRON_REPAIR_KIT": {
+        "name": "Cast Iron Pipe Repair Kit",
+        "labor_template": "CAST_IRON_PIPE_REPAIR",
+        "items": {
+            "fitting.no_hub_coupling_4in":          2,
+            "fitting.fernco_4x4_pvc_ci":            1,
+        },
+    },
+    "CAST_IRON_SECTION_KIT": {
+        "name": "Cast Iron Section Replace Kit",
+        "labor_template": "CAST_IRON_SECTION_REPLACE",
+        "items": {
+            "fitting.no_hub_coupling_4in":          4,
+            "fitting.fernco_4x4_pvc_ci":            2,
+        },
+    },
+    "GALV_REPAIR_KIT": {
+        "name": "Galvanized Pipe Repair Kit",
+        "labor_template": "GALVANIZED_PIPE_REPAIR",
+        "items": {
+            "fitting.dielectric_union_3_4":         2,
+        },
+    },
+    "GALV_PEX_TRANSITION_KIT": {
+        "name": "Galvanized-to-PEX Transition Kit",
+        "labor_template": "GALVANIZED_TO_PEX_SECTION",
+        "items": {
+            "fitting.galv_pex_adapter_3_4":         2,
+            "fitting.dielectric_union_3_4":         1,
+        },
+    },
+    "CPVC_REPAIR_KIT": {
+        "name": "CPVC Pipe Repair Kit",
+        "labor_template": "CPVC_PIPE_REPAIR",
+        "items": {
+            "fitting.cpvc_to_pex_adapter_3_4":      1,
+            "pipe.cpvc_3_4_per_ft":                 4,
+        },
+    },
+    "CPVC_PEX_TRANSITION_KIT": {
+        "name": "CPVC-to-PEX Transition Kit",
+        "labor_template": "CPVC_TO_PEX_SECTION",
+        "items": {
+            "fitting.cpvc_to_pex_adapter_3_4":      2,
+        },
+    },
+
+    # S. Smart Plumbing
+    "SMART_MONITOR_KIT": {
+        "name": "Smart Water Monitor Install Kit",
+        "labor_template": "SMART_WATER_MONITOR_INSTALL",
+        "items": {
+            "appliance.smart_water_monitor":        1,
+        },
+    },
+    "SMART_SHUTOFF_KIT": {
+        "name": "Smart Shutoff Valve Install Kit",
+        "labor_template": "SMART_SHUTOFF_VALVE_INSTALL",
+        "items": {
+            "valve.smart_shutoff_1in":              1,
+        },
+    },
+    "LEAK_SENSOR_SYSTEM_KIT": {
+        "name": "Smart Leak Sensor System Kit",
+        "labor_template": "SMART_LEAK_SENSOR_SYSTEM",
+        "items": {
+            "safety.leak_sensor_5pk_wifi":          1,
+        },
+    },
+    "SMART_TOILET_KIT": {
+        "name": "Smart Toilet Install Kit",
+        "labor_template": "SMART_TOILET_INSTALL",
+        "items": {
+            "fixture.smart_toilet_bidet":           1,
+            "toilet.wax_ring":                      1,
+            "toilet.closet_bolts":                  1,
+            "toilet.supply_line_12":                1,
+        },
+    },
+    "TOUCHLESS_FAUCET_KIT": {
+        "name": "Touchless Faucet Install Kit",
+        "labor_template": "TOUCHLESS_FAUCET_RESIDENTIAL",
+        "items": {
+            "faucet.touchless_kitchen":             1,
+        },
+    },
+    "POU_TANKLESS_KIT": {
+        "name": "Point-of-Use Tankless Install Kit",
+        "labor_template": "TANKLESS_POU_INSTALL",
+        "items": {
+            "appliance.tankless_pou_electric":      1,
+        },
+    },
+
+    # U. Medical
+    "MEDICAL_GAS_KIT": {
+        "name": "Medical Gas Outlet Install Kit",
+        "labor_template": "MEDICAL_GAS_OUTLET_INSTALL",
+        "items": {
+            "fitting.medical_gas_outlet_o2":        1,
+        },
+    },
+
+    # V. Restaurant
+    "RESTAURANT_FLOOR_DRAIN_KIT": {
+        "name": "Restaurant Floor Drain Kit",
+        "labor_template": "RESTAURANT_FLOOR_DRAIN_INSTALL",
+        "items": {
+            "fixture.restaurant_floor_drain_12in":  1,
+        },
+    },
+    "HANDWASH_STATION_KIT": {
+        "name": "Handwash Station Kit",
+        "labor_template": "RESTAURANT_HANDWASH_STATION",
+        "items": {
+            "fixture.handwash_station_wall":        1,
+        },
+    },
+    "ICE_MACHINE_KIT": {
+        "name": "Ice Machine Plumbing Kit",
+        "labor_template": "ICE_MACHINE_PLUMBING",
+        "items": {
+            "fitting.ice_machine_filter_head":      1,
+        },
+    },
+
+    # W. Aging-in-Place
+    "ADA_TOILET_KIT": {
+        "name": "ADA Comfort Height Toilet Kit",
+        "labor_template": "COMFORT_HEIGHT_TOILET_ADA",
+        "items": {
+            "fixture.ada_toilet_comfort":           1,
+            "toilet.wax_ring":                      1,
+            "toilet.closet_bolts":                  1,
+            "toilet.supply_line_12":                1,
+        },
+    },
+    "LEVER_HANDLE_KIT": {
+        "name": "Lever Handle ADA Conversion Kit",
+        "labor_template": "LEVER_HANDLE_CONVERSION",
+        "items": {
+            "fitting.lever_handle_pair":            1,
+        },
+    },
+    "ANTI_SCALD_KIT": {
+        "name": "Anti-Scald Valve Retrofit Kit",
+        "labor_template": "ANTI_SCALD_VALVE_RETROFIT",
+        "items": {
+            "valve.anti_scald_pressure_balance":    1,
+        },
+    },
+
+    # X. DFW Slab & Climate
+    "FOUNDATION_WATER_KIT": {
+        "name": "Foundation Watering System Kit",
+        "labor_template": "FOUNDATION_WATERING_SYSTEM",
+        "items": {
+            "material.foundation_soaker_100ft":     2,
+        },
+    },
+    "PIPE_INSULATION_KIT": {
+        "name": "Attic Pipe Insulation Kit",
+        "labor_template": "ATTIC_PIPE_INSULATION_UPGRADE",
+        "items": {
+            "material.pipe_insulation_foam_3_4_50ft": 4,
+        },
+    },
+
+    # Y. Tankless Extended
+    "TANKLESS_VENT_KIT": {
+        "name": "Tankless Vent Install Kit",
+        "labor_template": "TANKLESS_VENT_INSTALL",
+        "items": {
+            "pipe.tankless_vent_concentric_kit":    1,
+        },
+    },
+    "CONDENSATE_NEUTRALIZER_KIT": {
+        "name": "Tankless Condensate Drain Kit",
+        "labor_template": "TANKLESS_CONDENSATE_DRAIN",
+        "items": {
+            "fitting.condensate_neutralizer":       1,
+        },
+    },
+    "POWER_VENT_WH_KIT": {
+        "name": "Power Vent Water Heater Kit",
+        "labor_template": "WH_POWER_VENT_REPLACE",
+        "items": {
+            "appliance.power_vent_wh_50g":          1,
+            "wh.dielectric_union_pair":             1,
+            "wh.gas_flex_connector_18":             1,
         },
     },
     }

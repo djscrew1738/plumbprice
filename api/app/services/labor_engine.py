@@ -3455,6 +3455,732 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         applicable_assemblies=["DUAL_FLUSH_KIT"],
         notes="Convert standard toilet to dual-flush with retrofit kit. Water conservation upgrade.",
     ),
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Phase 5: Pipe Materials, Remodel, Smart, Multi-Family, Specialty (2025-2026)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # ── Q. Pipe Material-Specific Repairs ──────────────────────────────────────
+
+    "CAST_IRON_PIPE_REPAIR": LaborTemplateData(
+        code="CAST_IRON_PIPE_REPAIR",
+        name="Cast Iron Pipe — Spot Repair (band/coupling)",
+        category="service",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.5,
+        applicable_assemblies=["CAST_IRON_REPAIR_KIT"],
+        notes="Repair cracked/corroded cast iron DWV with no-hub coupling or Fernco band. Common in pre-1980 DFW homes.",
+    ),
+
+    "CAST_IRON_SECTION_REPLACE": LaborTemplateData(
+        code="CAST_IRON_SECTION_REPLACE",
+        name="Cast Iron — Section Replace (up to 5 LF)",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=1.0,
+        applicable_assemblies=["CAST_IRON_SECTION_KIT"],
+        notes="Cut and replace section of cast iron DWV with PVC. Transition couplings. DFW 1950s-1970s homes.",
+    ),
+
+    "CAST_IRON_STACK_REPLACE": LaborTemplateData(
+        code="CAST_IRON_STACK_REPLACE",
+        name="Cast Iron Vertical Stack — Full Replace",
+        category="service",
+        base_hours=10.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=2.0,
+        applicable_assemblies=[],
+        notes="Full vertical stack replacement cast iron to PVC. Multi-story. Permit required. Heavy demo.",
+    ),
+
+    "GALVANIZED_PIPE_REPAIR": LaborTemplateData(
+        code="GALVANIZED_PIPE_REPAIR",
+        name="Galvanized Supply Pipe — Spot Repair",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["GALV_REPAIR_KIT"],
+        notes="Repair corroded galvanized supply pipe section. Dielectric union to prevent future corrosion.",
+    ),
+
+    "GALVANIZED_TO_PEX_SECTION": LaborTemplateData(
+        code="GALVANIZED_TO_PEX_SECTION",
+        name="Galvanized-to-PEX Transition (per run)",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.5,
+        applicable_assemblies=["GALV_PEX_TRANSITION_KIT"],
+        notes="Replace single galvanized supply run with PEX. Transition adapter at each end. DFW 1940s-1960s homes.",
+    ),
+
+    "GALVANIZED_WHOLE_HOUSE_REPIPE": LaborTemplateData(
+        code="GALVANIZED_WHOLE_HOUSE_REPIPE",
+        name="Galvanized — Whole House Repipe to PEX",
+        category="service",
+        base_hours=16.0,
+        helper_required=True,
+        helper_hours=12.0,
+        disposal_hours=2.0,
+        applicable_assemblies=[],
+        notes="Complete removal of galvanized supply, repipe with PEX-A. Typical DFW pre-1970 home 1500-2500 SF.",
+    ),
+
+    "CPVC_PIPE_REPAIR": LaborTemplateData(
+        code="CPVC_PIPE_REPAIR",
+        name="CPVC Supply Pipe — Spot Repair",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["CPVC_REPAIR_KIT"],
+        notes="Repair cracked/brittle CPVC supply pipe. Solvent weld or transition to PEX. DFW 1985-2005 homes.",
+    ),
+
+    "CPVC_TO_PEX_SECTION": LaborTemplateData(
+        code="CPVC_TO_PEX_SECTION",
+        name="CPVC-to-PEX Transition (per run)",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["CPVC_PEX_TRANSITION_KIT"],
+        notes="Replace brittle CPVC run with PEX. Push-fit or crimp transition. Prevent future failures.",
+    ),
+
+    "LEAD_SERVICE_LINE_REPLACE": LaborTemplateData(
+        code="LEAD_SERVICE_LINE_REPLACE",
+        name="Lead Service Line — Replace (Meter to House)",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Replace lead service line per EPA LCRR requirement. Some older DFW neighborhoods affected.",
+    ),
+
+    "ORANGEBURG_SEWER_REPLACE": LaborTemplateData(
+        code="ORANGEBURG_SEWER_REPLACE",
+        name="Orangeburg Sewer Pipe — Replace",
+        category="service",
+        base_hours=10.0,
+        helper_required=True,
+        helper_hours=10.0,
+        disposal_hours=2.0,
+        applicable_assemblies=[],
+        notes="Replace deteriorated Orangeburg (bituminous fiber) sewer. Found in DFW 1945-1972 homes. Full excavation.",
+    ),
+
+    # ── R. Bathroom & Kitchen Remodel Packages ─────────────────────────────────
+
+    "BATH_REMODEL_PLUMBING_STANDARD": LaborTemplateData(
+        code="BATH_REMODEL_PLUMBING_STANDARD",
+        name="Standard Bath Remodel — Plumbing Package",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes=(
+            "Full plumbing for standard bath remodel: disconnect old fixtures, "
+            "relocate/rough supply & drain as needed, set new fixtures. "
+            "Tub/shower, toilet, vanity. DFW's #1 remodel request."
+        ),
+    ),
+
+    "BATH_REMODEL_PLUMBING_MASTER": LaborTemplateData(
+        code="BATH_REMODEL_PLUMBING_MASTER",
+        name="Master Bath Remodel — Plumbing Package",
+        category="service",
+        base_hours=14.0,
+        helper_required=True,
+        helper_hours=10.0,
+        disposal_hours=1.5,
+        applicable_assemblies=[],
+        notes=(
+            "Master bath plumbing remodel: dual vanity, walk-in shower or freestanding tub, "
+            "toilet relocate, possible body sprays. May include moving drain in slab."
+        ),
+    ),
+
+    "KITCHEN_REMODEL_PLUMBING": LaborTemplateData(
+        code="KITCHEN_REMODEL_PLUMBING",
+        name="Kitchen Remodel — Plumbing Package",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes=(
+            "Kitchen plumbing for remodel: sink relocate, dishwasher, disposal, ice maker, "
+            "pot filler, gas line for range. Island sink with AAV if applicable."
+        ),
+    ),
+
+    "TUB_TO_SHOWER_CONVERSION": LaborTemplateData(
+        code="TUB_TO_SHOWER_CONVERSION",
+        name="Tub-to-Shower Conversion — Plumbing",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Convert tub to walk-in shower: remove tub, relocate drain, install shower valve & pan drain.",
+    ),
+
+    "SHOWER_TO_TUB_CONVERSION": LaborTemplateData(
+        code="SHOWER_TO_TUB_CONVERSION",
+        name="Shower-to-Tub Conversion — Plumbing",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Convert shower stall to bathtub: modify drain, add tub spout, overflow. Reframe curb.",
+    ),
+
+    "SINGLE_TO_DOUBLE_VANITY": LaborTemplateData(
+        code="SINGLE_TO_DOUBLE_VANITY",
+        name="Single-to-Double Vanity — Plumbing Conversion",
+        category="service",
+        base_hours=4.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=[],
+        notes="Add second sink drain & supply for double vanity conversion. Extend waste arm and venting.",
+    ),
+
+    "LAUNDRY_ROOM_RELOCATE": LaborTemplateData(
+        code="LAUNDRY_ROOM_RELOCATE",
+        name="Laundry Room — Plumbing Relocate",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=0.5,
+        applicable_assemblies=[],
+        notes="Move washer/dryer plumbing to new location: extend supply, drain, gas. Cap old location.",
+    ),
+
+    # ── S. Smart Plumbing & IoT ────────────────────────────────────────────────
+
+    "SMART_WATER_MONITOR_INSTALL": LaborTemplateData(
+        code="SMART_WATER_MONITOR_INSTALL",
+        name="Smart Water Monitor — Install (Flume/Phyn)",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["SMART_MONITOR_KIT"],
+        notes="Non-invasive ultrasonic water monitor on main line. WiFi connected. No pipe cutting.",
+    ),
+
+    "SMART_SHUTOFF_VALVE_INSTALL": LaborTemplateData(
+        code="SMART_SHUTOFF_VALVE_INSTALL",
+        name="Smart Auto-Shutoff Valve — Install (Flo/Moen)",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["SMART_SHUTOFF_KIT"],
+        notes="In-line smart shutoff valve with leak detection. Requires pipe cut. WiFi + app control.",
+    ),
+
+    "SMART_LEAK_SENSOR_SYSTEM": LaborTemplateData(
+        code="SMART_LEAK_SENSOR_SYSTEM",
+        name="Smart Leak Sensor System — Multi-Point Install",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["LEAK_SENSOR_SYSTEM_KIT"],
+        notes="Deploy 5+ WiFi leak sensors at high-risk points: WH, washing machine, sinks, toilets.",
+    ),
+
+    "SMART_TOILET_INSTALL": LaborTemplateData(
+        code="SMART_TOILET_INSTALL",
+        name="Smart Toilet — Install (Bidet/Heated/Auto)",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.5,
+        applicable_assemblies=["SMART_TOILET_KIT"],
+        notes="Install smart toilet with bidet, heated seat, auto-flush. May require GFCI outlet.",
+    ),
+
+    "TOUCHLESS_FAUCET_RESIDENTIAL": LaborTemplateData(
+        code="TOUCHLESS_FAUCET_RESIDENTIAL",
+        name="Touchless/Motion Faucet — Residential Install",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["TOUCHLESS_FAUCET_KIT"],
+        notes="Residential motion-sensor kitchen or bath faucet. Battery or AC adapter powered.",
+    ),
+
+    "TANKLESS_POU_INSTALL": LaborTemplateData(
+        code="TANKLESS_POU_INSTALL",
+        name="Point-of-Use Tankless WH — Install",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["POU_TANKLESS_KIT"],
+        notes="Small electric tankless under sink or at remote fixture. Eliminates long hot water wait.",
+    ),
+
+    # ── T. Multi-Family & Condo ────────────────────────────────────────────────
+
+    "MULTIFAMILY_UNIT_SHUTOFF": LaborTemplateData(
+        code="MULTIFAMILY_UNIT_SHUTOFF",
+        name="Multi-Family Unit Shutoff Valve — Install",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Install individual unit shutoff valve in multi-family building. Allows unit-level isolation.",
+    ),
+
+    "MULTIFAMILY_RISER_REPAIR": LaborTemplateData(
+        code="MULTIFAMILY_RISER_REPAIR",
+        name="Multi-Family Water Riser — Repair",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.5,
+        applicable_assemblies=[],
+        notes="Repair shared water riser in multi-story building. Requires coordination with management.",
+    ),
+
+    "MULTIFAMILY_STACK_REPAIR": LaborTemplateData(
+        code="MULTIFAMILY_STACK_REPAIR",
+        name="Multi-Family DWV Stack — Repair",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Repair shared DWV stack in multi-family. Often cast iron. Coordinate with adjacent units.",
+    ),
+
+    "CONDO_WATER_HEATER_REPLACE": LaborTemplateData(
+        code="CONDO_WATER_HEATER_REPLACE",
+        name="Condo/Apartment WH — Replace (closet/utility)",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.5,
+        applicable_assemblies=[],
+        notes="WH replace in tight condo closet. Elevator building logistics, HOA coordination, pan required.",
+    ),
+
+    "SHARED_SEWER_LINE_REPAIR": LaborTemplateData(
+        code="SHARED_SEWER_LINE_REPAIR",
+        name="Shared Sewer Line — Repair (multi-unit)",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Repair shared sewer lateral serving multiple units. HOA/property management coordination.",
+    ),
+
+    # ── U. Medical & Healthcare Plumbing ───────────────────────────────────────
+
+    "MEDICAL_GAS_OUTLET_INSTALL": LaborTemplateData(
+        code="MEDICAL_GAS_OUTLET_INSTALL",
+        name="Medical Gas Outlet — Install (O2/Vacuum/Air)",
+        category="commercial",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.0,
+        applicable_assemblies=["MEDICAL_GAS_KIT"],
+        notes="NFPA 99 medical gas outlet. Requires certified installer. Dental, medical office, surgery center.",
+    ),
+
+    "LAB_WASTE_SYSTEM": LaborTemplateData(
+        code="LAB_WASTE_SYSTEM",
+        name="Laboratory Waste Drainage System — Install",
+        category="commercial",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=0.5,
+        applicable_assemblies=[],
+        notes="Acid-resistant (PP/PVDF) lab waste drainage. Neutralization tank. Medical/dental lab.",
+    ),
+
+    "DENTAL_CHAIR_PLUMBING": LaborTemplateData(
+        code="DENTAL_CHAIR_PLUMBING",
+        name="Dental Chair — Plumbing Hookup",
+        category="commercial",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Water supply, drain, vacuum, and air connections for dental operatory chair.",
+    ),
+
+    "AUTOCLAVE_PLUMBING": LaborTemplateData(
+        code="AUTOCLAVE_PLUMBING",
+        name="Autoclave/Sterilizer — Plumbing Hookup",
+        category="commercial",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Water supply and drain for medical/dental autoclave. May require DI/RO water connection.",
+    ),
+
+    # ── V. Restaurant & Food Service ───────────────────────────────────────────
+
+    "RESTAURANT_FLOOR_DRAIN_INSTALL": LaborTemplateData(
+        code="RESTAURANT_FLOOR_DRAIN_INSTALL",
+        name="Restaurant Floor Drain — Install",
+        category="commercial",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["RESTAURANT_FLOOR_DRAIN_KIT"],
+        notes="Heavy-duty floor drain with sediment bucket for commercial kitchen. Stainless strainer.",
+    ),
+
+    "RESTAURANT_HANDWASH_STATION": LaborTemplateData(
+        code="RESTAURANT_HANDWASH_STATION",
+        name="Restaurant Handwash Station — Install",
+        category="commercial",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.25,
+        applicable_assemblies=["HANDWASH_STATION_KIT"],
+        notes="Code-required handwash station with knee-valve or sensor faucet. Health department compliance.",
+    ),
+
+    "THREE_COMPARTMENT_SINK_INSTALL": LaborTemplateData(
+        code="THREE_COMPARTMENT_SINK_INSTALL",
+        name="3-Compartment Sink — Plumbing Install",
+        category="commercial",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.5,
+        applicable_assemblies=[],
+        notes="Commercial 3-bay sink with indirect waste, grease interceptor connection. Restaurant code.",
+    ),
+
+    "BAR_SINK_INSTALL": LaborTemplateData(
+        code="BAR_SINK_INSTALL",
+        name="Bar/Cocktail Sink — Plumbing Install",
+        category="commercial",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=[],
+        notes="Under-bar sink with glass rinser, ice bin drain, speed rail drain. Bar/restaurant.",
+    ),
+
+    "ICE_MACHINE_PLUMBING": LaborTemplateData(
+        code="ICE_MACHINE_PLUMBING",
+        name="Commercial Ice Machine — Plumbing Hookup",
+        category="commercial",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["ICE_MACHINE_KIT"],
+        notes="Water supply with filter, drain connection for commercial ice machine. Restaurant/bar.",
+    ),
+
+    "COMMERCIAL_COFFEE_HOOKUP": LaborTemplateData(
+        code="COMMERCIAL_COFFEE_HOOKUP",
+        name="Commercial Coffee/Espresso — Water Hookup",
+        category="commercial",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Dedicated water line with inline filter for commercial coffee equipment. Cafe/restaurant.",
+    ),
+
+    # ── W. Aging-in-Place & Accessibility ──────────────────────────────────────
+
+    "WALK_IN_TUB_INSTALL": LaborTemplateData(
+        code="WALK_IN_TUB_INSTALL",
+        name="Walk-In Tub — Plumbing Install",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Walk-in tub with rapid drain, thermostatic valve. Aging-in-place. Growing DFW senior market.",
+    ),
+
+    "COMFORT_HEIGHT_TOILET_ADA": LaborTemplateData(
+        code="COMFORT_HEIGHT_TOILET_ADA",
+        name="Comfort Height / ADA Toilet — Replace",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["ADA_TOILET_KIT"],
+        notes="Replace standard toilet with 17-19\" ADA comfort height. Elongated bowl preferred.",
+    ),
+
+    "LEVER_HANDLE_CONVERSION": LaborTemplateData(
+        code="LEVER_HANDLE_CONVERSION",
+        name="Faucet Knob-to-Lever Handle Conversion",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["LEVER_HANDLE_KIT"],
+        notes="Replace round knob handles with ADA lever handles. Per faucet. Arthritis/accessibility.",
+    ),
+
+    "RAISED_TOILET_SEAT_PLUMBING": LaborTemplateData(
+        code="RAISED_TOILET_SEAT_PLUMBING",
+        name="Raised Toilet Seat with Bidet — Plumbing",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Install raised toilet seat with integrated warm-water bidet. T-adapter + GFCI check.",
+    ),
+
+    "ANTI_SCALD_VALVE_RETROFIT": LaborTemplateData(
+        code="ANTI_SCALD_VALVE_RETROFIT",
+        name="Anti-Scald Valve Retrofit — Shower/Tub",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["ANTI_SCALD_KIT"],
+        notes="Retrofit thermostatic or pressure-balance anti-scald valve in existing shower. Code requirement.",
+    ),
+
+    # ── X. DFW-Specific Slab & Climate ─────────────────────────────────────────
+
+    "SLAB_LEAK_DETECTION_FULL": LaborTemplateData(
+        code="SLAB_LEAK_DETECTION_FULL",
+        name="Slab Leak Detection — Full Protocol (DFW)",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes=(
+            "Full DFW slab leak protocol: isolation test, electronic detection, "
+            "thermal imaging, moisture mapping. Report with repair options. "
+            "DFW #1 plumbing call category due to expansive clay soil."
+        ),
+    ),
+
+    "SLAB_LEAK_TUNNEL_REPAIR": LaborTemplateData(
+        code="SLAB_LEAK_TUNNEL_REPAIR",
+        name="Slab Leak — Tunnel Access Repair",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=1.0,
+        applicable_assemblies=[],
+        notes="Access slab leak by tunneling under foundation. Less destructive than jackhammer. DFW specialty.",
+    ),
+
+    "SLAB_LEAK_EPOXY_LINING": LaborTemplateData(
+        code="SLAB_LEAK_EPOXY_LINING",
+        name="Under-Slab Pipe — Epoxy Lining (per pipe)",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Trenchless epoxy lining of under-slab supply pipe. No excavation. DFW copper pinhole alternative.",
+    ),
+
+    "FOUNDATION_WATERING_SYSTEM": LaborTemplateData(
+        code="FOUNDATION_WATERING_SYSTEM",
+        name="Foundation Watering System — Install",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.0,
+        applicable_assemblies=["FOUNDATION_WATER_KIT"],
+        notes="Soaker hose system around foundation perimeter. Prevents expansive clay shrinkage. DFW essential.",
+    ),
+
+    "THERMAL_PIPE_EXPANSION_FIX": LaborTemplateData(
+        code="THERMAL_PIPE_EXPANSION_FIX",
+        name="Thermal Pipe Expansion Noise Fix",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Fix pipe popping/ticking from thermal expansion in attic or walls. DFW extreme heat cycles.",
+    ),
+
+    "ATTIC_PIPE_INSULATION_UPGRADE": LaborTemplateData(
+        code="ATTIC_PIPE_INSULATION_UPGRADE",
+        name="Attic Pipe Insulation — Upgrade / Replace",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["PIPE_INSULATION_KIT"],
+        notes="Upgrade pipe insulation in DFW attic. Prevents freeze + reduces heat gain. Foam or fiberglass.",
+    ),
+
+    # ── Y. Tankless & Water Heater Extended ────────────────────────────────────
+
+    "TANKLESS_ERROR_DIAGNOSTIC": LaborTemplateData(
+        code="TANKLESS_ERROR_DIAGNOSTIC",
+        name="Tankless WH Error Code Diagnostic",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Diagnose tankless WH error code: ignition fail, flame rod, flow sensor, exhaust temp.",
+    ),
+
+    "TANKLESS_VENT_INSTALL": LaborTemplateData(
+        code="TANKLESS_VENT_INSTALL",
+        name="Tankless WH Venting — Install/Modify",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.25,
+        applicable_assemblies=["TANKLESS_VENT_KIT"],
+        notes="Install or modify concentric or PVC vent for tankless WH. Wall or roof termination.",
+    ),
+
+    "TANKLESS_CONDENSATE_DRAIN": LaborTemplateData(
+        code="TANKLESS_CONDENSATE_DRAIN",
+        name="Tankless WH Condensate Drain — Install",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["CONDENSATE_NEUTRALIZER_KIT"],
+        notes="Install condensate drain and neutralizer for condensing tankless WH. Code requirement.",
+    ),
+
+    "WH_POWER_VENT_REPLACE": LaborTemplateData(
+        code="WH_POWER_VENT_REPLACE",
+        name="Power-Vent Water Heater — Replace",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.75,
+        applicable_assemblies=["POWER_VENT_WH_KIT"],
+        notes="Replace power-vent WH with blower motor. PVC venting. DFW condos/townhomes common.",
+    ),
+
+    "WH_CONVERSION_GAS_TO_ELECTRIC": LaborTemplateData(
+        code="WH_CONVERSION_GAS_TO_ELECTRIC",
+        name="Water Heater Conversion — Gas to Electric",
+        category="service",
+        base_hours=5.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.75,
+        applicable_assemblies=[],
+        notes="Convert gas WH to electric: cap gas line, install electric WH, may need electrical panel work.",
+    ),
+
+    # ── Z. Code Compliance & Inspection Prep ───────────────────────────────────
+
+    "PRE_INSPECTION_PREP": LaborTemplateData(
+        code="PRE_INSPECTION_PREP",
+        name="Pre-Inspection Plumbing Prep & Fixes",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Fix common code violations before city inspection: missing straps, slope, cleanouts, venting.",
+    ),
+
+    "HOME_SALE_PLUMBING_INSPECTION": LaborTemplateData(
+        code="HOME_SALE_PLUMBING_INSPECTION",
+        name="Home Sale — Plumbing Inspection & Report",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Full plumbing inspection for home sale. Written report with photos. DFW real estate requirement.",
+    ),
+
+    "CODE_VIOLATION_REMEDIATION": LaborTemplateData(
+        code="CODE_VIOLATION_REMEDIATION",
+        name="Code Violation Remediation (per issue)",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Fix cited plumbing code violation. Common: cross-connection, improper venting, S-traps.",
+    ),
+
+    "PERMIT_CLOSURE_INSPECTION_PREP": LaborTemplateData(
+        code="PERMIT_CLOSURE_INSPECTION_PREP",
+        name="Open Permit Closure — Inspection Prep",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Prepare for closing out open plumbing permit. Fix punch list items, schedule re-inspection.",
+    ),
+
+    "WATER_CONSERVATION_AUDIT": LaborTemplateData(
+        code="WATER_CONSERVATION_AUDIT",
+        name="Water Conservation Audit & Retrofit",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Audit fixtures for water conservation. Install aerators, low-flow showerheads, toilet flappers.",
+    ),
+
+    "CROSS_CONNECTION_SURVEY": LaborTemplateData(
+        code="CROSS_CONNECTION_SURVEY",
+        name="Cross-Connection Survey & Correction",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=[],
+        notes="Survey property for cross-connection hazards. Install vacuum breakers, air gaps as needed.",
+    ),
 }
 
 

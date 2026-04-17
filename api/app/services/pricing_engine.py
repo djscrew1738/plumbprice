@@ -133,6 +133,24 @@ _PERMIT_REQUIRED: dict[str, str] = {
     "GREYWATER_SYSTEM_INSTALL":     "general",
     "FLOOR_DRAIN_RESIDENTIAL":      "general",
     "CLEANOUT_INSTALL_EXTERIOR":    "sewer",
+    # ── Phase 5: pipe material, remodel, multi-family, medical permits ──
+    "CAST_IRON_STACK_REPLACE":      "general",
+    "GALVANIZED_WHOLE_HOUSE_REPIPE":"repipe",
+    "LEAD_SERVICE_LINE_REPLACE":    "repipe",
+    "ORANGEBURG_SEWER_REPLACE":     "sewer",
+    "BATH_REMODEL_PLUMBING_MASTER": "general",
+    "TUB_TO_SHOWER_CONVERSION":     "general",
+    "SHOWER_TO_TUB_CONVERSION":     "general",
+    "LAUNDRY_ROOM_RELOCATE":        "general",
+    "MEDICAL_GAS_OUTLET_INSTALL":   "general",
+    "LAB_WASTE_SYSTEM":             "general",
+    "RESTAURANT_FLOOR_DRAIN_INSTALL":"general",
+    "THREE_COMPARTMENT_SINK_INSTALL":"general",
+    "WALK_IN_TUB_INSTALL":          "general",
+    "SLAB_LEAK_TUNNEL_REPAIR":      "general",
+    "WH_POWER_VENT_REPLACE":        "water_heater",
+    "WH_CONVERSION_GAS_TO_ELECTRIC":"water_heater",
+    "SHARED_SEWER_LINE_REPAIR":     "sewer",
 }
 
 # ─── Trip / Service Call Charge ───────────────────────────────────────────────
