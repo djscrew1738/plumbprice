@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 from app.database import Base
 
 
@@ -34,6 +35,7 @@ class DocumentChunk(Base):
     content = Column(Text, nullable=False)
     # embedding vector stored as JSON for now (pgvector extension adds proper vector column)
     embedding_json = Column(JSON, nullable=True)
+    embedding = Column(Vector(768), nullable=True)
     metadata_json = Column(JSON, nullable=True)
     token_count = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

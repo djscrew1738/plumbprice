@@ -193,6 +193,7 @@ async def chat_price_stream(
 
     # Use template_name already resolved by process_chat_message (avoids redundant lookup)
     template_name = result.get("_template_name") or result.get("template_used") or ""
+    rag_context = result.get("_rag_context") or ""
     quantity = result.get("classification", {}).get("quantity", 1) if result.get("classification") else 1
     est = pricing_event["estimate"]
 
@@ -214,6 +215,7 @@ async def chat_price_stream(
                         county=body.county or "Dallas",
                         quantity=quantity,
                         history=history or None,
+                        context=rag_context
                     ):
                         yield f"event: token\ndata: {json.dumps(token)}\n\n"
                 else:

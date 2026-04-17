@@ -17,6 +17,7 @@ from app.services.pricing_engine import pricing_engine, EstimateResult, Material
 from app.services.supplier_service import supplier_service, MATERIAL_ASSEMBLIES
 from app.services.labor_engine import get_template, LABOR_TEMPLATES as LABOR_MAP
 from app.services.llm_service import llm_service
+from app.services.rag_service import rag_service
 
 logger = structlog.get_logger()
 
@@ -1272,6 +1273,17 @@ async def process_chat_message(
     template      = get_template(result.template_code or "")
     template_name = template.name if template else (result.template_code or "")
 
+    # Retrieve RAG context if DB session is available
+    rag_context = ""
+    if db:
+        try:
+            chunks = await rag_service.retrieve(db, message, top_k=3)
+            if chunks:
+                rag_context = "\n".join([f"Source: {c['source']}\n{c['content']}" for c in chunks])
+                logger.info("rag.context_retrieved", chunks=len(chunks))
+        except Exception as e:
+            logger.warning("rag.retrieve_failed", error=str(e))
+
     llm_opener = None
     if not skip_llm_response:
         llm_opener = await llm_service.generate_response(
@@ -1284,10 +1296,12 @@ async def process_chat_message(
             county=result.county,
             quantity=quantity,
             history=history,
+            context=rag_context
         )
 
     # ── Step 6: Format final response ────────────────────────────────────────
     response = format_estimate_response(result, classification, message, llm_opener=llm_opener)
     response["_estimate_result"] = result   # raw, for callers (not serialised)
     response["_template_name"]   = template_name  # for stream endpoint
+    response["_rag_context"]     = rag_context  # for stream endpoint
     return response

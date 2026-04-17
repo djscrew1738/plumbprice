@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     llm_timeout: float = Field(default=30.0, env="LLM_TIMEOUT")
     llm_classify_timeout: float = Field(default=20.0, env="LLM_CLASSIFY_TIMEOUT")
     llm_classify_threshold: float = Field(default=0.75, env="LLM_CLASSIFY_THRESHOLD")
+    llm_embedding_model: str = Field(default="nomic-embed-text", env="LLM_EMBEDDING_MODEL")
+    llm_vision_model: str = Field(default="llama3.2-vision", env="LLM_VISION_MODEL")
 
     # CORS
     cors_origins: list[str] = Field(

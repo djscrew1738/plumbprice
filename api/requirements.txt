@@ -20,3 +20,6 @@ pytest-asyncio
 httpx
 aiosqlite
 ipdb
+pytest-cov
+minio
+pymupdf

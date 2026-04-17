@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "build:prod": "API_URL=https://pricing.ctlplumbingllc.com NEXT_PUBLIC_API_URL=https://pricing.ctlplumbingllc.com next build",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },

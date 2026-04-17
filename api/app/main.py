@@ -12,7 +12,7 @@ import uuid
 
 from app.config import settings
 from app.database import init_db, AsyncSessionLocal
-from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates
+from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -251,8 +251,10 @@ app.include_router(projects.router,  prefix="/api/v1/projects",    tags=["projec
 app.include_router(suppliers.router, prefix="/api/v1/suppliers",   tags=["suppliers"])
 app.include_router(blueprints.router,prefix="/api/v1/blueprints",  tags=["blueprints"])
 app.include_router(proposals.router, prefix="/api/v1/proposals",   tags=["proposals"])
+app.include_router(documents.router, prefix="/api/v1/documents",   tags=["documents"])
 app.include_router(admin.router,     prefix="/api/v1/admin",       tags=["admin"])
 app.include_router(templates.router,  prefix="/api/v1/templates", tags=["templates"])
+app.include_router(health.router,    tags=["health"])
 
 
 @app.get("/health")

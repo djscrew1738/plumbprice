@@ -242,6 +242,7 @@ class LLMService:
         county: str,
         quantity: int = 1,
         history: list[dict] | None = None,
+        context: str | None = None,
     ) -> Optional[str]:
         """
         Generate a conversational, contractor-style opener for the pricing response.
@@ -255,11 +256,14 @@ class LLMService:
             return None
 
         qty_note = f" (×{quantity} units — ${grand_total / quantity:,.0f} each)" if quantity > 1 else ""
+        context_note = f"\n\nSupporting technical context:\n{context}" if context else ""
+
         user_prompt = (
             f'Customer question: "{message}"\n\n'
             f"Estimate: {template_name} — {county} County, TX{qty_note}\n"
             f"  Grand total: ${grand_total:,.0f}\n"
-            f"  Labor: ${labor_total:,.0f}  |  Materials: ${materials_total:,.0f}  |  Tax: ${tax_total:,.2f}\n\n"
+            f"  Labor: ${labor_total:,.0f}  |  Materials: ${materials_total:,.0f}  |  Tax: ${tax_total:,.2f}"
+            f"{context_note}\n\n"
             "Write your 2-3 sentence response:"
         )
 
@@ -304,6 +308,7 @@ class LLMService:
         county: str,
         quantity: int = 1,
         history: list[dict] | None = None,
+        context: str | None = None,
     ):
         """
         Async generator that yields text chunks for SSE streaming.
@@ -317,11 +322,14 @@ class LLMService:
             return
 
         qty_note = f" (×{quantity} units — ${grand_total / quantity:,.0f} each)" if quantity > 1 else ""
+        context_note = f"\n\nSupporting technical context:\n{context}" if context else ""
+
         user_prompt = (
             f'Customer question: "{message}"\n\n'
             f"Estimate: {template_name} — {county} County, TX{qty_note}\n"
             f"  Grand total: ${grand_total:,.0f}\n"
-            f"  Labor: ${labor_total:,.0f}  |  Materials: ${materials_total:,.0f}  |  Tax: ${tax_total:,.2f}\n\n"
+            f"  Labor: ${labor_total:,.0f}  |  Materials: ${materials_total:,.0f}  |  Tax: ${tax_total:,.2f}"
+            f"{context_note}\n\n"
             "Write your 2-3 sentence response:"
         )
 
