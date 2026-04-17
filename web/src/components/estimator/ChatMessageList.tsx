@@ -7,6 +7,7 @@ import type { ChatMessage } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import { InlineEstimateCard } from './InlineEstimateCard'
 import { ChatSkeleton } from '@/components/ui/Skeleton'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 function formatTime(d: Date) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
@@ -55,15 +56,16 @@ export function ChatMessageList({
                   <div className="chat-prose pr-4">
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onCopyMessage(message.id, message.content)}
-                    className="absolute right-2 top-2 rounded-lg p-2.5 min-w-[36px] min-h-[36px] text-[color:var(--muted-ink)] opacity-100 transition-all hover:bg-[color:var(--panel-strong)] lg:opacity-0 lg:group-hover:opacity-100"
-                    title="Copy"
-                    aria-label="Copy response"
-                  >
-                    {copiedId === message.id ? <Check size={13} className="text-[hsl(var(--success))]" /> : <Copy size={13} />}
-                  </button>
+                  <Tooltip content="Copy">
+                    <button
+                      type="button"
+                      onClick={() => onCopyMessage(message.id, message.content)}
+                      className="absolute right-2 top-2 rounded-lg p-2.5 min-w-[36px] min-h-[36px] text-[color:var(--muted-ink)] opacity-100 transition-all hover:bg-[color:var(--panel-strong)] lg:opacity-0 lg:group-hover:opacity-100"
+                      aria-label="Copy response"
+                    >
+                      {copiedId === message.id ? <Check size={13} className="text-[hsl(var(--success))]" /> : <Copy size={13} />}
+                    </button>
+                  </Tooltip>
                 </>
               ) : (
                 message.content

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -15,6 +15,7 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { badgeVariants } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 interface Estimate {
   id: number; title: string; job_type: string; status: string
@@ -145,6 +146,7 @@ export function EstimatesListPage() {
   const [search,        setSearch]        = useState('')
   const [sortBy,        setSortBy]        = useState<SortKey>('newest')
   const [sortOpen,      setSortOpen]      = useState(false)
+  const sortRef = useRef<HTMLDivElement>(null)
 
   const fetchEstimates = useCallback(async () => {
     try {
@@ -161,6 +163,18 @@ export function EstimatesListPage() {
   }, [filter])
 
   useEffect(() => { fetchEstimates() }, [fetchEstimates])
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    if (!sortOpen) return
+    const handler = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [sortOpen])
 
   const handleStatusChange = (id: number, status: string) => {
     setEstimates(prev => prev.map(e => e.id === id ? { ...e, status } : e))
@@ -227,6 +241,7 @@ export function EstimatesListPage() {
                 <button
                   key={f.value}
                   onClick={() => setFilter(f.value)}
+                  aria-pressed={filter === f.value}
                   className={cn(
                     'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
                     filter === f.value
@@ -239,33 +254,35 @@ export function EstimatesListPage() {
               ))}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => {
-                  const rows = [
-                    ['ID', 'Title', 'Job Type', 'Status', 'County', 'Grand Total', 'Confidence', 'Created'],
-                    ...visible.map(e => [
-                      String(e.id), e.title, e.job_type, e.status, e.county,
-                      String(e.grand_total), e.confidence_label,
-                      new Date(e.created_at).toLocaleDateString(),
-                    ]),
-                  ]
-                  const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
-                  const a = Object.assign(document.createElement('a'), {
-                    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
-                    download: 'estimates.csv',
-                  })
-                  a.click()
-                }}
-                className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-                title="Export visible estimates as CSV"
-                aria-label="Export CSV"
-              >
-                <Download size={15} />
-              </button>
+              <Tooltip content="Export visible estimates as CSV">
+                <button
+                  onClick={() => {
+                    const rows = [
+                      ['ID', 'Title', 'Job Type', 'Status', 'County', 'Grand Total', 'Confidence', 'Created'],
+                      ...visible.map(e => [
+                        String(e.id), e.title, e.job_type, e.status, e.county,
+                        String(e.grand_total), e.confidence_label,
+                        new Date(e.created_at).toLocaleDateString(),
+                      ]),
+                    ]
+                    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
+                    const a = Object.assign(document.createElement('a'), {
+                      href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+                      download: 'estimates.csv',
+                    })
+                    a.click()
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                  aria-label="Export CSV"
+                >
+                  <Download size={15} />
+                  <span className="hidden sm:inline text-xs font-medium">Export</span>
+                </button>
+              </Tooltip>
               <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Refresh estimates">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
-              <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2">
+              <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2" aria-label="New estimate">
                 <Plus size={15} /><span className="hidden sm:inline">New</span>
               </button>
             </div>
@@ -281,7 +298,7 @@ export function EstimatesListPage() {
               aria-label="Search estimates"
             />
             {/* Sort dropdown */}
-            <div className="relative">
+            <div className="relative" ref={sortRef}>
               <button
                 onClick={() => setSortOpen(o => !o)}
                 className="flex items-center gap-1.5 px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-xs font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-all whitespace-nowrap"
@@ -442,22 +459,26 @@ export function EstimatesListPage() {
                           </div>
                         ) : (
                           <>
-                            <button
-                              onClick={e => handleDuplicate(est.id, e)}
-                              disabled={duplicating === est.id}
-                              className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
-                              title="Duplicate"
-                            >
-                              {duplicating === est.id ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
-                              disabled={deleting === est.id}
-                              className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
-                              title="Delete"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <Tooltip content="Duplicate">
+                              <button
+                                onClick={e => handleDuplicate(est.id, e)}
+                                disabled={duplicating === est.id}
+                                className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+                                aria-label="Duplicate estimate"
+                              >
+                                {duplicating === est.id ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
+                              </button>
+                            </Tooltip>
+                            <Tooltip content="Delete">
+                              <button
+                                onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
+                                disabled={deleting === est.id}
+                                className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
+                                aria-label="Delete estimate"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </Tooltip>
                           </>
                         )}
                       </div>
@@ -498,7 +519,7 @@ export function EstimatesListPage() {
                         <td className="px-4 py-3 font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(est.grand_total)}</td>
                         <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs whitespace-nowrap">{formatDate(est.created_at)}</td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                          <div className={cn('flex items-center gap-1 transition-opacity', confirmDelete === est.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')} onClick={e => e.stopPropagation()}>
                             {confirmDelete === est.id ? (
                               <>
                                 <span className="text-[11px] text-[hsl(var(--danger))] font-medium mr-1">Delete?</span>
@@ -517,16 +538,16 @@ export function EstimatesListPage() {
                                 <button
                                   onClick={e => handleDuplicate(est.id, e)}
                                   disabled={duplicating === est.id}
-                                  className="p-1.5 rounded-lg hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
-                                  title="Duplicate"
+                                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+                                  aria-label="Duplicate estimate"
                                 >
                                   {duplicating === est.id ? <RefreshCw size={12} className="animate-spin" /> : <Copy size={12} />}
                                 </button>
                                 <button
                                   onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
                                   disabled={deleting === est.id}
-                                  className="p-1.5 rounded-lg hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
-                                  title="Delete"
+                                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
+                                  aria-label="Delete estimate"
                                 >
                                   <Trash2 size={13} />
                                 </button>

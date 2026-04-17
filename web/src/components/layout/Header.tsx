@@ -7,6 +7,7 @@ import { Menu, MapPin, LogOut, Settings, ChevronRight } from 'lucide-react'
 import { getPageMeta, PAGE_META } from './nav'
 import { ThemeToggle } from './ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 function getUserInitials(name: string | undefined, email: string | undefined): string {
   if (name) {
@@ -88,7 +89,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             </h1>
           </Link>
           {breadcrumb.length > 1 && (
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1 mt-0.5">
+            <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-1 mt-0.5">
               {breadcrumb.map((crumb, i) => (
                 <span key={crumb.href} className="flex items-center gap-1">
                   {i > 0 && <ChevronRight size={10} className="text-[color:var(--muted-ink)] opacity-50" />}
@@ -109,26 +110,28 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             </nav>
           )}
         </div>
-        <div
-          className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 sm:flex"
-          title="Dallas-Fort Worth metro area"
-        >
-          <MapPin size={12} className="text-[color:var(--accent-strong)]" />
-          <span className="text-xs font-medium text-[color:var(--muted-ink)]">DFW</span>
-        </div>
+        <Tooltip content="Dallas-Fort Worth metro area">
+          <div
+            className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 sm:flex"
+          >
+            <MapPin size={12} className="text-[color:var(--accent-strong)]" />
+            <span className="text-xs font-medium text-[color:var(--muted-ink)]">DFW</span>
+          </div>
+        </Tooltip>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen(prev => !prev)}
-              title={displayName}
-              aria-label={`Signed in as ${displayName}`}
-              aria-expanded={menuOpen}
-              aria-haspopup="true"
-              className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] cursor-pointer select-none transition-colors hover:bg-[color:var(--accent-strong)] hover:text-white"
-            >
-              {initials}
-            </button>
+            <Tooltip content={displayName}>
+              <button
+                onClick={() => setMenuOpen(prev => !prev)}
+                aria-label={`Signed in as ${displayName}`}
+                aria-expanded={menuOpen}
+                aria-haspopup="true"
+                className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] cursor-pointer select-none transition-colors hover:bg-[color:var(--accent-strong)] hover:text-white"
+              >
+                {initials}
+              </button>
+            </Tooltip>
             {menuOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-50">
                 <div className="border-b border-[color:var(--line)] px-4 py-3">

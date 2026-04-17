@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ function JobCard({ job, onRemove }: { job: BlueprintJob; onRemove: (id: string) 
       {/* Remove */}
       <button
         onClick={() => onRemove(job.id)}
-        className="p-1.5 rounded-lg hover:bg-white/[0.07] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
+        className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-white/[0.07] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
         aria-label={`Remove ${job.filename}`}
       >
         <X size={14} />
@@ -188,6 +189,7 @@ function JobCard({ job, onRemove }: { job: BlueprintJob; onRemove: (id: string) 
 
 export function BlueprintsPage() {
   const [jobs, setJobs] = useState<BlueprintJob[]>([])
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
 
   const handleFiles = useCallback((files: File[]) => {
     const newJobs: BlueprintJob[] = files.map(file => ({
@@ -299,7 +301,7 @@ export function BlueprintsPage() {
                 Uploaded files ({jobs.length})
               </p>
               <button
-                onClick={() => setJobs([])}
+                onClick={() => setConfirmClearAll(true)}
                 className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
                 aria-label="Clear all uploaded files"
               >
@@ -313,6 +315,16 @@ export function BlueprintsPage() {
                 ))}
               </AnimatePresence>
             </div>
+
+            <ConfirmDialog
+              open={confirmClearAll}
+              onClose={() => setConfirmClearAll(false)}
+              onConfirm={() => { setJobs([]); setConfirmClearAll(false) }}
+              title="Clear all uploads"
+              description={`Remove all ${jobs.length} uploaded file${jobs.length !== 1 ? 's' : ''}? This cannot be undone.`}
+              confirmLabel="Clear All"
+              variant="danger"
+            />
           </div>
         )}
       </div>

@@ -189,24 +189,26 @@ function OutcomeButtons({
 
   return (
     <div className="flex items-center gap-1">
-      <button
-        onClick={() => onRecordOutcome('won')}
-        disabled={outcomeSubmitting}
-        title="Mark as won"
-        aria-label="Mark estimate as won"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.18)] transition-colors disabled:opacity-40"
-      >
-        Won
-      </button>
-      <button
-        onClick={() => onRecordOutcome('lost')}
-        disabled={outcomeSubmitting}
-        title="Mark as lost"
-        aria-label="Mark estimate as lost"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.18)] transition-colors disabled:opacity-40"
-      >
-        Lost
-      </button>
+      <Tooltip content="Mark as won">
+        <button
+          onClick={() => onRecordOutcome('won')}
+          disabled={outcomeSubmitting}
+          aria-label="Mark estimate as won"
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.18)] transition-colors disabled:opacity-40"
+        >
+          Won
+        </button>
+      </Tooltip>
+      <Tooltip content="Mark as lost">
+        <button
+          onClick={() => onRecordOutcome('lost')}
+          disabled={outcomeSubmitting}
+          aria-label="Mark estimate as lost"
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.18)] transition-colors disabled:opacity-40"
+        >
+          Lost
+        </button>
+      </Tooltip>
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Keyboard, X } from 'lucide-react'
 import { PRIMARY_NAV, SECONDARY_NAV, matchesPathname } from './nav'
 import { RecentJobsList } from '@/components/workspace/RecentJobsList'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => void; showRecentRail?: boolean }) {
   const pathname = usePathname()
@@ -89,15 +90,17 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
 
         {/* Keyboard shortcut hint */}
         <div className="border-t border-[color:var(--line)] px-3 py-3">
-          <button
-            onClick={openShortcuts}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
-            title="View keyboard shortcuts"
-          >
-            <Keyboard size={13} />
-            <span>Keyboard shortcuts</span>
-            <kbd className="ml-auto rounded border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-1.5 py-0.5 font-mono text-[10px]">?</kbd>
-          </button>
+          <Tooltip content="View keyboard shortcuts" side="right">
+            <button
+              onClick={openShortcuts}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
+              aria-label="View keyboard shortcuts"
+            >
+              <Keyboard size={13} />
+              <span>Keyboard shortcuts</span>
+              <kbd className="ml-auto rounded border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-1.5 py-0.5 font-mono text-[10px]">?</kbd>
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

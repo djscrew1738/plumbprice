@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Badge } from '@/components/ui/Badge'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 // ─── Company config (move to /api/v1/settings when multi-tenant) ──────────────
 const COMPANY = {
@@ -276,15 +277,16 @@ function ProposalModal({
                 {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
-                title="Download as .txt"
-                aria-label="Download proposal"
-              >
-                <Download size={13} />
-                <span className="hidden sm:inline">Download</span>
-              </button>
+              <Tooltip content="Download as .txt">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
+                  aria-label="Download proposal"
+                >
+                  <Download size={13} />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+              </Tooltip>
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-colors"

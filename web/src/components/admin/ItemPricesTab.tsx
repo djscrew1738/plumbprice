@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 const SUPPLIERS = ['ferguson', 'moore_supply', 'apex'] as const
 type SupplierSlug = typeof SUPPLIERS[number]
@@ -75,14 +76,15 @@ export function ItemPricesTab({
       key: 'actions',
       header: '',
       render: (item) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); onOpenEditItem(item) }}
-          className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
-          title="Edit prices"
-          aria-label={`Edit prices for ${item.canonical_item}`}
-        >
-          <Pencil size={12} />
-        </button>
+        <Tooltip content="Edit prices">
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenEditItem(item) }}
+            className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
+            aria-label={`Edit prices for ${item.canonical_item}`}
+          >
+            <Pencil size={12} />
+          </button>
+        </Tooltip>
       ),
     },
   ], [onOpenEditItem])

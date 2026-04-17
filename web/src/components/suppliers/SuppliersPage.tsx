@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 interface SupplierPrice { name: string; sku: string; cost: number }
 interface CatalogItem {
@@ -286,13 +287,15 @@ export function SuppliersPage() {
                                       </div>
                                       <div className="flex items-center gap-1.5 mt-0.5">
                                         <span className="text-[11px] text-[color:var(--muted-ink)] font-mono">{p.sku}</span>
-                                        <button
-                                          onClick={e => { e.stopPropagation(); copySku(p.sku) }}
-                                          className="p-0.5 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-                                          title="Copy SKU"
-                                        >
-                                          {copiedSku === p.sku ? <Check size={10} className="text-emerald-600" /> : <Copy size={10} />}
-                                        </button>
+                                        <Tooltip content="Copy SKU">
+                                          <button
+                                            onClick={e => { e.stopPropagation(); copySku(p.sku) }}
+                                            className="flex min-h-[28px] min-w-[28px] items-center justify-center rounded-lg p-1.5 text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] transition-colors"
+                                            aria-label={`Copy SKU ${p.sku}`}
+                                          >
+                                            {copiedSku === p.sku ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                          </button>
+                                        </Tooltip>
                                       </div>
                                     </div>
                                     <div className={cn('text-sm font-bold tabular-nums', isBest ? 'text-emerald-700' : 'text-[color:var(--muted-ink)]')}>

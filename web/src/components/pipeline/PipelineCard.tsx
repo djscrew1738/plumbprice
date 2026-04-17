@@ -104,10 +104,12 @@ export function PipelineCard({ project, delay, stageKeys, onMove }: PipelineCard
       <div className="flex items-center justify-between text-[11px]">
         <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
           <span>{project.estimate_count} {project.estimate_count === 1 ? 'estimate' : 'estimates'}</span>
-          <span className="flex items-center gap-0.5" title={new Date(project.created_at).toLocaleDateString()}>
-            <Clock size={9} />
-            {timeAgo(project.created_at)}
-          </span>
+          <Tooltip content={new Date(project.created_at).toLocaleDateString()}>
+            <span className="flex items-center gap-0.5">
+              <Clock size={9} />
+              {timeAgo(project.created_at)}
+            </span>
+          </Tooltip>
         </div>
         <div className="flex items-center gap-1">
           {project.status === 'won' && (
