@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,8 +7,9 @@ import structlog
 
 from app.database import get_db
 from app.models.labor import LaborTemplate, MarkupRule
+from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.services.labor_engine import LABOR_TEMPLATES, list_template_codes, get_template
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, get_current_admin
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -225,3 +227,188 @@ async def import_pricing_templates(db: AsyncSession = Depends(get_db), current_u
 
     await db.commit()
     return {"imported": processed}
+
+
+# ─── Canonical Item CRUD ──────────────────────────────────────────────────────
+
+class SupplierPriceInput(BaseModel):
+    sku: Optional[str] = None
+    name: str
+    cost: float
+    unit: str = "ea"
+
+
+@router.get("/canonical-items")
+async def list_canonical_items(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """List all distinct canonical items with their per-supplier prices from DB."""
+    result = await db.execute(
+        select(SupplierProduct, Supplier.slug)
+        .join(Supplier, SupplierProduct.supplier_id == Supplier.id)
+        .where(SupplierProduct.is_active == True)
+        .order_by(SupplierProduct.canonical_item, Supplier.slug)
+    )
+    rows = result.all()
+
+    items: dict[str, dict] = {}
+    for product, slug in rows:
+        ci = product.canonical_item
+        if ci not in items:
+            items[ci] = {"canonical_item": ci, "suppliers": {}}
+        items[ci]["suppliers"][slug] = {
+            "id": product.id,
+            "sku": product.sku,
+            "name": product.name,
+            "cost": product.cost,
+            "unit": product.unit,
+            "confidence_score": product.confidence_score,
+            "last_verified": product.last_verified,
+        }
+
+    return {"count": len(items), "items": list(items.values())}
+
+
+@router.get("/canonical-items/{canonical_item:path}")
+async def get_canonical_item(
+    canonical_item: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """Get all supplier prices for a single canonical item."""
+    result = await db.execute(
+        select(SupplierProduct, Supplier.slug)
+        .join(Supplier, SupplierProduct.supplier_id == Supplier.id)
+        .where(
+            SupplierProduct.canonical_item == canonical_item,
+            SupplierProduct.is_active == True,
+        )
+    )
+    rows = result.all()
+    if not rows:
+        # Fall back to CANONICAL_MAP for items not yet in DB
+        from app.services.supplier_service import CANONICAL_MAP
+        if canonical_item not in CANONICAL_MAP:
+            raise HTTPException(status_code=404, detail=f"Canonical item '{canonical_item}' not found")
+        return {
+            "canonical_item": canonical_item,
+            "source": "in_memory",
+            "suppliers": CANONICAL_MAP[canonical_item],
+        }
+
+    suppliers = {}
+    for product, slug in rows:
+        suppliers[slug] = {
+            "id": product.id,
+            "sku": product.sku,
+            "name": product.name,
+            "cost": product.cost,
+            "unit": product.unit,
+            "confidence_score": product.confidence_score,
+            "last_verified": product.last_verified,
+        }
+    return {"canonical_item": canonical_item, "source": "database", "suppliers": suppliers}
+
+
+@router.put("/canonical-items/{canonical_item:path}/{supplier_slug}")
+async def upsert_canonical_item_price(
+    canonical_item: str,
+    supplier_slug: str,
+    body: SupplierPriceInput,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """
+    Create or update the price for a specific (canonical_item, supplier) pair.
+    Records a price history entry when cost changes.
+    """
+    # Resolve supplier
+    sup_result = await db.execute(select(Supplier).where(Supplier.slug == supplier_slug))
+    supplier = sup_result.scalar_one_or_none()
+    if not supplier:
+        raise HTTPException(status_code=404, detail=f"Supplier '{supplier_slug}' not found")
+
+    # Get existing product
+    prod_result = await db.execute(
+        select(SupplierProduct).where(
+            SupplierProduct.supplier_id == supplier.id,
+            SupplierProduct.canonical_item == canonical_item,
+        )
+    )
+    product = prod_result.scalar_one_or_none()
+
+    if product:
+        old_cost = product.cost
+        product.sku = body.sku or product.sku
+        product.name = body.name
+        product.cost = round(body.cost, 2)
+        product.unit = body.unit
+        if abs(old_cost - body.cost) > 0.001:
+            db.add(SupplierPriceHistory(product_id=product.id, cost=body.cost, source="admin"))
+        action = "updated"
+    else:
+        product = SupplierProduct(
+            supplier_id=supplier.id,
+            canonical_item=canonical_item,
+            sku=body.sku,
+            name=body.name,
+            cost=round(body.cost, 2),
+            unit=body.unit,
+            confidence_score=1.0,
+            is_active=True,
+        )
+        db.add(product)
+        await db.flush()
+        db.add(SupplierPriceHistory(product_id=product.id, cost=body.cost, source="admin"))
+        action = "created"
+
+    await db.commit()
+    await db.refresh(product)
+
+    logger.info(
+        "canonical_item.price_updated",
+        canonical_item=canonical_item,
+        supplier=supplier_slug,
+        action=action,
+        cost=body.cost,
+        admin_id=current_user.id,
+    )
+    return {
+        "action": action,
+        "canonical_item": canonical_item,
+        "supplier": supplier_slug,
+        "id": product.id,
+        "cost": product.cost,
+        "sku": product.sku,
+    }
+
+
+@router.delete("/canonical-items/{canonical_item:path}/{supplier_slug}")
+async def deactivate_canonical_item_price(
+    canonical_item: str,
+    supplier_slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """Soft-delete (deactivate) a supplier price for a canonical item."""
+    sup_result = await db.execute(select(Supplier).where(Supplier.slug == supplier_slug))
+    supplier = sup_result.scalar_one_or_none()
+    if not supplier:
+        raise HTTPException(status_code=404, detail=f"Supplier '{supplier_slug}' not found")
+
+    prod_result = await db.execute(
+        select(SupplierProduct).where(
+            SupplierProduct.supplier_id == supplier.id,
+            SupplierProduct.canonical_item == canonical_item,
+            SupplierProduct.is_active == True,
+        )
+    )
+    product = prod_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Price not found")
+
+    product.is_active = False
+    await db.commit()
+    logger.info("canonical_item.deactivated", canonical_item=canonical_item, supplier=supplier_slug)
+    return {"deactivated": True, "canonical_item": canonical_item, "supplier": supplier_slug}
