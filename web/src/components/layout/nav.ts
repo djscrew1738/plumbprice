@@ -1,12 +1,16 @@
 import {
+  BarChart3,
   BriefcaseBusiness,
   FileOutput,
+  FileStack,
   FileText,
   House,
   Layers,
+  MessageSquare,
   MoreHorizontal,
   Package,
   Settings,
+  SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,8 +32,12 @@ export const PRIMARY_NAV: AppNavItem[] = [
 ]
 
 export const SECONDARY_NAV: AppNavItem[] = [
+  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/sessions', label: 'Chat History', icon: MessageSquare },
   { href: '/suppliers', label: 'Suppliers', icon: Package },
+  { href: '/documents', label: 'Documents', icon: FileStack },
   { href: '/admin', label: 'Admin', icon: Settings },
+  { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ]
 
 export const MORE_LINKS: AppNavItem[] = [
@@ -50,10 +58,14 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/estimator': { title: 'Pricing Workspace', eyebrow: 'Build and review a live estimate' },
   '/estimates': { title: 'Saved Estimates', eyebrow: 'Resume and review recent pricing work' },
   '/pipeline': { title: 'Pipeline', eyebrow: 'Track open bids and won work' },
+  '/analytics': { title: 'Analytics', eyebrow: 'Outcome insights and performance trends' },
   '/suppliers': { title: 'Suppliers', eyebrow: 'Compare catalog pricing' },
   '/admin': { title: 'Admin', eyebrow: 'Manage pricing rules and templates' },
   '/blueprints': { title: 'Blueprints', eyebrow: 'Upload-led estimating entry point' },
   '/proposals': { title: 'Proposals', eyebrow: 'Customer-ready bid outputs' },
+  '/documents': { title: 'Documents', eyebrow: 'Manage uploaded documents' },
+  '/sessions': { title: 'Chat History', eyebrow: 'Browse and resume past conversations' },
+  '/settings': { title: 'Settings', eyebrow: 'Manage your account and organization' },
 }
 
 export function matchesPathname(pathname: string, href: string) {

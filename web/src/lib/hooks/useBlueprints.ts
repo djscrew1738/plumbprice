@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { blueprintsApi } from '@/lib/api'
+import { useToast } from '@/components/ui/Toast'
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ export function useBlueprints(
 
 export function useUploadBlueprint() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async (file: File) => {
@@ -50,15 +52,37 @@ export function useUploadBlueprint() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: blueprintKeys.all })
     },
+    onError: () => {
+      toast.error('Failed to upload blueprint')
+    },
   })
 }
 
 export function useDeleteBlueprint() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: (jobId: string) => blueprintsApi.delete(jobId),
+    onMutate: async (jobId) => {
+      await queryClient.cancelQueries({ queryKey: blueprintKeys.all })
+      const previous = queryClient.getQueryData<BlueprintJob[]>(blueprintKeys.all)
+      queryClient.setQueryData<BlueprintJob[]>(
+        blueprintKeys.all,
+        (old) => old?.filter(b => b.id !== jobId),
+      )
+      return { previous }
+    },
+    onError: (_err, _jobId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(blueprintKeys.all, context.previous)
+      }
+      toast.error('Failed to delete blueprint')
+    },
     onSuccess: () => {
+      toast.success('Blueprint deleted')
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: blueprintKeys.all })
     },
   })

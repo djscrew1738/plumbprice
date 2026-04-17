@@ -110,7 +110,7 @@ export default function Blueprints() {
           {error && (
             <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">
               <span className="flex-1">{error}</span>
-              <button onClick={() => setError(null)} className="shrink-0 hover:opacity-70"><X size={14} /></button>
+              <button onClick={() => setError(null)} aria-label="Dismiss error" className="flex min-h-[32px] min-w-[32px] shrink-0 items-center justify-center rounded-lg hover:opacity-70 transition-opacity"><X size={14} /></button>
             </div>
           )}
 
@@ -126,7 +126,8 @@ export default function Blueprints() {
               </div>
               <button
                 onClick={e => { e.stopPropagation(); setFile(null) }}
-                className="p-1.5 rounded-lg text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
+                aria-label="Remove file"
+                className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
               >
                 <X size={15} />
               </button>

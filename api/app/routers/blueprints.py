@@ -13,7 +13,13 @@ from app.models.blueprints import BlueprintJob
 from app.models.users import User
 from app.core.storage import storage_client
 from app.config import settings
-from worker.tasks.blueprint_analysis import analyze_blueprint
+
+try:
+    from worker.tasks.blueprint_analysis import analyze_blueprint as _analyze_blueprint
+    _worker_available = True
+except ImportError:
+    _analyze_blueprint = None
+    _worker_available = False
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -62,8 +68,11 @@ async def upload_blueprint(
     await db.commit()
     await db.refresh(job)
 
-    # 4. Trigger background analysis
-    analyze_blueprint.delay(job.id, job.storage_path)
+    # 4. Trigger background analysis (requires Celery worker)
+    if _worker_available and _analyze_blueprint:
+        _analyze_blueprint.delay(job.id, job.storage_path)
+    else:
+        logger.warning("blueprint.worker_unavailable", job_id=job.id)
 
     logger.info("blueprint.uploaded", job_id=job.id, user_id=current_user.id)
     return BlueprintJobResponse(

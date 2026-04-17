@@ -15,7 +15,7 @@ from sqlalchemy import select
 logger = structlog.get_logger()
 
 
-def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 100) -> list[str]:
+def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 200) -> list[str]:
     """Simple character-based chunking with overlap."""
     if not text:
         return []

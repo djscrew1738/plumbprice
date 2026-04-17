@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { projectsApi, type ProjectPipelineResponse, type ProjectPipelineItem } from '@/lib/api'
+import { useToast } from '@/components/ui/Toast'
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ export function usePipeline(
 
 export function useCreateProject() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async (body: {
@@ -44,11 +46,15 @@ export function useCreateProject() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pipelineKeys.all })
     },
+    onError: () => {
+      toast.error('Failed to create project')
+    },
   })
 }
 
 export function useMoveProject() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async ({ projectId, newStatus }: { projectId: number; newStatus: string }) => {
@@ -80,6 +86,7 @@ export function useMoveProject() {
       if (context?.previous) {
         queryClient.setQueryData(pipelineKeys.all, context.previous)
       }
+      toast.error('Failed to move project')
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: pipelineKeys.all })
@@ -89,10 +96,36 @@ export function useMoveProject() {
 
 export function useDeleteProject() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: (id: number) => projectsApi.delete(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: pipelineKeys.all })
+      const previous = queryClient.getQueryData<ProjectPipelineResponse>(pipelineKeys.all)
+      queryClient.setQueryData<ProjectPipelineResponse>(pipelineKeys.all, prev => {
+        if (!prev) return prev
+        const deleted = prev.projects.find((p: ProjectPipelineItem) => p.id === id)
+        return {
+          ...prev,
+          projects: prev.projects.filter((p: ProjectPipelineItem) => p.id !== id),
+          summary: deleted
+            ? { ...prev.summary, [deleted.status]: Math.max(0, (prev.summary[deleted.status] ?? 1) - 1) }
+            : prev.summary,
+        }
+      })
+      return { previous }
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(pipelineKeys.all, context.previous)
+      }
+      toast.error('Failed to delete project')
+    },
     onSuccess: () => {
+      toast.success('Project deleted')
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: pipelineKeys.all })
     },
   })

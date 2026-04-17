@@ -54,7 +54,7 @@ class RAGService:
                     chunk_index=i,
                     content=chunk_text,
                     embedding=embedding,
-                    token_count=len(chunk_text.split()) # Rough estimate
+                    token_count=len(chunk_text) // 4  # ~4 chars per token
                 )
                 db.add(chunk)
             

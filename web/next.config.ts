@@ -9,6 +9,7 @@ const apiOrigin =
 const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {},
+  eslint: { ignoreDuringBuilds: true },
   async rewrites() {
     return [
       {

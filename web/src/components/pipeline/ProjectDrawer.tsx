@@ -251,26 +251,26 @@ export function ProjectDrawer({
                     {editing ? (
                       <div className="p-3.5 space-y-3">
                         <div>
-                          <label className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Name</label>
-                          <input value={form.customer_name} onChange={e => set('customer_name', e.target.value)} className="input text-sm" placeholder="Customer name" />
+                          <label htmlFor="drawer-customer-name" className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Name</label>
+                          <input id="drawer-customer-name" value={form.customer_name} onChange={e => set('customer_name', e.target.value)} className="input text-sm" placeholder="Customer name" autoComplete="name" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Phone</label>
-                            <input value={form.customer_phone} onChange={e => set('customer_phone', e.target.value)} className="input text-sm" placeholder="(214) 555-0100" />
+                            <label htmlFor="drawer-customer-phone" className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Phone</label>
+                            <input id="drawer-customer-phone" value={form.customer_phone} onChange={e => set('customer_phone', e.target.value)} className="input text-sm" placeholder="(214) 555-0100" autoComplete="tel" />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">City</label>
-                            <input value={form.city} onChange={e => set('city', e.target.value)} className="input text-sm" placeholder="Dallas" />
+                            <label htmlFor="drawer-customer-city" className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">City</label>
+                            <input id="drawer-customer-city" value={form.city} onChange={e => set('city', e.target.value)} className="input text-sm" placeholder="Dallas" autoComplete="address-level2" />
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Email</label>
-                          <input type="email" value={form.customer_email} onChange={e => set('customer_email', e.target.value)} className="input text-sm" placeholder="customer@email.com" />
+                          <label htmlFor="drawer-customer-email" className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Email</label>
+                          <input id="drawer-customer-email" type="email" value={form.customer_email} onChange={e => set('customer_email', e.target.value)} className="input text-sm" placeholder="customer@email.com" autoComplete="email" />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">County</label>
-                          <input value={form.county} onChange={e => set('county', e.target.value)} className="input text-sm" placeholder="Dallas" />
+                          <label htmlFor="drawer-customer-county" className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">County</label>
+                          <input id="drawer-customer-county" value={form.county} onChange={e => set('county', e.target.value)} className="input text-sm" placeholder="Dallas" />
                         </div>
                       </div>
                     ) : (

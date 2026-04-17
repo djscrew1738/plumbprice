@@ -69,10 +69,11 @@ function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-xs font-bold text-zinc-600 uppercase tracking-wider mb-1.5">
+              <label htmlFor="email" className="block text-xs font-bold text-zinc-600 uppercase tracking-wider mb-1.5">
                 Email
               </label>
               <input
+                id="email"
                 ref={emailRef}
                 type="email"
                 required
@@ -87,11 +88,12 @@ function LoginForm() {
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-bold text-zinc-600 uppercase tracking-wider mb-1.5">
+              <label htmlFor="password" className="block text-xs font-bold text-zinc-600 uppercase tracking-wider mb-1.5">
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPw ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
@@ -104,8 +106,8 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  aria-label="Toggle password visibility"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors"
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex min-h-[36px] min-w-[36px] items-center justify-center rounded-lg text-zinc-600 hover:text-zinc-300 transition-colors"
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>

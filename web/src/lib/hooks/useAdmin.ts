@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { api, adminApi, type CanonicalItem } from '@/lib/api'
+import { useToast } from '@/components/ui/Toast'
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
 
@@ -99,6 +100,7 @@ export function useAdminStats(
 
 export function useSaveMarkup() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async (rules: MarkupRule[]) => {
@@ -109,7 +111,25 @@ export function useSaveMarkup() {
         })
       ))
     },
-    onSuccess: () => {
+    onMutate: async (rules) => {
+      await queryClient.cancelQueries({ queryKey: adminKeys.markups() })
+      const previous = queryClient.getQueryData<MarkupRule[]>(adminKeys.markups())
+      queryClient.setQueryData<MarkupRule[]>(adminKeys.markups(), (old) => {
+        if (!old) return rules
+        return old.map(existing => {
+          const updated = rules.find(r => r.job_type === existing.job_type)
+          return updated ?? existing
+        })
+      })
+      return { previous }
+    },
+    onError: (_err, _rules, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(adminKeys.markups(), context.previous)
+      }
+      toast.error('Failed to save markup rules')
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.markups() })
     },
   })
@@ -117,6 +137,7 @@ export function useSaveMarkup() {
 
 export function useSaveItem() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async ({
@@ -143,7 +164,37 @@ export function useSaveItem() {
         )
       )
     },
-    onSuccess: () => {
+    onMutate: async ({ canonicalItem, updates }) => {
+      await queryClient.cancelQueries({ queryKey: adminKeys.items() })
+      const previous = queryClient.getQueryData<CanonicalItem[]>(adminKeys.items())
+      queryClient.setQueryData<CanonicalItem[]>(adminKeys.items(), (old) => {
+        if (!old) return old
+        return old.map(item => {
+          if (item.canonical_item !== canonicalItem) return item
+          const newSuppliers = { ...item.suppliers }
+          for (const u of updates) {
+            if (newSuppliers[u.supplier]) {
+              newSuppliers[u.supplier] = {
+                ...newSuppliers[u.supplier],
+                name: u.name,
+                cost: u.cost,
+                unit: u.unit,
+                sku: u.sku ?? newSuppliers[u.supplier].sku,
+              }
+            }
+          }
+          return { ...item, suppliers: newSuppliers }
+        })
+      })
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(adminKeys.items(), context.previous)
+      }
+      toast.error('Failed to save item prices')
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.items() })
     },
   })
@@ -151,13 +202,31 @@ export function useSaveItem() {
 
 export function useSaveTemplate() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async (template: Record<string, unknown>) => {
       const res = await api.put(`/admin/labor-templates/${template.code}`, template)
       return res.data
     },
-    onSuccess: () => {
+    onMutate: async (template) => {
+      await queryClient.cancelQueries({ queryKey: adminKeys.templates() })
+      const previous = queryClient.getQueryData<LaborTemplate[]>(adminKeys.templates())
+      queryClient.setQueryData<LaborTemplate[]>(adminKeys.templates(), (old) => {
+        if (!old) return old
+        return old.map(t =>
+          t.code === template.code ? { ...t, ...template } as LaborTemplate : t,
+        )
+      })
+      return { previous }
+    },
+    onError: (_err, _template, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(adminKeys.templates(), context.previous)
+      }
+      toast.error('Failed to save template')
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.templates() })
     },
   })

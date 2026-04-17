@@ -13,7 +13,13 @@ from app.models.documents import UploadedDocument
 from app.models.users import User
 from app.core.storage import storage_client
 from app.config import settings
-from worker.tasks.document_processing import process_document
+
+try:
+    from worker.tasks.document_processing import process_document as _process_document
+    _worker_available = True
+except ImportError:
+    _process_document = None
+    _worker_available = False
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -71,7 +77,10 @@ async def upload_document(
     await db.commit()
     await db.refresh(doc)
 
-    process_document.delay(doc.id, doc.storage_path, doc.doc_type)
+    if _worker_available and _process_document:
+        _process_document.delay(doc.id, doc.storage_path, doc.doc_type)
+    else:
+        logger.warning("document.worker_unavailable", doc_id=doc.id)
 
     logger.info("document.uploaded", doc_id=doc.id, user_id=current_user.id, doc_type=doc_type)
     return {

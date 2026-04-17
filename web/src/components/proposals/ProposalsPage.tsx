@@ -1,22 +1,25 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileOutput, RefreshCw, MapPin, Calendar, X,
   Copy, Check, Printer, FileText, ChevronRight,
-  Zap, Building2, Clock, Download,
+  Zap, Building2, Clock, Download, Send,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
-import { api } from '@/lib/api'
-import { formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
+import { api, proposalsApi, type ProposalListItem } from '@/lib/api'
+import { formatCurrency, formatCurrencyDecimal, downloadBlob } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Select } from '@/components/ui/Select'
 
 // ─── Company config (move to /api/v1/settings when multi-tenant) ──────────────
 const COMPANY = {
@@ -82,11 +85,28 @@ const JOB_TYPE_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warni
   commercial: 'warning',
 }
 
-const STATUS_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info'> = {
+const PROPOSAL_STATUS_VARIANT: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'danger'> = {
+  draft:    'neutral',
+  sent:     'info',
+  viewed:   'warning',
+  accepted: 'success',
+  declined: 'danger',
+}
+
+const ESTIMATE_STATUS_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info'> = {
   draft:    'neutral',
   sent:     'info',
   accepted: 'success',
 }
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '',         label: 'All statuses' },
+  { value: 'draft',    label: 'Draft' },
+  { value: 'sent',     label: 'Sent' },
+  { value: 'viewed',   label: 'Viewed' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'declined', label: 'Declined' },
+]
 
 // ─── Proposal text generator ──────────────────────────────────────────────────
 
@@ -208,18 +228,12 @@ function ProposalModal({
 
   const handleDownload = () => {
     const blob = new Blob([proposalText], { type: 'text/plain;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `proposal-PP-${String(estimate.id).padStart(5, '0')}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(blob, `proposal-PP-${String(estimate.id).padStart(5, '0')}.txt`)
   }
 
   const handlePrint = () => {
     const win = window.open('', '_blank', 'width=800,height=900')
     if (!win) {
-      // Fallback: download as txt if popup blocked
       handleDownload()
       return
     }
@@ -328,11 +342,195 @@ function ProposalModal({
   )
 }
 
+// ─── Proposals DataTable Section ──────────────────────────────────────────────
+
+function ProposalsTableSection({
+  onResend,
+  onDownloadPdf,
+}: {
+  onResend: (id: number) => Promise<void>
+  onDownloadPdf: (id: number) => Promise<void>
+}) {
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const { data: proposals = [], isLoading } = useQuery({
+    queryKey: ['proposals', 'list'],
+    queryFn: async () => {
+      const res = await proposalsApi.list()
+      return (res.data ?? []) as ProposalListItem[]
+    },
+  })
+
+  const filtered = useMemo(() => {
+    let items = proposals
+    if (statusFilter) {
+      items = items.filter(p => p.status === statusFilter)
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      items = items.filter(p =>
+        (p.customer_name ?? '').toLowerCase().includes(q) ||
+        (p.scope_summary ?? '').toLowerCase().includes(q) ||
+        (p.recipient_email ?? '').toLowerCase().includes(q)
+      )
+    }
+    items = [...items].sort((a, b) => {
+      const key = sortKey as keyof ProposalListItem
+      const aVal = a[key]
+      const bVal = b[key]
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDir === 'asc' ? aVal - bVal : bVal - aVal
+      }
+      const cmp = String(aVal).localeCompare(String(bVal))
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return items
+  }, [proposals, statusFilter, search, sortKey, sortDir])
+
+  const handleSort = useCallback((key: string) => {
+    setSortDir(prev => sortKey === key && prev === 'asc' ? 'desc' : 'asc')
+    setSortKey(key)
+  }, [sortKey])
+
+  const columns: Column<ProposalListItem>[] = useMemo(() => [
+    {
+      key: 'customer_name',
+      header: 'Customer',
+      sortable: true,
+      render: (row) => (
+        <div className="min-w-0">
+          <div className="font-medium text-[color:var(--ink)] truncate">
+            {row.customer_name || 'Unnamed'}
+          </div>
+          <div className="text-[11px] text-[color:var(--muted-ink)]">
+            Est. #{row.estimate_id}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      width: '110px',
+      render: (row) => (
+        <Badge
+          variant={PROPOSAL_STATUS_VARIANT[row.status] ?? 'neutral'}
+          size="sm"
+          dot
+        >
+          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+        </Badge>
+      ),
+    },
+    {
+      key: 'grand_total',
+      header: 'Total',
+      sortable: true,
+      align: 'right' as const,
+      width: '120px',
+      render: (row) => (
+        <span className="font-bold tabular-nums text-[color:var(--ink)]">
+          {formatCurrency(row.grand_total)}
+        </span>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      sortable: true,
+      width: '120px',
+      render: (row) => (
+        <span className="text-[color:var(--muted-ink)] text-xs">
+          {fmtDateShort(row.created_at)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '140px',
+      align: 'right' as const,
+      render: (row) => (
+        <div className="flex items-center justify-end gap-1.5">
+          {row.status === 'sent' && (
+            <Tooltip content="Resend proposal">
+              <button
+                onClick={(e) => { e.stopPropagation(); void onResend(row.id) }}
+                className="p-1.5 rounded-lg hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                aria-label="Resend proposal"
+              >
+                <Send size={13} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip content="Download PDF">
+            <button
+              onClick={(e) => { e.stopPropagation(); void onDownloadPdf(row.id) }}
+              className="p-1.5 rounded-lg hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+              aria-label="Download PDF"
+            >
+              <Download size={13} />
+            </button>
+          </Tooltip>
+        </div>
+      ),
+    },
+  ], [onResend, onDownloadPdf])
+
+  if (!isLoading && proposals.length === 0) return null
+
+  return (
+    <div className="space-y-3 mb-6">
+      <h2 className="text-[11px] font-bold text-zinc-600 uppercase tracking-widest px-0.5">
+        Proposals
+      </h2>
+
+      {/* Search & filter bar */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search customer name…"
+          className="flex-1"
+        />
+        <Select
+          options={STATUS_FILTER_OPTIONS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          placeholder="All statuses"
+          clearable
+          size="sm"
+          className="sm:w-44"
+        />
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={filtered}
+        keyExtractor={(row) => row.id}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={handleSort}
+        loading={isLoading}
+        emptyMessage="No proposals match your filters"
+      />
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function ProposalsPage() {
   const router = useRouter()
   const toast = useToast()
+  const queryClient = useQueryClient()
 
   const [generating, setGenerating] = useState<number | null>(null)
   const [activeProposal, setActiveProposal] = useState<EstimateDetail | null>(null)
@@ -350,15 +548,33 @@ export function ProposalsPage() {
   const generateProposal = async (est: Estimate) => {
     setGenerating(est.id)
     try {
-      // Fetch full estimate with line items
       const res = await api.get(`/estimates/${est.id}`)
-      setActiveProposal(res.data)
+      setActiveProposal(res.data as EstimateDetail)
     } catch {
       toast.error('Could not load estimate details', 'Please try again.')
     } finally {
       setGenerating(null)
     }
   }
+
+  const handleResend = useCallback(async (proposalId: number) => {
+    try {
+      await proposalsApi.resend(proposalId)
+      toast.success('Proposal resent')
+      void queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
+    } catch {
+      toast.error('Could not resend proposal', 'Please try again.')
+    }
+  }, [toast, queryClient])
+
+  const handleDownloadPdf = useCallback(async (proposalId: number) => {
+    try {
+      const res = await proposalsApi.downloadPdf(proposalId)
+      downloadBlob(res.data as Blob, `proposal-${proposalId}.pdf`)
+    } catch {
+      toast.error('Could not download PDF', 'Please try again.')
+    }
+  }, [toast])
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
@@ -376,10 +592,6 @@ export function ProposalsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <Clock size={11} className="text-amber-400" />
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Phase 2</span>
-            </div>
             <button
               onClick={() => void load()}
               disabled={loading}
@@ -394,16 +606,13 @@ export function ProposalsPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-4">
 
-        {/* Phase 2 callout */}
-        <div className="mb-4 flex items-start gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-          <Building2 size={16} className="text-blue-400 shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-zinc-300 mb-0.5">PDF proposals coming in Phase 2</p>
-            <p className="text-[11px] text-zinc-600 leading-relaxed">
-              Generate formatted text proposals now. Phase 2 adds branded PDF output, logo, e-signature, and automatic email delivery to customers.
-            </p>
-          </div>
-        </div>
+        {/* ── Proposals DataTable ── */}
+        <ProposalsTableSection
+          onResend={handleResend}
+          onDownloadPdf={handleDownloadPdf}
+        />
+
+        {/* ── Estimates Section ── */}
 
         {/* Loading */}
         {loading && (
@@ -465,7 +674,7 @@ export function ProposalsPage() {
                         <Badge variant={JOB_TYPE_VARIANT[est.job_type] ?? 'neutral'} size="sm">
                            {est.job_type}
                          </Badge>
-                        <Badge variant={STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
+                        <Badge variant={ESTIMATE_STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
                            {est.status}
                          </Badge>
                       </div>
@@ -480,7 +689,7 @@ export function ProposalsPage() {
                     <div className="text-right shrink-0">
                       <div className="text-lg font-extrabold text-white mb-2">{formatCurrency(est.grand_total)}</div>
                       <button
-                        onClick={() => generateProposal(est)}
+                        onClick={() => void generateProposal(est)}
                         disabled={generating === est.id}
                         className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
                       >
@@ -506,7 +715,7 @@ export function ProposalsPage() {
                       <div className="flex items-center gap-3 text-[11px] text-zinc-600 mt-0.5">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county} County</span>
                         <span className="flex items-center gap-1"><Calendar size={10} />{fmtDate(est.created_at)}</span>
-                        <Badge variant={STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
+                        <Badge variant={ESTIMATE_STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
                          {est.status}
                        </Badge>
                       </div>
@@ -515,7 +724,7 @@ export function ProposalsPage() {
                       {formatCurrency(est.grand_total)}
                     </div>
                     <button
-                      onClick={() => generateProposal(est)}
+                      onClick={() => void generateProposal(est)}
                       disabled={generating === est.id}
                       className="btn-primary shrink-0 text-xs px-4 py-2"
                     >

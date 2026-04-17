@@ -41,6 +41,7 @@ export function ShortcutsDialog() {
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="fixed left-1/2 top-[20%] z-50 w-full max-w-sm -translate-x-1/2 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-5 shadow-2xl"
             role="dialog"
+            aria-modal="true"
             aria-label="Keyboard shortcuts"
           >
             <div className="mb-4 flex items-center justify-between">
@@ -50,7 +51,8 @@ export function ShortcutsDialog() {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                aria-label="Close shortcuts dialog"
+                className="rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               >
                 <X size={15} />
               </button>

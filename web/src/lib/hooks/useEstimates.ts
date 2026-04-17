@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { api, estimatesApi, type EstimateListItem, type EstimateDetailResponse } from '@/lib/api'
+import { useToast } from '@/components/ui/Toast'
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ export function useEstimates(
   options?: Partial<UseQueryOptions<EstimateListItem[]>>,
 ) {
   return useQuery({
-    queryKey: ['estimates', { filter: params?.job_type ?? 'all' }],
+    queryKey: estimateKeys.list(params),
     queryFn: async () => {
       const apiParams = params?.job_type && params.job_type !== 'all'
         ? { job_type: params.job_type }
@@ -37,7 +38,7 @@ export function useEstimate(
   options?: Partial<UseQueryOptions<EstimateDetailResponse>>,
 ) {
   return useQuery({
-    queryKey: ['estimates', id],
+    queryKey: estimateKeys.detail(id),
     queryFn: async () => {
       const res = await api.get(`/estimates/${id}`)
       return res.data as EstimateDetailResponse
@@ -51,6 +52,7 @@ export function useEstimate(
 
 export function useCreateEstimate() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async (body: { type: 'service' | 'construction'; data: Record<string, unknown> }) => {
@@ -62,15 +64,37 @@ export function useCreateEstimate() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['estimates'] })
     },
+    onError: () => {
+      toast.error('Failed to create estimate')
+    },
   })
 }
 
 export function useDeleteEstimate() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: (id: number) => api.delete(`/estimates/${id}`),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['estimates'] })
+      const previousQueries = queryClient.getQueriesData<EstimateListItem[]>({ queryKey: ['estimates'] })
+      queryClient.setQueriesData<EstimateListItem[]>(
+        { queryKey: ['estimates'] },
+        (old) => old?.filter(e => e.id !== id),
+      )
+      return { previousQueries }
+    },
+    onError: (_err, _id, context) => {
+      context?.previousQueries?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data)
+      })
+      toast.error('Failed to delete estimate')
+    },
     onSuccess: () => {
+      toast.success('Estimate deleted')
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['estimates'] })
     },
   })
@@ -78,6 +102,7 @@ export function useDeleteEstimate() {
 
 export function useDuplicateEstimate() {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -86,6 +111,9 @@ export function useDuplicateEstimate() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['estimates'] })
+    },
+    onError: () => {
+      toast.error('Failed to duplicate estimate')
     },
   })
 }

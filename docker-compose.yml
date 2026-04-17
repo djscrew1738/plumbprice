@@ -95,7 +95,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - PYTHONPATH=/app/api
-      - HERMES_ENDPOINT_URL=http://100.83.120.32:11434/v1
+      - HERMES_ENDPOINT_URL=${HERMES_ENDPOINT_URL:-http://localhost:11434/v1}
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3200","https://pricing.ctlplumbingllc.com"]}
     ports:
       - "${API_PORT:-8201}:8000"
@@ -157,7 +157,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - PYTHONPATH=/app/api
-      - HERMES_ENDPOINT_URL=http://100.83.120.32:11434/v1
+      - HERMES_ENDPOINT_URL=${HERMES_ENDPOINT_URL:-http://localhost:11434/v1}
     depends_on:
       postgres:
         condition: service_healthy
