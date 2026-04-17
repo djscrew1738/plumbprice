@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useCallback, type DragEvent } from 'react'
 import { CircleDollarSign } from 'lucide-react'
 import { type ProjectPipelineItem } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -20,6 +21,7 @@ export interface PipelineColumnProps {
   stageIndex: number
   stageKeys: readonly string[]
   onMoveProject: (id: number, newStatus: string) => Promise<void>
+  onProjectDeleted?: (id: number) => void
 }
 
 export function PipelineColumn({
@@ -28,9 +30,48 @@ export function PipelineColumn({
   stageIndex,
   stageKeys,
   onMoveProject,
+  onProjectDeleted,
 }: PipelineColumnProps) {
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLElement>) => {
+    if (!e.dataTransfer.types.includes('application/x-pipeline-project')) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: DragEvent<HTMLElement>) => {
+    // Only clear when leaving the column itself (not child elements)
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
+    setIsDragOver(false)
+  }, [])
+
+  const handleDrop = useCallback((e: DragEvent<HTMLElement>) => {
+    e.preventDefault()
+    setIsDragOver(false)
+
+    const raw = e.dataTransfer.getData('application/x-pipeline-project')
+    if (!raw) return
+
+    try {
+      const data = JSON.parse(raw) as { projectId: number; sourceStage: string }
+      if (data.sourceStage === stage.key) return
+      void onMoveProject(data.projectId, stage.key)
+    } catch { /* ignore malformed data */ }
+  }, [stage.key, onMoveProject])
+
   return (
-    <section className={cn('card p-4 min-h-[360px]', stage.colClass)}>
+    <section
+      className={cn(
+        'card p-4 min-h-[360px] transition-all duration-200',
+        stage.colClass,
+        isDragOver && 'border-2 border-dashed border-[color:var(--accent)] bg-[color:var(--accent)]/[0.04] scale-[1.01]',
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="flex items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="text-xs font-bold text-[color:var(--ink)] uppercase tracking-wider">{stage.label}</h2>
@@ -55,9 +96,12 @@ export function PipelineColumn({
         {projects.length === 0 && (
           <EmptyState
             icon={<CircleDollarSign size={20} />}
-            title="Empty"
-            description="No jobs in this stage"
-            className="card rounded-2xl border border-dashed p-4"
+            title={isDragOver ? 'Drop here' : 'Empty'}
+            description={isDragOver ? `Move to ${stage.label}` : 'No jobs in this stage'}
+            className={cn(
+              'card rounded-2xl border border-dashed p-4',
+              isDragOver && 'border-[color:var(--accent)] bg-[color:var(--accent)]/[0.06]',
+            )}
           />
         )}
         {projects.map((project, projectIndex) => (
@@ -67,6 +111,7 @@ export function PipelineColumn({
             delay={stageIndex * 0.04 + projectIndex * 0.04}
             stageKeys={stageKeys}
             onMove={onMoveProject}
+            onDeleted={onProjectDeleted}
           />
         ))}
       </div>

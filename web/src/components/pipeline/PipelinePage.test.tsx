@@ -3,6 +3,7 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PipelinePage } from './PipelinePage'
 
@@ -18,8 +19,9 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/api', () => ({
   projectsApi: {
     list: listMock,
-    updateStage: vi.fn(),
+    update: vi.fn(),
     create: vi.fn(),
+    delete: vi.fn(),
   },
 }))
 
@@ -46,6 +48,15 @@ const PIPELINE_DATA = {
   summary: { lead: 1, estimate_sent: 0, won: 0, lost: 0 },
 }
 
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    createElement(QueryClientProvider, { client: queryClient }, ui),
+  )
+}
+
 describe('PipelinePage', () => {
   beforeEach(() => {
     listMock.mockReset()
@@ -53,7 +64,7 @@ describe('PipelinePage', () => {
   })
 
   it('renders all four pipeline stage columns', async () => {
-    render(createElement(PipelinePage))
+    renderWithProviders(createElement(PipelinePage))
     await waitFor(() => expect(listMock).toHaveBeenCalled())
     expect((await screen.findAllByText('Lead')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('Estimate Sent').length).toBeGreaterThan(0)
@@ -62,20 +73,20 @@ describe('PipelinePage', () => {
   })
 
   it('shows a project card in the Lead stage', async () => {
-    render(createElement(PipelinePage))
+    renderWithProviders(createElement(PipelinePage))
     await waitFor(() => expect(listMock).toHaveBeenCalled())
     expect(await screen.findByText(/main line replacement/i)).toBeInTheDocument()
   })
 
   it('shows summary pipeline value', async () => {
-    render(createElement(PipelinePage))
+    renderWithProviders(createElement(PipelinePage))
     await waitFor(() => expect(listMock).toHaveBeenCalled())
     expect((await screen.findAllByText(/\$4,200/)).length).toBeGreaterThan(0)
   })
 
   it('shows error state when API fails', async () => {
     listMock.mockRejectedValue(new Error('Network error'))
-    render(createElement(PipelinePage))
+    renderWithProviders(createElement(PipelinePage))
     expect(await screen.findByText(/could not load pipeline/i)).toBeInTheDocument()
   })
 
@@ -86,9 +97,8 @@ describe('PipelinePage', () => {
         summary: { lead: 0, estimate_sent: 0, won: 0, lost: 0 },
       },
     })
-    render(createElement(PipelinePage))
+    renderWithProviders(createElement(PipelinePage))
     await waitFor(() => expect(listMock).toHaveBeenCalled())
-    expect((await screen.findAllByText('Lead')).length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Won').length).toBeGreaterThan(0)
+    expect(await screen.findByText(/no opportunities yet/i)).toBeInTheDocument()
   })
 })

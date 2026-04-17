@@ -1,15 +1,18 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
-  CircleDollarSign, RefreshCw, TrendingUp, Plus,
+  CircleDollarSign, RefreshCw, TrendingUp, Plus, X,
 } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { projectsApi, type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
+import { usePipeline, useMoveProject, pipelineKeys } from '@/lib/hooks'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Select, type SelectOption } from '@/components/ui/Select'
 import { PipelineColumn } from './PipelineColumn'
 import { CreateProjectModal } from './CreateProjectModal'
 
@@ -20,61 +23,33 @@ const STAGES = [
   { key: 'lost', label: 'Lost', colClass: 'stage-lost', countColor: 'text-red-700', emptyColor: 'border-red-500/20' },
 ] as const
 
+const JOB_TYPE_OPTIONS: SelectOption[] = [
+  { value: '', label: 'All Job Types' },
+  { value: 'service', label: 'Service' },
+  { value: 'construction', label: 'Construction' },
+  { value: 'commercial', label: 'Commercial' },
+]
+
 export function PipelinePage() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [showCreate,  setShowCreate]  = useState(false)
 
-  const { data, isLoading: loading, error: queryError, refetch: load } = useQuery({
-    queryKey: ['projects'],
-    queryFn: async () => {
-      const response = await projectsApi.list()
-      return response.data
-    },
-  })
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [jobTypeFilter, setJobTypeFilter] = useState('')
+
+  const { data, isLoading: loading, error: queryError, refetch: load } = usePipeline()
 
   const error = queryError ? 'Could not load pipeline' : null
 
-  const moveProjectMutation = useMutation({
-    mutationFn: async ({ projectId, newStatus }: { projectId: number; newStatus: string }) => {
-      await projectsApi.update(projectId, { status: newStatus })
-    },
-    onMutate: async ({ projectId, newStatus }) => {
-      await queryClient.cancelQueries({ queryKey: ['projects'] })
-      const previous = queryClient.getQueryData<ProjectPipelineResponse>(['projects'])
-      queryClient.setQueryData<ProjectPipelineResponse>(['projects'], prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          projects: prev.projects.map(p =>
-            p.id === projectId ? { ...p, status: newStatus } : p
-          ),
-          summary: (() => {
-            const old = prev.projects.find(p => p.id === projectId)
-            if (!old) return prev.summary
-            const s = { ...prev.summary }
-            s[old.status] = Math.max(0, (s[old.status] ?? 1) - 1)
-            s[newStatus] = (s[newStatus] ?? 0) + 1
-            return s
-          })(),
-        }
-      })
-      return { previous }
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(['projects'], context.previous)
-      }
-      toast.error('Could not move project', 'Refreshing pipeline…')
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ['projects'] })
-    },
-  })
+  const moveProjectMutation = useMoveProject()
 
   const moveProject = useCallback(async (projectId: number, newStatus: string) => {
-    moveProjectMutation.mutate({ projectId, newStatus })
-  }, [moveProjectMutation])
+    moveProjectMutation.mutate({ projectId, newStatus }, {
+      onError: () => toast.error('Could not move project', 'Refreshing pipeline…'),
+    })
+  }, [moveProjectMutation, toast])
 
   const handleProjectCreated = useCallback((_project: ProjectPipelineItem) => {
     setShowCreate(false)
@@ -82,9 +57,51 @@ export function PipelinePage() {
     toast.success('Project created', _project.name)
   }, [toast, queryClient])
 
+  const handleProjectDeleted = useCallback((projectId: number) => {
+    queryClient.setQueryData<ProjectPipelineResponse>(pipelineKeys.all, prev => {
+      if (!prev) return prev
+      const removed = prev.projects.find(p => p.id === projectId)
+      return {
+        ...prev,
+        projects: prev.projects.filter(p => p.id !== projectId),
+        summary: removed
+          ? { ...prev.summary, [removed.status]: Math.max(0, (prev.summary[removed.status] ?? 1) - 1) }
+          : prev.summary,
+      }
+    })
+    void queryClient.invalidateQueries({ queryKey: pipelineKeys.all })
+  }, [queryClient])
+
   const stageKeys = STAGES.map(s => s.key)
   const projects = data?.projects ?? []
   const summary  = data?.summary  ?? {}
+
+  // Apply client-side filters
+  const filteredProjects = useMemo(() => {
+    let result = projects
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.customer_name && p.customer_name.toLowerCase().includes(q))
+      )
+    }
+
+    if (jobTypeFilter) {
+      result = result.filter(p => p.job_type === jobTypeFilter)
+    }
+
+    return result
+  }, [projects, searchQuery, jobTypeFilter])
+
+  const hasActiveFilters = searchQuery.trim() !== '' || jobTypeFilter !== ''
+  const isFiltered = hasActiveFilters && filteredProjects.length !== projects.length
+
+  const clearFilters = useCallback(() => {
+    setSearchQuery('')
+    setJobTypeFilter('')
+  }, [])
 
   const totalPipelineValue = projects
     .filter(p => p.status !== 'lost')
@@ -149,6 +166,43 @@ export function PipelinePage() {
 
         <div className="mt-4">
 
+        {/* Filter bar */}
+        {!loading && !error && projects.length > 0 && (
+          <div className="mb-4 card p-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search projects or customers…"
+                className="flex-1 min-w-[200px]"
+                aria-label="Search pipeline projects"
+              />
+              <Select
+                options={JOB_TYPE_OPTIONS}
+                value={jobTypeFilter}
+                onChange={setJobTypeFilter}
+                placeholder="All Job Types"
+                size="md"
+                className="w-44"
+              />
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="btn-secondary min-h-0 py-2 flex items-center gap-1.5"
+                >
+                  <X size={13} />
+                  Clear
+                </button>
+              )}
+              <span className="text-xs text-[color:var(--muted-ink)] ml-auto tabular-nums whitespace-nowrap">
+                {isFiltered
+                  ? `Showing ${filteredProjects.length} of ${projects.length} projects`
+                  : `${projects.length} projects`}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Loading */}
         {loading && (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
@@ -179,17 +233,28 @@ export function PipelinePage() {
           />
         )}
 
+        {/* No filter results */}
+        {!loading && !error && projects.length > 0 && filteredProjects.length === 0 && hasActiveFilters && (
+          <EmptyState
+            icon={<CircleDollarSign size={28} />}
+            title="No matching projects"
+            description="Try adjusting your search or filters."
+            className="card"
+          />
+        )}
+
         {/* Kanban columns */}
-        {!loading && !error && projects.length > 0 && (
+        {!loading && !error && filteredProjects.length > 0 && (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-start">
             {STAGES.map((stage, stageIndex) => (
               <PipelineColumn
                 key={stage.key}
                 stage={stage}
-                projects={projects.filter(p => p.status === stage.key)}
+                projects={filteredProjects.filter(p => p.status === stage.key)}
                 stageIndex={stageIndex}
                 stageKeys={stageKeys}
                 onMoveProject={moveProject}
+                onProjectDeleted={handleProjectDeleted}
               />
             ))}
           </div>
