@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, TrendingDown, Package, DollarSign, ChevronDown, ChevronUp, Search, X, Copy, Check } from 'lucide-react'
 import { cn, formatCurrencyDecimal } from '@/lib/utils'
@@ -35,9 +36,7 @@ function prettyCat(cat: string) {
 
 export function SuppliersPage() {
   const toast = useToast()
-  const [items,          setItems]          = useState<CatalogItem[]>([])
-  const [loading,        setLoading]        = useState(true)
-  const [error,          setError]          = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [search,         setSearch]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
@@ -51,13 +50,13 @@ export function SuppliersPage() {
     })
   }
 
-  const fetchCatalog = async () => {
-    try {
-      setLoading(true); setError(null)
+  const { data: items = [], isLoading: loading, error: queryError, refetch: fetchCatalog } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: async () => {
       const res = await api.get('/suppliers/catalog')
       const raw: Record<string, Record<string, { sku: string; name: string; cost: number }>> =
         res.data?.items ?? res.data ?? {}
-      const parsed: CatalogItem[] = Object.entries(raw).map(([canonical_id, prices]) => {
+      return Object.entries(raw).map(([canonical_id, prices]): CatalogItem => {
         const entries = Object.entries(prices) as [string, { sku: string; name: string; cost: number }][]
         let best_supplier = entries[0]?.[0] ?? ''
         let best_price    = entries[0]?.[1]?.cost ?? 0
@@ -73,15 +72,10 @@ export function SuppliersPage() {
           prices: prices as CatalogItem['prices'],
         }
       })
-      setItems(parsed)
-    } catch {
-      setError('Could not load supplier catalog')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+  })
 
-  useEffect(() => { void fetchCatalog() }, [])
+  const error = queryError ? 'Could not load supplier catalog' : null
 
   const categories = useMemo(() => {
     const cats = [...new Set(items.map(i => i.category))].sort()

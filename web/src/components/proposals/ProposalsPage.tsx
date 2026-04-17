@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileOutput, RefreshCw, MapPin, Calendar, X,
@@ -333,25 +334,18 @@ export function ProposalsPage() {
   const router = useRouter()
   const toast = useToast()
 
-  const [estimates, setEstimates] = useState<Estimate[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState<string | null>(null)
   const [generating, setGenerating] = useState<number | null>(null)
   const [activeProposal, setActiveProposal] = useState<EstimateDetail | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try {
+  const { data: estimates = [], isLoading: loading, error: queryError, refetch: load } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: async () => {
       const res = await api.get('/estimates')
-      setEstimates(res.data ?? [])
-    } catch {
-      setError('Could not load estimates')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      return (res.data ?? []) as Estimate[]
+    },
+  })
 
-  useEffect(() => { void load() }, [load])
+  const error = queryError ? 'Could not load estimates' : null
 
   const generateProposal = async (est: Estimate) => {
     setGenerating(est.id)

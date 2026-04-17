@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
@@ -135,10 +136,8 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 export function EstimatesListPage() {
   const router  = useRouter()
   const toast   = useToast()
+  const queryClient = useQueryClient()
 
-  const [estimates,     setEstimates]     = useState<Estimate[]>([])
-  const [loading,       setLoading]       = useState(true)
-  const [error,         setError]         = useState<string | null>(null)
   const [filter,        setFilter]        = useState('all')
   const [deleting,      setDeleting]      = useState<number | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
@@ -148,21 +147,17 @@ export function EstimatesListPage() {
   const [sortOpen,      setSortOpen]      = useState(false)
   const sortRef = useRef<HTMLDivElement>(null)
 
-  const fetchEstimates = useCallback(async () => {
-    try {
-      setLoading(true); setError(null)
+  const { data: estimates = [], isLoading: loading, error: queryError, refetch: fetchEstimates } = useQuery({
+    queryKey: ['estimates', { filter }],
+    queryFn: async () => {
       const params = filter !== 'all' ? { job_type: filter } : {}
       const res = await api.get('/estimates', { params })
       const raw = res.data
-      setEstimates(Array.isArray(raw) ? raw : (raw?.estimates ?? []))
-    } catch {
-      setError('Could not load estimates')
-    } finally {
-      setLoading(false)
-    }
-  }, [filter])
+      return (Array.isArray(raw) ? raw : (raw?.estimates ?? [])) as Estimate[]
+    },
+  })
 
-  useEffect(() => { fetchEstimates() }, [fetchEstimates])
+  const error = queryError ? 'Could not load estimates' : null
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -177,7 +172,9 @@ export function EstimatesListPage() {
   }, [sortOpen])
 
   const handleStatusChange = (id: number, status: string) => {
-    setEstimates(prev => prev.map(e => e.id === id ? { ...e, status } : e))
+    queryClient.setQueryData<Estimate[]>(['estimates', { filter }], prev =>
+      prev?.map(e => e.id === id ? { ...e, status } : e)
+    )
   }
 
   const handleDeleteConfirm = async (id: number) => {
@@ -185,7 +182,7 @@ export function EstimatesListPage() {
     setConfirmDelete(null)
     try {
       await api.delete(`/estimates/${id}`)
-      setEstimates(prev => prev.filter(e => e.id !== id))
+      void queryClient.invalidateQueries({ queryKey: ['estimates'] })
       toast.success('Estimate deleted')
     } catch {
       toast.error('Failed to delete', 'Please try again.')
@@ -200,7 +197,7 @@ export function EstimatesListPage() {
     try {
       const res = await api.post<Estimate>(`/estimates/${id}/duplicate`, {})
       const copy = res.data
-      setEstimates(prev => [copy, ...prev])
+      void queryClient.invalidateQueries({ queryKey: ['estimates'] })
       toast.success('Estimate duplicated', copy.title || `Estimate #${copy.id}`)
     } catch {
       toast.error('Could not duplicate', 'Please try again.')
@@ -279,7 +276,7 @@ export function EstimatesListPage() {
                   <span className="hidden sm:inline text-xs font-medium">Export</span>
                 </button>
               </Tooltip>
-              <button onClick={fetchEstimates} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Refresh estimates">
+              <button onClick={() => void fetchEstimates()} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Refresh estimates">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
               <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2" aria-label="New estimate">
@@ -375,7 +372,7 @@ export function EstimatesListPage() {
         {/* Error */}
         {error && !loading && (
           <div className="card">
-            <ErrorState message={error} onRetry={fetchEstimates} />
+            <ErrorState message={error} onRetry={() => void fetchEstimates()} />
           </div>
         )}
 

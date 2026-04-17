@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { History } from 'lucide-react'
 import { api, outcomesApi, proposalsApi, type OutcomeValue } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -11,6 +13,8 @@ import { LineItemsTable, type LineItem } from './LineItemsTable'
 import { OutcomeRecorderCard, type SentProposal } from './OutcomeRecorderCard'
 import { ProposalSendModal } from './ProposalSendModal'
 import { EstimateActionsBar } from './EstimateActionsBar'
+import { VersionTimeline } from './VersionTimeline'
+import { VersionDiffModal } from './VersionDiffModal'
 
 interface EstimateDetail {
   id: number
@@ -44,11 +48,29 @@ export function EstimateDetailPage() {
   const params = useParams()
   const router = useRouter()
   const toast  = useToast()
+  const queryClient = useQueryClient()
   const id = Number(params?.id)
 
-  const [estimate,      setEstimate]      = useState<EstimateDetail | null>(null)
-  const [loading,       setLoading]       = useState(true)
-  const [error,         setError]         = useState<string | null>(null)
+  const { data: estimate, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['estimates', id],
+    queryFn: async () => {
+      const res = await api.get(`/estimates/${id}`)
+      return res.data as EstimateDetail
+    },
+    enabled: !!id,
+  })
+
+  const { data: sentProposals = [] } = useQuery({
+    queryKey: ['proposals', 'sends', id],
+    queryFn: async () => {
+      const res = await proposalsApi.listSends(id)
+      return res.data as SentProposal[]
+    },
+    enabled: !!id,
+  })
+
+  const error = queryError ? 'Could not load estimate' : null
+
   const [duplicating,      setDuplicating]      = useState(false)
   const [confirmDelete,    setConfirmDelete]    = useState(false)
   const [deleting,         setDeleting]         = useState(false)
@@ -59,8 +81,10 @@ export function EstimateDetailPage() {
   const [proposalName,     setProposalName]     = useState('')
   const [proposalMsg,      setProposalMsg]      = useState('')
   const [proposalSending,  setProposalSending]  = useState(false)
-  const [sentProposals, setSentProposals] = useState<SentProposal[]>([])
-
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [diffOpen, setDiffOpen] = useState(false)
+  const [diffV1, setDiffV1] = useState('')
+  const [diffV2, setDiffV2] = useState('')
   const exportCSV = useCallback(() => {
     if (!estimate) return
     const rows = [
@@ -122,15 +146,6 @@ export function EstimateDetailPage() {
     }
   }, [estimate, toast])
 
-  const fetchSentProposals = useCallback(async (estimateId: number) => {
-    try {
-      const res = await proposalsApi.listSends(estimateId)
-      setSentProposals(res.data)
-    } catch {
-      // non-critical — don't surface error
-    }
-  }, [])
-
   const handleSendProposal = useCallback(async () => {
     if (!estimate || !proposalEmail.trim()) return
     setProposalSending(true)
@@ -145,31 +160,29 @@ export function EstimateDetailPage() {
       setProposalEmail('')
       setProposalName('')
       setProposalMsg('')
-      void fetchSentProposals(estimate.id)
+      void queryClient.invalidateQueries({ queryKey: ['proposals', 'sends', id] })
     } catch {
       toast.error('Could not send proposal', 'Please try again.')
     } finally {
       setProposalSending(false)
     }
-  }, [estimate, proposalEmail, proposalName, proposalMsg, toast, fetchSentProposals])
+  }, [estimate, proposalEmail, proposalName, proposalMsg, toast, queryClient, id])
 
-  useEffect(() => {
-    if (!id) return
-    const load = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const res = await api.get(`/estimates/${id}`)
-        setEstimate(res.data)
-        void fetchSentProposals(Number(id))
-      } catch {
-        setError('Could not load estimate')
-      } finally {
-        setLoading(false)
-      }
+  const handleSelectVersion = useCallback(async (versionId: string) => {
+    if (!estimate) return
+    try {
+      const res = await api.get(`/estimates/${estimate.id}/versions/${versionId}`)
+      queryClient.setQueryData(['estimates', id], res.data)
+    } catch {
+      toast.error('Could not load version', 'Please try again.')
     }
-    void load()
-  }, [id, fetchSentProposals])
+  }, [estimate, toast, queryClient, id])
+
+  const handleCompareVersions = useCallback((v1: string, v2: string) => {
+    setDiffV1(v1)
+    setDiffV2(v2)
+    setDiffOpen(true)
+  }, [])
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
@@ -258,6 +271,35 @@ export function EstimateDetailPage() {
           sentProposals={sentProposals}
         />
 
+        {/* ── Version History ────────────────────────────────────────────────── */}
+        <div className="card overflow-hidden">
+          <button
+            onClick={() => setHistoryOpen((o) => !o)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold text-[color:var(--ink)] hover:bg-white/[0.03] transition-colors"
+          >
+            <History size={15} className="text-[color:var(--accent-strong)]" />
+            <span>Version History</span>
+            <svg
+              className={`ml-auto h-4 w-4 text-[color:var(--muted-ink)] transition-transform ${historyOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {historyOpen && (
+            <div className="border-t border-[color:var(--line)] px-4 py-3">
+              <VersionTimeline
+                estimateId={estimate.id}
+                onSelectVersion={handleSelectVersion}
+                onCompare={handleCompareVersions}
+              />
+            </div>
+          )}
+        </div>
+
         {/* ── Bottom actions bar ─────────────────────────────────────────────── */}
         <EstimateActionsBar
           estimateTitle={estimate.title}
@@ -287,6 +329,15 @@ export function EstimateDetailPage() {
         onNameChange={setProposalName}
         onMsgChange={setProposalMsg}
         onSend={() => void handleSendProposal()}
+      />
+
+      {/* ── Version Diff modal ───────────────────────────────────────────── */}
+      <VersionDiffModal
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        estimateId={estimate.id}
+        v1={diffV1}
+        v2={diffV2}
       />
     </div>
   )

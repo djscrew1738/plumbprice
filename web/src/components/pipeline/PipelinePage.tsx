@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import {
   CircleDollarSign, RefreshCw, TrendingUp, Plus,
 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectsApi, type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
@@ -21,65 +22,65 @@ const STAGES = [
 
 export function PipelinePage() {
   const toast = useToast()
-  const [data,        setData]        = useState<ProjectPipelineResponse | null>(null)
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [showCreate,  setShowCreate]  = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const { data, isLoading: loading, error: queryError, refetch: load } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
       const response = await projectsApi.list()
-      setData(response.data)
-    } catch {
-      setError('Could not load pipeline')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      return response.data
+    },
+  })
 
-  useEffect(() => { void load() }, [load])
+  const error = queryError ? 'Could not load pipeline' : null
+
+  const moveProjectMutation = useMutation({
+    mutationFn: async ({ projectId, newStatus }: { projectId: number; newStatus: string }) => {
+      await projectsApi.update(projectId, { status: newStatus })
+    },
+    onMutate: async ({ projectId, newStatus }) => {
+      await queryClient.cancelQueries({ queryKey: ['projects'] })
+      const previous = queryClient.getQueryData<ProjectPipelineResponse>(['projects'])
+      queryClient.setQueryData<ProjectPipelineResponse>(['projects'], prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          projects: prev.projects.map(p =>
+            p.id === projectId ? { ...p, status: newStatus } : p
+          ),
+          summary: (() => {
+            const old = prev.projects.find(p => p.id === projectId)
+            if (!old) return prev.summary
+            const s = { ...prev.summary }
+            s[old.status] = Math.max(0, (s[old.status] ?? 1) - 1)
+            s[newStatus] = (s[newStatus] ?? 0) + 1
+            return s
+          })(),
+        }
+      })
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['projects'], context.previous)
+      }
+      toast.error('Could not move project', 'Refreshing pipeline…')
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
 
   const moveProject = useCallback(async (projectId: number, newStatus: string) => {
-    // Optimistic update
-    setData(prev => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        projects: prev.projects.map(p =>
-          p.id === projectId ? { ...p, status: newStatus } : p
-        ),
-        summary: (() => {
-          const old = prev.projects.find(p => p.id === projectId)
-          if (!old) return prev.summary
-          const s = { ...prev.summary }
-          s[old.status] = Math.max(0, (s[old.status] ?? 1) - 1)
-          s[newStatus] = (s[newStatus] ?? 0) + 1
-          return s
-        })(),
-      }
-    })
-    try {
-      await projectsApi.update(projectId, { status: newStatus })
-    } catch {
-      toast.error('Could not move project', 'Refreshing pipeline…')
-      void load()
-    }
-  }, [load, toast])
+    moveProjectMutation.mutate({ projectId, newStatus })
+  }, [moveProjectMutation])
 
-  const handleProjectCreated = useCallback((project: ProjectPipelineItem) => {
+  const handleProjectCreated = useCallback((_project: ProjectPipelineItem) => {
     setShowCreate(false)
-    setData(prev => {
-      if (!prev) return { projects: [project], summary: { lead: 1 } }
-      return {
-        ...prev,
-        projects: [project, ...prev.projects],
-        summary: { ...prev.summary, lead: (prev.summary['lead'] ?? 0) + 1 },
-      }
-    })
-    toast.success('Project created', project.name)
-  }, [toast])
+    void queryClient.invalidateQueries({ queryKey: ['projects'] })
+    toast.success('Project created', _project.name)
+  }, [toast, queryClient])
 
   const stageKeys = STAGES.map(s => s.key)
   const projects = data?.projects ?? []

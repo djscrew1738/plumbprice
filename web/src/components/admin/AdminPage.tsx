@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { RefreshCw, Wrench, DollarSign, BarChart3, Package } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, adminApi, type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import { PageIntro } from '@/components/layout/PageIntro'
@@ -27,73 +28,79 @@ type EditValues = Record<SupplierSlug, Partial<CanonicalItemSupplier>>
 
 export function AdminPage() {
   const toast = useToast()
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState('labor')
-  const [templates, setTemplates] = useState<LaborTemplate[]>([])
   const [markupRules, setMarkupRules] = useState<MarkupRule[]>([])
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveOk, setSaveOk] = useState(false)
   const [confirmSave, setConfirmSave] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [canonicalItems, setCanonicalItems] = useState<CanonicalItem[]>([])
   const [priceSearch, setPriceSearch] = useState('')
   const [editItem, setEditItem] = useState<CanonicalItem | null>(null)
   const [editValues, setEditValues] = useState<EditValues>({} as EditValues)
   const [editSaving, setEditSaving] = useState(false)
 
-  useEffect(() => {
-    if (tab === 'labor') {
-      void fetchTemplates()
-    } else if (tab === 'markup') {
-      void fetchMarkup()
-    } else if (tab === 'prices') {
-      void fetchCanonicalItems()
-    } else if (tab === 'stats') {
-      void fetchStats()
-    }
-  }, [tab])
-
-  const fetchTemplates = async () => {
-    setLoading(true); setError(null)
-    try {
+  const { data: templates = [], isLoading: templatesLoading, error: templatesError } = useQuery({
+    queryKey: ['admin', 'templates'],
+    queryFn: async () => {
       const res = await api.get('/admin/labor-templates')
-      setTemplates(res.data?.templates ?? res.data ?? [])
-    } catch {
-      setError('Failed to load templates')
-    } finally {
-      setLoading(false)
-    }
-  }
+      return (res.data?.templates ?? res.data ?? []) as LaborTemplate[]
+    },
+    enabled: tab === 'labor',
+  })
 
-  const fetchMarkup = async () => {
-    setLoading(true); setError(null)
-    try {
+  const { data: markupData, isLoading: markupLoading, error: markupError, dataUpdatedAt: markupUpdatedAt } = useQuery({
+    queryKey: ['admin', 'markups'],
+    queryFn: async () => {
       const res = await api.get('/admin/markup-rules')
-      const rules = (res.data ?? []).map((r: MarkupRuleResponse) => ({
+      return ((res.data ?? []) as MarkupRuleResponse[]).map(r => ({
         job_type: r.job_type,
         materials_markup_pct: Math.round((r.materials_markup_pct ?? 0) * 100),
         misc_disposal_flat: r.misc_flat ?? r.misc_disposal_flat ?? 0,
       }))
-      setMarkupRules(rules)
-    } catch {
-      setError('Failed to load markup rules')
-    } finally {
-      setLoading(false)
-    }
+    },
+    enabled: tab === 'markup',
+  })
+
+  // Track last-synced timestamp so we only sync new fetches
+  const [markupSyncedAt, setMarkupSyncedAt] = useState(0)
+  if (markupData && markupUpdatedAt > markupSyncedAt) {
+    setMarkupRules(markupData)
+    setMarkupSyncedAt(markupUpdatedAt)
   }
 
-  const fetchCanonicalItems = async () => {
-    setLoading(true); setError(null)
-    try {
+  const { data: canonicalItems = [], isLoading: pricesLoading, error: pricesError } = useQuery({
+    queryKey: ['admin', 'items'],
+    queryFn: async () => {
       const res = await adminApi.listCanonicalItems()
-      setCanonicalItems(res.data?.items ?? [])
-    } catch {
-      setError('Failed to load item prices')
-    } finally {
-      setLoading(false)
-    }
-  }
+      return res.data?.items ?? []
+    },
+    enabled: tab === 'prices',
+  })
+
+  const { data: stats = null, isLoading: statsLoading, error: statsError } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: async () => {
+      const res = await api.get('/admin/stats')
+      const d = res.data
+      return {
+        total_estimates: d.total_estimates ?? 0,
+        avg_estimate_value: d.avg_estimate_value ?? 0,
+        labor_templates_count: d.labor_templates_count ?? d.labor_templates ?? 0,
+        canonical_items_count: d.canonical_items_count ?? d.canonical_items ?? 0,
+      } as Stats
+    },
+    enabled: tab === 'stats',
+  })
+
+  const loading = (tab === 'labor' && templatesLoading) ||
+    (tab === 'markup' && markupLoading) ||
+    (tab === 'prices' && pricesLoading) ||
+    (tab === 'stats' && statsLoading)
+
+  const error = (tab === 'labor' && templatesError ? 'Failed to load templates' : null) ??
+    (tab === 'markup' && markupError ? 'Failed to load markup rules' : null) ??
+    (tab === 'prices' && pricesError ? 'Failed to load item prices' : null) ??
+    (tab === 'stats' && statsError ? 'Failed to load stats' : null)
 
   const openEditItem = useCallback((item: CanonicalItem) => {
     setEditItem(item)
@@ -121,31 +128,13 @@ export function AdminPage() {
       )
       toast.success('Prices updated')
       setEditItem(null)
-      void fetchCanonicalItems()
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'items'] })
     } catch {
       toast.error('Could not save prices', 'Please try again.')
     } finally {
       setEditSaving(false)
     }
-  }, [editItem, editValues, toast])
-
-  const fetchStats = async () => {
-    setLoading(true); setError(null)
-    try {
-      const res = await api.get('/admin/stats')
-      const d = res.data
-      setStats({
-        total_estimates: d.total_estimates ?? 0,
-        avg_estimate_value: d.avg_estimate_value ?? 0,
-        labor_templates_count: d.labor_templates_count ?? d.labor_templates ?? 0,
-        canonical_items_count: d.canonical_items_count ?? d.canonical_items ?? 0,
-      })
-    } catch {
-      setError('Failed to load stats')
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [editItem, editValues, toast, queryClient])
 
   const saveMarkup = async () => {
     setConfirmSave(false)
@@ -160,8 +149,9 @@ export function AdminPage() {
       toast.success('Markup rules saved')
       setSaveOk(true)
       setTimeout(() => setSaveOk(false), 3000)
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'markups'] })
     } catch {
-      setError('Failed to save markup rules. Please try again.')
+      toast.error('Failed to save markup rules. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -175,10 +165,10 @@ export function AdminPage() {
   }
 
   const refreshCurrentTab = () => {
-    if (tab === 'labor') { void fetchTemplates(); return }
-    if (tab === 'markup') { void fetchMarkup(); return }
-    if (tab === 'prices') { void fetchCanonicalItems(); return }
-    void fetchStats()
+    if (tab === 'labor') { void queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] }); return }
+    if (tab === 'markup') { setMarkupRules([]); void queryClient.invalidateQueries({ queryKey: ['admin', 'markups'] }); return }
+    if (tab === 'prices') { void queryClient.invalidateQueries({ queryKey: ['admin', 'items'] }); return }
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] })
   }
 
   const handleEditValueChange = useCallback((slug: SupplierSlug, field: string, value: string | number) => {
@@ -217,7 +207,7 @@ export function AdminPage() {
             {error && (
               <ErrorState
                 message={error}
-                onRetry={() => { setError(null); refreshCurrentTab() }}
+                onRetry={refreshCurrentTab}
                 className="mb-4"
               />
             )}
@@ -256,7 +246,7 @@ export function AdminPage() {
             </TabsContent>
 
             <TabsContent value="stats">
-              <StatsTab stats={stats} loading={loading} onRetry={fetchStats} />
+              <StatsTab stats={stats} loading={loading} onRetry={() => void queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] })} />
             </TabsContent>
           </div>
         </TabsRoot>
