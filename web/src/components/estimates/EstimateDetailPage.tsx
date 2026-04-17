@@ -6,10 +6,11 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, MapPin, Layers, CircleDollarSign,
   FileText, TrendingUp, Tag, Printer, Download,
-  Copy, Trash2, Zap, RefreshCw,
+  Copy, Trash2, Zap, RefreshCw, Mail,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
-import { api } from '@/lib/api'
+import { api, outcomesApi, proposalsApi, type OutcomeValue } from '@/lib/api'
+import { Modal } from '@/components/ui/Modal'
 import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Badge } from '@/components/ui/Badge'
@@ -85,9 +86,16 @@ export function EstimateDetailPage() {
   const [estimate,      setEstimate]      = useState<EstimateDetail | null>(null)
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState<string | null>(null)
-  const [duplicating,   setDuplicating]   = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting,      setDeleting]      = useState(false)
+  const [duplicating,      setDuplicating]      = useState(false)
+  const [confirmDelete,    setConfirmDelete]    = useState(false)
+  const [deleting,         setDeleting]         = useState(false)
+  const [outcome,          setOutcome]          = useState<OutcomeValue | null>(null)
+  const [outcomeSubmitting, setOutcomeSubmitting] = useState(false)
+  const [proposalOpen,     setProposalOpen]     = useState(false)
+  const [proposalEmail,    setProposalEmail]    = useState('')
+  const [proposalName,     setProposalName]     = useState('')
+  const [proposalMsg,      setProposalMsg]      = useState('')
+  const [proposalSending,  setProposalSending]  = useState(false)
 
   const exportCSV = useCallback(() => {
     if (!estimate) return
@@ -135,6 +143,41 @@ export function EstimateDetailPage() {
       setConfirmDelete(false)
     }
   }, [estimate, router, toast])
+
+  const handleRecordOutcome = useCallback(async (value: OutcomeValue) => {
+    if (!estimate) return
+    setOutcomeSubmitting(true)
+    try {
+      await outcomesApi.record(estimate.id, { outcome: value })
+      setOutcome(value)
+      toast.success(value === 'won' ? 'Marked as won' : value === 'lost' ? 'Marked as lost' : 'Outcome recorded')
+    } catch {
+      toast.error('Could not record outcome', 'Please try again.')
+    } finally {
+      setOutcomeSubmitting(false)
+    }
+  }, [estimate, toast])
+
+  const handleSendProposal = useCallback(async () => {
+    if (!estimate || !proposalEmail.trim()) return
+    setProposalSending(true)
+    try {
+      await proposalsApi.send(estimate.id, {
+        recipient_email: proposalEmail.trim(),
+        recipient_name: proposalName.trim() || undefined,
+        message: proposalMsg.trim() || undefined,
+      })
+      toast.success('Proposal sent')
+      setProposalOpen(false)
+      setProposalEmail('')
+      setProposalName('')
+      setProposalMsg('')
+    } catch {
+      toast.error('Could not send proposal', 'Please try again.')
+    } finally {
+      setProposalSending(false)
+    }
+  }, [estimate, proposalEmail, proposalName, proposalMsg, toast])
 
   useEffect(() => {
     if (!id) return
@@ -247,6 +290,47 @@ export function EstimateDetailPage() {
             >
               <Printer size={16} />
             </button>
+            {/* Send Proposal */}
+            <button
+              onClick={() => setProposalOpen(true)}
+              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+              title="Send proposal email"
+              aria-label="Send proposal"
+            >
+              <Mail size={15} />
+            </button>
+
+            {/* Win / Lost outcome */}
+            {outcome ? (
+              <span className={cn(
+                'px-2 py-1 rounded-lg text-[11px] font-semibold border',
+                outcome === 'won'
+                  ? 'bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]'
+                  : 'bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.3)]',
+              )}>
+                {outcome === 'won' ? 'Won' : 'Lost'}
+              </span>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => void handleRecordOutcome('won')}
+                  disabled={outcomeSubmitting}
+                  title="Mark as won"
+                  className="px-2 py-1 rounded-lg text-[11px] font-semibold border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.18)] transition-colors disabled:opacity-40"
+                >
+                  Won
+                </button>
+                <button
+                  onClick={() => void handleRecordOutcome('lost')}
+                  disabled={outcomeSubmitting}
+                  title="Mark as lost"
+                  className="px-2 py-1 rounded-lg text-[11px] font-semibold border border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.18)] transition-colors disabled:opacity-40"
+                >
+                  Lost
+                </button>
+              </div>
+            )}
+
             {/* Delete with inline confirm */}
             {confirmDelete ? (
               <div className="flex items-center gap-1.5">
@@ -406,6 +490,74 @@ export function EstimateDetailPage() {
           </motion.div>
         )}
       </div>
+
+      {/* ── Send Proposal modal ──────────────────────────────────────────── */}
+      <Modal
+        open={proposalOpen}
+        onClose={() => setProposalOpen(false)}
+        title="Send Proposal"
+        description={`Email estimate #${estimate.id} as a proposal to your customer.`}
+        size="sm"
+      >
+        <form
+          onSubmit={e => { e.preventDefault(); void handleSendProposal() }}
+          className="space-y-3"
+        >
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
+              Recipient email *
+            </label>
+            <input
+              type="email"
+              required
+              value={proposalEmail}
+              onChange={e => setProposalEmail(e.target.value)}
+              placeholder="customer@example.com"
+              className="input w-full"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
+              Recipient name
+            </label>
+            <input
+              type="text"
+              value={proposalName}
+              onChange={e => setProposalName(e.target.value)}
+              placeholder="John Smith"
+              className="input w-full"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
+              Personal message
+            </label>
+            <textarea
+              value={proposalMsg}
+              onChange={e => setProposalMsg(e.target.value)}
+              placeholder="Thank you for considering us for this project…"
+              rows={3}
+              className="input w-full resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setProposalOpen(false)}
+              className="rounded-xl border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!proposalEmail.trim() || proposalSending}
+              className="btn-primary rounded-xl px-4 py-2 text-sm disabled:opacity-40"
+            >
+              {proposalSending ? <RefreshCw size={14} className="animate-spin" /> : 'Send'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

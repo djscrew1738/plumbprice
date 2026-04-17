@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { motion, type Variants } from 'framer-motion'
-import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock } from 'lucide-react'
+import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { estimatesApi, type EstimateListItem } from '@/lib/api'
+import { estimatesApi, sessionsApi, type EstimateListItem, type ChatSessionSummary } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+import { formatDistanceToNow } from 'date-fns'
 
 /* ── Animation helpers ───────────────────────────── */
 
@@ -50,11 +51,15 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
 
 export function LauncherHome() {
   const [stats, setStats] = useState<{ count: number; totalValue: number; avgValue: number } | null>(null)
+  const [sessions, setSessions] = useState<ChatSessionSummary[] | null>(null)
 
   useEffect(() => {
     let active = true
     estimatesApi.list({ limit: 50 }).then(res => {
       if (active) setStats(computeWeeklyStats(res.data))
+    }).catch(() => { /* non-critical */ })
+    sessionsApi.list(5).then(res => {
+      if (active) setSessions(res.data)
     }).catch(() => { /* non-critical */ })
     return () => { active = false }
   }, [])
@@ -141,6 +146,36 @@ export function LauncherHome() {
       <section className="mt-5">
         <RecentJobsList heading="Recent jobs" />
       </section>
+
+      {/* Recent chat sessions */}
+      {sessions && sessions.length > 0 && (
+        <section className="mt-4 shell-panel p-4">
+          <h2 className="mb-3 border-b border-[color:var(--line)] pb-2 text-xs font-bold uppercase tracking-wider text-[color:var(--ink)]">
+            Recent Sessions
+          </h2>
+          <ul className="space-y-1.5">
+            {sessions.map(s => (
+              <li key={s.id}>
+                <a
+                  href="/estimator"
+                  className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-2 transition-colors hover:bg-[color:var(--panel-strong)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium text-[color:var(--ink)]">
+                      {s.title ?? `Session #${s.id}`}
+                    </p>
+                    <p className="text-[11px] text-[color:var(--muted-ink)]">
+                      {formatDistanceToNow(new Date(s.updated_at), { addSuffix: true })}
+                      {s.county ? ` · ${s.county}` : ''}
+                    </p>
+                  </div>
+                  <MessageSquare size={13} className="shrink-0 text-[color:var(--muted-ink)]" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Footer hint */}
       <p className="mt-6 flex items-center gap-1.5 text-[11px] text-[color:var(--muted-ink)]">

@@ -101,6 +101,7 @@ export function EstimatorPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   const [blueprintName, setBlueprintName] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<number | null>(null)
 
   const MAX_INPUT = 2000
 
@@ -270,8 +271,9 @@ export function EstimatorPage() {
       let pricingData: { estimate?: ChatMessage['estimate']; confidence?: number; confidence_label?: string; assumptions?: string[] } = {}
       let narrative = ''
 
-      for await (const event of chatApi.priceStream({ message, county, history })) {
+      for await (const event of chatApi.priceStream({ message, county, history, session_id: sessionId })) {
         if (event.type === 'pricing') {
+          if (event.session_id != null) setSessionId(event.session_id)
           pricingData = {
             estimate: event.estimate ? {
               ...event.estimate,
@@ -341,6 +343,7 @@ export function EstimatorPage() {
     setMessages([])
     setSelectedEstimate(null)
     setSheetOpen(false)
+    setSessionId(null)
     inputRef.current?.focus()
   }
 
