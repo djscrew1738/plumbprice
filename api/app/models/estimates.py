@@ -88,3 +88,20 @@ class EstimateVersion(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     estimate = relationship("Estimate", back_populates="versions")
+
+
+class Proposal(Base):
+    __tablename__ = "proposals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    estimate_id = Column(Integer, ForeignKey("estimates.id"), nullable=False, index=True)
+    recipient_email = Column(String(255), nullable=False)
+    recipient_name = Column(String(255), nullable=True)
+    message = Column(Text, nullable=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    resend_message_id = Column(String(255), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    estimate = relationship("Estimate")
