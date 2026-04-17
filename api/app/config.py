@@ -74,6 +74,16 @@ class Settings(BaseSettings):
     construct_api_url: Optional[str] = Field(default=None, env="CONSTRUCT_API_URL")
     price_cache_ttl_hours: int = Field(default=24, env="PRICE_CACHE_TTL_HOURS")
 
+    # Ferguson Trade API (Phase 2 live pricing)
+    # Obtain via Ferguson Trade Partner Program: https://www.ferguson.com/content/website-info/api-overview
+    ferguson_api_key: Optional[str] = Field(default=None, env="FERGUSON_API_KEY")
+    ferguson_api_base_url: str = Field(
+        default="https://api.ferguson.com/v1",
+        env="FERGUSON_API_BASE_URL",
+    )
+    # Alert when live price deviates more than this fraction from stored cost
+    price_change_alert_threshold: float = Field(default=0.10, env="PRICE_CHANGE_ALERT_THRESHOLD")
+
     # Celery
     celery_broker_url: str = Field(default="redis://localhost:6379/0", env="CELERY_BROKER_URL")
     celery_result_backend: str = Field(default="redis://localhost:6379/1", env="CELERY_RESULT_BACKEND")
