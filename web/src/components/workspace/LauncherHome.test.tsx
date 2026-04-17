@@ -5,6 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LauncherHome } from './LauncherHome'
 
 const { listMock } = vi.hoisted(() => ({
@@ -20,7 +21,16 @@ vi.mock('@/lib/api', () => ({
   estimatesApi: {
     list: listMock,
   },
+  sessionsApi: {
+    list: vi.fn().mockResolvedValue({ data: [] }),
+  },
 }))
+
+function makeWrapper() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return ({ children }: { children: React.ReactNode }) =>
+    createElement(QueryClientProvider, { client: qc }, children)
+}
 
 describe('LauncherHome', () => {
   beforeEach(() => {
@@ -53,16 +63,16 @@ describe('LauncherHome', () => {
       ],
     })
 
-    render(createElement(LauncherHome))
+    render(createElement(LauncherHome), { wrapper: makeWrapper() })
 
-    expect(screen.getByText(/field pricing launcher/i)).toBeInTheDocument()
+    expect(screen.getByText(/estimator dashboard/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /quick quote/i })).toHaveAttribute(
       'href',
-      '/estimator?entry=quick-quote'
+      '/estimator?entry=quick-quote',
     )
     expect(screen.getByRole('link', { name: /upload job files/i })).toHaveAttribute(
       'href',
-      '/estimator?entry=upload-job-files'
+      '/estimator?entry=upload-job-files',
     )
 
     await waitFor(() => expect(listMock).toHaveBeenCalled())
@@ -71,11 +81,11 @@ describe('LauncherHome', () => {
     expect(screen.getByText('Estimate ready')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /main line cleanout/i })).toHaveAttribute(
       'href',
-      '/estimator?estimateId=321'
+      '/estimator?estimateId=321',
     )
     expect(screen.getByRole('link', { name: /water heater replacement/i })).toHaveAttribute(
       'href',
-      '/estimator?estimateId=322'
+      '/estimator?estimateId=322',
     )
   })
 })

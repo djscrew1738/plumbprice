@@ -14,9 +14,7 @@ const { pushMock, getMock, deleteMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: pushMock,
-  }),
+  useRouter: () => ({ push: pushMock }),
 }))
 
 vi.mock('@/lib/api', () => ({
@@ -27,11 +25,7 @@ vi.mock('@/lib/api', () => ({
 }))
 
 vi.mock('@/components/ui/Toast', () => ({
-  useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-  }),
+  useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }),
 }))
 
 describe('EstimatesListPage', () => {
@@ -39,19 +33,50 @@ describe('EstimatesListPage', () => {
     pushMock.mockReset()
     getMock.mockReset()
     deleteMock.mockReset()
-    getMock.mockResolvedValue({ data: { estimates: [] } })
   })
 
-  it('shows the saved estimates intro and routes Quick Quote into the estimator entry flow', async () => {
+  it('shows empty state with Start Estimating action when no estimates exist', async () => {
+    getMock.mockResolvedValue({ data: [] })
     const user = userEvent.setup()
 
     render(createElement(EstimatesListPage))
 
     await waitFor(() => expect(getMock).toHaveBeenCalled())
+    expect(await screen.findByText(/no estimates yet/i)).toBeInTheDocument()
 
-    expect(screen.getByRole('heading', { name: /review and resume saved estimates/i })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /quick quote/i }))
+    await user.click(screen.getByRole('button', { name: /start estimating/i }))
+    expect(pushMock).toHaveBeenCalledWith('/estimator')
+  })
 
-    expect(pushMock).toHaveBeenCalledWith('/estimator?entry=quick-quote')
+  it('normalizes { estimates: [] } envelope from API without crashing', async () => {
+    getMock.mockResolvedValue({ data: { estimates: [] } })
+
+    render(createElement(EstimatesListPage))
+
+    await waitFor(() => expect(getMock).toHaveBeenCalled())
+    expect(await screen.findByText(/no estimates yet/i)).toBeInTheDocument()
+  })
+
+  it('renders estimate rows when data is returned', async () => {
+    getMock.mockResolvedValue({
+      data: [
+        {
+          id: 1,
+          title: 'Toilet replacement',
+          job_type: 'service',
+          status: 'draft',
+          grand_total: 450,
+          confidence_label: 'HIGH',
+          county: 'Dallas',
+          created_at: '2026-04-01T12:00:00Z',
+        },
+      ],
+    })
+
+    render(createElement(EstimatesListPage))
+
+    await waitFor(() => expect(getMock).toHaveBeenCalled())
+    const matches = await screen.findAllByText('Toilet replacement')
+    expect(matches.length).toBeGreaterThan(0)
   })
 })

@@ -151,7 +151,8 @@ export function EstimatesListPage() {
       setLoading(true); setError(null)
       const params = filter !== 'all' ? { job_type: filter } : {}
       const res = await api.get('/estimates', { params })
-      setEstimates(res.data ?? [])
+      const raw = res.data
+      setEstimates(Array.isArray(raw) ? raw : (raw?.estimates ?? []))
     } catch {
       setError('Could not load estimates')
     } finally {
