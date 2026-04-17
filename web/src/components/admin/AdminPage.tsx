@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import { RefreshCw, Wrench, DollarSign, BarChart3, Package } from 'lucide-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { api, adminApi, type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
+import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -17,7 +18,6 @@ interface LaborTemplate {
   code: string; name: string; category: string; base_hours: number
   lead_rate: number; helper_required: boolean; disposal_hours: number
 }
-interface MarkupRule { job_type: string; materials_markup_pct: number; misc_disposal_flat: number }
 interface MarkupRuleResponse { job_type: string; materials_markup_pct?: number; misc_flat?: number; misc_disposal_flat?: number }
 interface Stats { total_estimates: number; avg_estimate_value: number; labor_templates_count: number; canonical_items_count: number }
 
@@ -31,33 +31,17 @@ export function AdminPage() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState('labor')
   const [markupRules, setMarkupRules] = useState<MarkupRule[]>([])
-  const [saving, setSaving] = useState(false)
   const [saveOk, setSaveOk] = useState(false)
   const [confirmSave, setConfirmSave] = useState(false)
   const [priceSearch, setPriceSearch] = useState('')
   const [editItem, setEditItem] = useState<CanonicalItem | null>(null)
   const [editValues, setEditValues] = useState<EditValues>({} as EditValues)
-  const [editSaving, setEditSaving] = useState(false)
 
-  const { data: templates = [], isLoading: templatesLoading, error: templatesError } = useQuery({
-    queryKey: ['admin', 'templates'],
-    queryFn: async () => {
-      const res = await api.get('/admin/labor-templates')
-      return (res.data?.templates ?? res.data ?? []) as LaborTemplate[]
-    },
+  const { data: templates = [], isLoading: templatesLoading, error: templatesError } = useAdminTemplates({
     enabled: tab === 'labor',
   })
 
-  const { data: markupData, isLoading: markupLoading, error: markupError, dataUpdatedAt: markupUpdatedAt } = useQuery({
-    queryKey: ['admin', 'markups'],
-    queryFn: async () => {
-      const res = await api.get('/admin/markup-rules')
-      return ((res.data ?? []) as MarkupRuleResponse[]).map(r => ({
-        job_type: r.job_type,
-        materials_markup_pct: Math.round((r.materials_markup_pct ?? 0) * 100),
-        misc_disposal_flat: r.misc_flat ?? r.misc_disposal_flat ?? 0,
-      }))
-    },
+  const { data: markupData, isLoading: markupLoading, error: markupError, dataUpdatedAt: markupUpdatedAt } = useAdminMarkups({
     enabled: tab === 'markup',
   })
 
@@ -68,29 +52,16 @@ export function AdminPage() {
     setMarkupSyncedAt(markupUpdatedAt)
   }
 
-  const { data: canonicalItems = [], isLoading: pricesLoading, error: pricesError } = useQuery({
-    queryKey: ['admin', 'items'],
-    queryFn: async () => {
-      const res = await adminApi.listCanonicalItems()
-      return res.data?.items ?? []
-    },
+  const { data: canonicalItems = [], isLoading: pricesLoading, error: pricesError } = useAdminItems({
     enabled: tab === 'prices',
   })
 
-  const { data: stats = null, isLoading: statsLoading, error: statsError } = useQuery({
-    queryKey: ['admin', 'stats'],
-    queryFn: async () => {
-      const res = await api.get('/admin/stats')
-      const d = res.data
-      return {
-        total_estimates: d.total_estimates ?? 0,
-        avg_estimate_value: d.avg_estimate_value ?? 0,
-        labor_templates_count: d.labor_templates_count ?? d.labor_templates ?? 0,
-        canonical_items_count: d.canonical_items_count ?? d.canonical_items ?? 0,
-      } as Stats
-    },
+  const { data: stats = null, isLoading: statsLoading, error: statsError } = useAdminStats({
     enabled: tab === 'stats',
   })
+
+  const saveMarkupMutation = useSaveMarkup()
+  const saveItemMutation = useSaveItem()
 
   const loading = (tab === 'labor' && templatesLoading) ||
     (tab === 'markup' && markupLoading) ||
@@ -114,47 +85,37 @@ export function AdminPage() {
 
   const saveEditItem = useCallback(async () => {
     if (!editItem) return
-    setEditSaving(true)
-    try {
-      await Promise.all(
-        SUPPLIERS
-          .filter(slug => editValues[slug]?.name && (editValues[slug]?.cost ?? 0) > 0)
-          .map(slug => adminApi.updateCanonicalItem(editItem.canonical_item, slug, {
-            name: editValues[slug].name!,
-            cost: Number(editValues[slug].cost),
-            unit: editValues[slug].unit ?? 'ea',
-            sku: editValues[slug].sku || undefined,
-          }))
-      )
-      toast.success('Prices updated')
-      setEditItem(null)
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'items'] })
-    } catch {
-      toast.error('Could not save prices', 'Please try again.')
-    } finally {
-      setEditSaving(false)
-    }
-  }, [editItem, editValues, toast, queryClient])
+    const updates = SUPPLIERS
+      .filter(slug => editValues[slug]?.name && (editValues[slug]?.cost ?? 0) > 0)
+      .map(slug => ({
+        supplier: slug,
+        name: editValues[slug].name!,
+        cost: Number(editValues[slug].cost),
+        unit: editValues[slug].unit ?? 'ea',
+        sku: editValues[slug].sku || undefined,
+      }))
+    saveItemMutation.mutate(
+      { canonicalItem: editItem.canonical_item, updates },
+      {
+        onSuccess: () => {
+          toast.success('Prices updated')
+          setEditItem(null)
+        },
+        onError: () => toast.error('Could not save prices', 'Please try again.'),
+      },
+    )
+  }, [editItem, editValues, toast, saveItemMutation])
 
   const saveMarkup = async () => {
     setConfirmSave(false)
-    setSaving(true)
-    try {
-      await Promise.all(markupRules.map(r =>
-        api.put(`/admin/markup-rules/${r.job_type}`, {
-          materials_markup_pct: r.materials_markup_pct / 100,
-          misc_flat: r.misc_disposal_flat,
-        })
-      ))
-      toast.success('Markup rules saved')
-      setSaveOk(true)
-      setTimeout(() => setSaveOk(false), 3000)
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'markups'] })
-    } catch {
-      toast.error('Failed to save markup rules. Please try again.')
-    } finally {
-      setSaving(false)
-    }
+    saveMarkupMutation.mutate(markupRules, {
+      onSuccess: () => {
+        toast.success('Markup rules saved')
+        setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 3000)
+      },
+      onError: () => toast.error('Failed to save markup rules. Please try again.'),
+    })
   }
 
   const updateMarkup = (jobType: string, field: keyof MarkupRule, rawValue: number) => {
@@ -220,7 +181,7 @@ export function AdminPage() {
               <MarkupRulesTab
                 markupRules={markupRules}
                 loading={loading}
-                saving={saving}
+                saving={saveMarkupMutation.isPending}
                 saveOk={saveOk}
                 confirmSave={confirmSave}
                 onUpdateMarkup={updateMarkup}
@@ -237,7 +198,7 @@ export function AdminPage() {
                 onPriceSearchChange={setPriceSearch}
                 editItem={editItem}
                 editValues={editValues}
-                editSaving={editSaving}
+                editSaving={saveItemMutation.isPending}
                 onOpenEditItem={openEditItem}
                 onCloseEditItem={() => setEditItem(null)}
                 onEditValueChange={handleEditValueChange}

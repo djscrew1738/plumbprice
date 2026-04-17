@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, TrendingDown, Package, DollarSign, ChevronDown, ChevronUp, Search, X, Copy, Check } from 'lucide-react'
 import { cn, formatCurrencyDecimal } from '@/lib/utils'
-import { api } from '@/lib/api'
+import { useSuppliers, type CatalogItem } from '@/lib/hooks'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
 import { Badge } from '@/components/ui/Badge'
@@ -13,16 +12,6 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Tooltip } from '@/components/ui/Tooltip'
-
-interface SupplierPrice { name: string; sku: string; cost: number }
-interface CatalogItem {
-  canonical_id: string
-  display_name: string
-  category: string
-  best_price: number
-  best_supplier: string
-  prices: { ferguson?: SupplierPrice; moore_supply?: SupplierPrice; apex?: SupplierPrice }
-}
 
 const SUPPLIER_LABELS: Record<string, string> = {
   ferguson: 'Ferguson',
@@ -36,7 +25,6 @@ function prettyCat(cat: string) {
 
 export function SuppliersPage() {
   const toast = useToast()
-  const queryClient = useQueryClient()
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [search,         setSearch]         = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
@@ -50,30 +38,7 @@ export function SuppliersPage() {
     })
   }
 
-  const { data: items = [], isLoading: loading, error: queryError, refetch: fetchCatalog } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: async () => {
-      const res = await api.get('/suppliers/catalog')
-      const raw: Record<string, Record<string, { sku: string; name: string; cost: number }>> =
-        res.data?.items ?? res.data ?? {}
-      return Object.entries(raw).map(([canonical_id, prices]): CatalogItem => {
-        const entries = Object.entries(prices) as [string, { sku: string; name: string; cost: number }][]
-        let best_supplier = entries[0]?.[0] ?? ''
-        let best_price    = entries[0]?.[1]?.cost ?? 0
-        for (const [sup, p] of entries) {
-          if (p.cost < best_price) { best_price = p.cost; best_supplier = sup }
-        }
-        return {
-          canonical_id,
-          display_name: canonical_id.replace(/\./g, ' › ').replace(/_/g, ' '),
-          category: canonical_id.split('.')[0] ?? 'other',
-          best_price,
-          best_supplier,
-          prices: prices as CatalogItem['prices'],
-        }
-      })
-    },
-  })
+  const { data: items = [], isLoading: loading, error: queryError, refetch: fetchCatalog } = useSuppliers()
 
   const error = queryError ? 'Could not load supplier catalog' : null
 

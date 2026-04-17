@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
@@ -11,6 +11,7 @@ import {
 import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api'
+import { useEstimates, useDeleteEstimate, useDuplicateEstimate } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { badgeVariants } from '@/components/ui/Badge'
@@ -139,23 +140,20 @@ export function EstimatesListPage() {
   const queryClient = useQueryClient()
 
   const [filter,        setFilter]        = useState('all')
-  const [deleting,      setDeleting]      = useState<number | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
-  const [duplicating,   setDuplicating]   = useState<number | null>(null)
   const [search,        setSearch]        = useState('')
   const [sortBy,        setSortBy]        = useState<SortKey>('newest')
   const [sortOpen,      setSortOpen]      = useState(false)
   const sortRef = useRef<HTMLDivElement>(null)
 
-  const { data: estimates = [], isLoading: loading, error: queryError, refetch: fetchEstimates } = useQuery({
-    queryKey: ['estimates', { filter }],
-    queryFn: async () => {
-      const params = filter !== 'all' ? { job_type: filter } : {}
-      const res = await api.get('/estimates', { params })
-      const raw = res.data
-      return (Array.isArray(raw) ? raw : (raw?.estimates ?? [])) as Estimate[]
-    },
-  })
+  const { data: estimates = [], isLoading: loading, error: queryError, refetch: fetchEstimates } = useEstimates(
+    { job_type: filter },
+  )
+  const deleteMutation = useDeleteEstimate()
+  const duplicateMutation = useDuplicateEstimate()
+
+  const deleting = deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
+  const duplicating = duplicateMutation.isPending ? (duplicateMutation.variables ?? null) : null
 
   const error = queryError ? 'Could not load estimates' : null
 
@@ -177,33 +175,20 @@ export function EstimatesListPage() {
     )
   }
 
-  const handleDeleteConfirm = async (id: number) => {
-    setDeleting(id)
+  const handleDeleteConfirm = (id: number) => {
     setConfirmDelete(null)
-    try {
-      await api.delete(`/estimates/${id}`)
-      void queryClient.invalidateQueries({ queryKey: ['estimates'] })
-      toast.success('Estimate deleted')
-    } catch {
-      toast.error('Failed to delete', 'Please try again.')
-    } finally {
-      setDeleting(null)
-    }
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success('Estimate deleted'),
+      onError: () => toast.error('Failed to delete', 'Please try again.'),
+    })
   }
 
-  const handleDuplicate = async (id: number, e: React.MouseEvent) => {
+  const handleDuplicate = (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
-    setDuplicating(id)
-    try {
-      const res = await api.post<Estimate>(`/estimates/${id}/duplicate`, {})
-      const copy = res.data
-      void queryClient.invalidateQueries({ queryKey: ['estimates'] })
-      toast.success('Estimate duplicated', copy.title || `Estimate #${copy.id}`)
-    } catch {
-      toast.error('Could not duplicate', 'Please try again.')
-    } finally {
-      setDuplicating(null)
-    }
+    duplicateMutation.mutate(id, {
+      onSuccess: (copy) => toast.success('Estimate duplicated', copy.title || `Estimate #${copy.id}`),
+      onError: () => toast.error('Could not duplicate', 'Please try again.'),
+    })
   }
 
   const visible = useMemo(() => {

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { History } from 'lucide-react'
 import { api, outcomesApi, proposalsApi, type OutcomeValue } from '@/lib/api'
+import { useEstimate } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EstimateHeader } from './EstimateHeader'
@@ -51,14 +52,8 @@ export function EstimateDetailPage() {
   const queryClient = useQueryClient()
   const id = Number(params?.id)
 
-  const { data: estimate, isLoading: loading, error: queryError } = useQuery({
-    queryKey: ['estimates', id],
-    queryFn: async () => {
-      const res = await api.get(`/estimates/${id}`)
-      return res.data as EstimateDetail
-    },
-    enabled: !!id,
-  })
+  const { data: rawEstimate, isLoading: loading, error: queryError } = useEstimate(id)
+  const estimate = rawEstimate as EstimateDetail | undefined
 
   const { data: sentProposals = [] } = useQuery({
     queryKey: ['proposals', 'sends', id],
@@ -269,6 +264,8 @@ export function EstimateDetailPage() {
         <OutcomeRecorderCard
           assumptions={estimate.assumptions}
           sentProposals={sentProposals}
+          estimateId={estimate.id}
+          onGenerateProposal={() => setProposalOpen(true)}
         />
 
         {/* ── Version History ────────────────────────────────────────────────── */}
