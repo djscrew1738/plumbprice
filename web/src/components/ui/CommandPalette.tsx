@@ -197,23 +197,26 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="fixed left-1/2 top-[18%] z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl backdrop-blur-xl"
+            className="fixed left-1/2 top-[18%] z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-2xl border border-[color:var(--line)] bg-[hsl(var(--panel-hsl)/0.95)] shadow-2xl backdrop-blur-xl"
             role="dialog"
+            aria-modal="true"
             aria-label="Command palette"
             onKeyDown={handleKeyDown}
           >
             {/* Search input */}
-            <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
-              <Search size={16} className="shrink-0 text-zinc-500" />
+            <div className="flex items-center gap-3 border-b border-[color:var(--line)] px-4 py-3">
+              <Search size={16} className="shrink-0 text-[color:var(--muted-ink)]" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Type a command..."
-                className="w-full bg-transparent text-base text-zinc-300 placeholder:text-zinc-600 outline-none"
+                className="w-full bg-transparent text-base text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] outline-none"
+                aria-label="Search commands"
+                autoComplete="off"
               />
-              <kbd className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600">
+              <kbd className="shrink-0 rounded bg-[color:var(--panel-strong)] px-1.5 py-0.5 text-[10px] text-[color:var(--muted-ink)]">
                 ESC
               </kbd>
             </div>
@@ -221,11 +224,11 @@ export function CommandPalette() {
             {/* Results */}
             <div ref={listRef} className="max-h-[360px] overflow-y-auto overscroll-contain p-2">
               {sections.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-zinc-600">No results found</p>
+                <p className="px-3 py-6 text-center text-sm text-[color:var(--muted-ink)]">No results found</p>
               )}
               {sections.map(section => (
                 <div key={section.title} className="mb-1">
-                  <p className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                  <p className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted-ink)]">
                     {section.title}
                   </p>
                   {section.items.map(item => {
@@ -240,13 +243,13 @@ export function CommandPalette() {
                         onClick={() => { item.action(); close() }}
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors ${
-                          isSelected ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:bg-white/[0.05]'
+                          isSelected ? 'bg-[color:var(--panel-strong)] text-[color:var(--ink)]' : 'text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)]'
                         }`}
                       >
                         <Icon size={15} className="shrink-0" />
                         <span className="flex-1 truncate">{item.label}</span>
                         {item.shortcut && (
-                          <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                          <span className="shrink-0 rounded bg-[color:var(--panel-strong)] px-1.5 py-0.5 text-[10px] text-[color:var(--muted-ink)]">
                             {item.shortcut}
                           </span>
                         )}

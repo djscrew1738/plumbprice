@@ -150,6 +150,14 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(120, 88, 57, 0.48); }
 * { scrollbar-width: thin; scrollbar-color: rgba(120, 88, 57, 0.32) transparent; }
 
+/* ── Icon Size Scale ──────────────────────────────
+ * 11-12px  — inline/compact (badges, timestamps)
+ * 14px     — compact UI (search fields, small buttons)
+ * 16px     — default (nav items, standard buttons, cards)
+ * 20px     — prominent (empty states, feature icons)
+ * 24-28px  — hero/display (page headers, large empty states)
+ */
+
 @layer components {
   .shell-panel {
     @apply rounded-[1.5rem] border border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_18px_50px_rgba(84,60,39,0.08)];

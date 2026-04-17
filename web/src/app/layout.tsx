@@ -64,6 +64,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <title>PlumbPrice AI</title>
+        <script dangerouslySetInnerHTML={{ __html: `
+  (function() {
+    var t = localStorage.getItem('pp_theme');
+    if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    }
+  })();
+` }} />
       </head>
       <body className="bg-[hsl(var(--background))] text-[color:var(--ink)] antialiased">
         {isOffline && (
