@@ -16,6 +16,7 @@ class ChatPriceRequest(BaseModel):
     county: Optional[str] = "Dallas"
     preferred_supplier: Optional[str] = None
     conversation_id: Optional[str] = None
+    session_id: Optional[int] = None  # persist to an existing session
     history: Optional[list[ChatMessage]] = []
 
 
@@ -34,6 +35,7 @@ class ChatPriceResponse(BaseModel):
     answer: str
     estimate: Optional[EstimateBreakdown] = None
     estimate_id: Optional[int] = None
+    session_id: Optional[int] = None
     confidence: float = 0.85
     confidence_label: str = "HIGH"
     assumptions: list[str] = []

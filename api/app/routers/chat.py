@@ -10,6 +10,7 @@ import structlog
 
 from app.core.auth import get_current_user
 from app.database import get_db
+from app.models.sessions import ChatSession, ChatMessage as ChatMessageModel
 from app.models.users import User
 from app.schemas.chat import ChatPriceRequest, ChatPriceResponse
 from app.services.agent import process_chat_message
@@ -21,6 +22,45 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 STREAM_TIMEOUT_SECONDS = 90
+
+
+async def _upsert_session(
+    db: AsyncSession,
+    session_id: int | None,
+    user_id: int,
+    organization_id: int | None,
+    user_message: str,
+    assistant_answer: str,
+    county: str | None,
+    estimate_id: int | None,
+) -> int:
+    """Get-or-create a ChatSession and append the exchange as two ChatMessageModel rows."""
+    from sqlalchemy import select
+
+    if session_id:
+        result = await db.execute(
+            select(ChatSession).where(
+                ChatSession.id == session_id,
+                ChatSession.user_id == user_id,
+            )
+        )
+        session = result.scalar_one_or_none()
+    else:
+        session = None
+
+    if session is None:
+        session = ChatSession(
+            user_id=user_id,
+            organization_id=organization_id,
+            title=user_message[:80],
+            county=county,
+        )
+        db.add(session)
+        await db.flush()  # get session.id before adding messages
+
+    db.add(ChatMessageModel(session_id=session.id, role="user", content=user_message))
+    db.add(ChatMessageModel(session_id=session.id, role="assistant", content=assistant_answer, estimate_id=estimate_id))
+    return session.id
 
 
 def build_estimate_breakdown(estimate_result):
@@ -95,7 +135,19 @@ async def chat_price(
                 organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
             )
             estimate_id = estimate.id
-            await db.commit()
+
+        answer = result["answer"]
+        session_id = await _upsert_session(
+            db=db,
+            session_id=body.session_id,
+            user_id=current_user.id,
+            organization_id=getattr(current_user, "organization_id", None),
+            user_message=body.message,
+            assistant_answer=answer,
+            county=body.county,
+            estimate_id=estimate_id,
+        )
+        await db.commit()
 
         estimate_payload = result.get("estimate")
         if estimate_result is not None:
@@ -104,9 +156,10 @@ async def chat_price(
         classified_by = result.get("classification", {}).get("classified_by")
 
         return ChatPriceResponse(
-            answer=result["answer"],
+            answer=answer,
             estimate=estimate_payload,
             estimate_id=estimate_id,
+            session_id=session_id,
             confidence=result["confidence"],
             confidence_label=result["confidence_label"],
             assumptions=result.get("assumptions", []),
@@ -174,13 +227,30 @@ async def chat_price_stream(
                 organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
             )
             estimate_id = estimate.id
-            await db.commit()
         except Exception as e:
             logger.warning("Stream estimate persist failed", error=str(e))
+
+    # Persist the exchange to a session (best-effort; non-fatal if it fails)
+    stream_session_id: int | None = None
+    try:
+        stream_session_id = await _upsert_session(
+            db=db,
+            session_id=body.session_id,
+            user_id=current_user.id,
+            organization_id=getattr(current_user, "organization_id", None),
+            user_message=body.message,
+            assistant_answer="",  # placeholder; streaming answer assembled client-side
+            county=body.county,
+            estimate_id=estimate_id,
+        )
+        await db.commit()
+    except Exception as e:
+        logger.warning("Stream session persist failed", error=str(e))
 
     pricing_event = {
         "estimate": build_estimate_breakdown(estimate_result) if estimate_result else None,
         "estimate_id": estimate_id,
+        "session_id": stream_session_id,
         "confidence": result["confidence"],
         "confidence_label": result["confidence_label"],
         "assumptions": result.get("assumptions", []),
