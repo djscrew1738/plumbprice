@@ -83,9 +83,9 @@ export const StatCard = memo(function StatCard({
                     )}
                   >
                     {isPositive ? (
-                      <TrendingUp className="h-3 w-3" />
+                      <TrendingUp className="h-3 w-3" aria-hidden="true" />
                     ) : (
-                      <TrendingDown className="h-3 w-3" />
+                      <TrendingDown className="h-3 w-3" aria-hidden="true" />
                     )}
                     {Math.abs(trend.value)}%
                     {trend.label && (

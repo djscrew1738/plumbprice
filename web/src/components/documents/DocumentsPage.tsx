@@ -356,6 +356,7 @@ export function DocumentsPage() {
                 type="file"
                 accept=".pdf,.csv,.xlsx,.xls"
                 className="hidden"
+                aria-label="Choose file to upload"
                 onChange={(e) => {
                   const f = e.target.files?.[0]
                   if (f) setUploadFile(f)

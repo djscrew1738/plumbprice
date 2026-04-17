@@ -94,11 +94,11 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
                 >
                   <span className="flex items-center gap-3">
                     <span className="flex size-10 items-center justify-center rounded-[1rem] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
-                      <Icon size={18} />
+                      <Icon size={18} aria-hidden="true" />
                     </span>
                     <span className="text-sm font-semibold">{label}</span>
                   </span>
-                  <ChevronRight size={16} className="text-[color:var(--muted-ink)]" />
+                  <ChevronRight size={16} className="text-[color:var(--muted-ink)]" aria-hidden="true" />
                 </Link>
               ))}
             </div>

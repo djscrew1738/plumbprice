@@ -74,6 +74,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <div className="relative">
           {leftIcon && (
             <span
+              aria-hidden="true"
               className={cn(
                 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[color:var(--muted-ink)]',
                 iconSize[s]
@@ -103,6 +104,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
           {rightIcon && (
             <span
+              aria-hidden="true"
               className={cn(
                 'pointer-events-none absolute inset-y-0 right-3 flex items-center text-[color:var(--muted-ink)]',
                 iconSize[s]

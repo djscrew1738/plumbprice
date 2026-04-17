@@ -37,17 +37,18 @@ export function FormField({
             *
           </span>
         )}
+        {required && <span className="sr-only"> (required)</span>}
       </label>
 
       {children}
 
       {error && (
-        <p className="text-xs text-[hsl(var(--danger))] mt-1" role="alert">
+        <p id={`${id}-error`} className="text-xs text-[hsl(var(--danger))] mt-1" role="alert">
           {error}
         </p>
       )}
       {!error && helperText && (
-        <p className="text-xs text-[color:var(--muted-ink)] mt-1">
+        <p id={`${id}-helper`} className="text-xs text-[color:var(--muted-ink)] mt-1">
           {helperText}
         </p>
       )}

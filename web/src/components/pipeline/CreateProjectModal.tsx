@@ -84,6 +84,7 @@ export function CreateProjectModal({ open, onClose, onCreated }: CreateProjectMo
           onChange={e => set('name', e.target.value)}
           placeholder="e.g. 123 Main St — Water Heater"
           required
+          aria-required="true"
           size="md"
         />
 
@@ -130,9 +131,9 @@ export function CreateProjectModal({ open, onClose, onCreated }: CreateProjectMo
             className="btn-primary min-h-0 py-2 disabled:opacity-50"
           >
             {saving ? (
-              <RefreshCw size={13} className="animate-spin" />
+              <RefreshCw size={13} className="animate-spin" aria-hidden="true" />
             ) : (
-              <Check size={13} />
+              <Check size={13} aria-hidden="true" />
             )}
             {saving ? 'Creating…' : 'Create Project'}
           </button>

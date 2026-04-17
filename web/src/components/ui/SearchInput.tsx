@@ -59,9 +59,9 @@ export function SearchInput({
       {/* Left icon — spinner or search */}
       <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[color:var(--muted-ink)]">
         {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
-          <Search className="h-4 w-4" />
+          <Search className="h-4 w-4" aria-hidden="true" />
         )}
       </span>
 

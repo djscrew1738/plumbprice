@@ -223,6 +223,7 @@ export function Select({
             </span>
           )}
           <ChevronDown
+            aria-hidden="true"
             className={cn(
               'h-4 w-4 text-[color:var(--muted-ink)] transition-transform',
               open && 'rotate-180'
@@ -250,7 +251,7 @@ export function Select({
           {searchable && (
             <li className="sticky top-0 border-b border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1.5">
               <div className="relative">
-                <Search className="pointer-events-none absolute inset-y-0 left-2 my-auto h-3.5 w-3.5 text-[color:var(--muted-ink)]" />
+                <Search className="pointer-events-none absolute inset-y-0 left-2 my-auto h-3.5 w-3.5 text-[color:var(--muted-ink)]" aria-hidden="true" />
                 <input
                   ref={searchRef}
                   type="text"

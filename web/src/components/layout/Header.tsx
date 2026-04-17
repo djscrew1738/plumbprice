@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Menu, MapPin, LogOut, Settings, ChevronRight } from 'lucide-react'
 import { getPageMeta, PAGE_META } from './nav'
 import { ThemeToggle } from './ThemeToggle'
+import { NotificationBell } from './NotificationBell'
 import { useAuth } from '@/contexts/AuthContext'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -60,6 +61,32 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [menuOpen])
 
+  // Close on Escape and handle arrow key navigation
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false)
+        return
+      }
+      if (!menuRef.current) return
+      const items = Array.from(
+        menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+      )
+      if (items.length === 0) return
+      const idx = items.indexOf(document.activeElement as HTMLElement)
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        items[Math.min(idx + 1, items.length - 1)]?.focus()
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        items[Math.max(idx - 1, 0)]?.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [menuOpen])
+
   const handleLogout = () => {
     setMenuOpen(false)
     logout()
@@ -77,7 +104,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] lg:hidden"
           aria-label="Open navigation"
         >
-          <Menu size={18} />
+          <Menu size={18} aria-hidden="true" />
         </button>
         <div className="min-w-0 flex-1">
           <Link href="/" className="group inline-block">
@@ -92,7 +119,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-1 mt-0.5">
               {breadcrumb.map((crumb, i) => (
                 <span key={crumb.href} className="flex items-center gap-1">
-                  {i > 0 && <ChevronRight size={10} className="text-[color:var(--muted-ink)] opacity-50" />}
+                  {i > 0 && <ChevronRight size={10} className="text-[color:var(--muted-ink)] opacity-50" aria-hidden="true" />}
                   {i < breadcrumb.length - 1 ? (
                     <Link
                       href={crumb.href}
@@ -114,11 +141,12 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <div
             className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 sm:flex"
           >
-            <MapPin size={12} className="text-[color:var(--accent-strong)]" />
+            <MapPin size={12} className="text-[color:var(--accent-strong)]" aria-hidden="true" />
             <span className="text-xs font-medium text-[color:var(--muted-ink)]">DFW</span>
           </div>
         </Tooltip>
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <ThemeToggle />
           <div className="relative" ref={menuRef}>
             <Tooltip content={displayName}>
@@ -133,7 +161,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
               </button>
             </Tooltip>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-50">
+              <div role="menu" aria-label="User menu" className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-50">
                 <div className="border-b border-[color:var(--line)] px-4 py-3">
                   <p className="text-sm font-semibold text-[color:var(--ink)] truncate">{displayName}</p>
                   {user?.email && (
@@ -148,17 +176,21 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                 <div className="py-1">
                   <Link
                     href="/admin"
+                    role="menuitem"
+                    tabIndex={0}
                     onClick={() => setMenuOpen(false)}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[color:var(--ink)] transition-colors hover:bg-[color:var(--panel-strong)]"
                   >
-                    <Settings size={15} />
+                    <Settings size={15} aria-hidden="true" />
                     <span>Settings</span>
                   </Link>
                   <button
+                    role="menuitem"
+                    tabIndex={0}
                     onClick={handleLogout}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
                   >
-                    <LogOut size={15} />
+                    <LogOut size={15} aria-hidden="true" />
                     <span>Sign out</span>
                   </button>
                 </div>

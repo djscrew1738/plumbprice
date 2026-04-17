@@ -50,6 +50,7 @@ export function ProposalSendModal({
             id="proposal-email"
             type="email"
             required
+            aria-required="true"
             autoComplete="email"
             value={proposalEmail}
             onChange={e => onEmailChange(e.target.value)}
@@ -98,7 +99,7 @@ export function ProposalSendModal({
             className="btn-primary rounded-xl px-4 py-2 text-sm disabled:opacity-40"
           >
             {proposalSending ? (
-              <><RefreshCw size={14} className="animate-spin" /><span>Sending…</span></>
+              <><RefreshCw size={14} className="animate-spin" aria-hidden="true" /><span>Sending…</span></>
             ) : 'Send'}
           </button>
         </div>

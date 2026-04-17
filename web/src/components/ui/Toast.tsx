@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* Toast stack — top-right desktop, top-center mobile */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-[300] flex flex-col gap-2 w-[calc(100vw-2rem)] sm:w-80 pointer-events-none">
+      <div role="region" aria-label="Notifications" className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-[300] flex flex-col gap-2 w-[calc(100vw-2rem)] sm:w-80 pointer-events-none">
         <AnimatePresence initial={false}>
           {toasts.map(t => {
             const s = STYLES[t.type]
@@ -75,12 +75,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   s.wrap,
                 )}
               >
-                <Icon size={16} className={cn('shrink-0 mt-0.5', s.icon)} />
+                <Icon size={16} className={cn('shrink-0 mt-0.5', s.icon)} aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <p className={cn('text-sm font-semibold leading-snug', s.title)}>{t.title}</p>
                   {t.message && <p className="text-xs text-[color:var(--muted-ink)] mt-0.5 leading-relaxed">{t.message}</p>}
                 </div>
-                <button onClick={() => dismiss(t.id)} className="shrink-0 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors mt-0.5">
+                <button
+                  onClick={() => dismiss(t.id)}
+                  aria-label="Dismiss notification"
+                  className="shrink-0 rounded-lg p-1 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                >
                   <X size={14} />
                 </button>
               </motion.div>

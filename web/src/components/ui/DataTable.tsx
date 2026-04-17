@@ -87,14 +87,14 @@ function SkeletonCards({ columns, count = 5 }: { columns: Column<unknown>[]; cou
 function SortIndicator({ active, dir }: { active: boolean; dir?: 'asc' | 'desc' }) {
   if (!active) {
     return (
-      <span className="ml-1 inline-flex flex-col opacity-0 group-hover:opacity-40 transition-opacity">
+      <span className="ml-1 inline-flex flex-col opacity-0 group-hover:opacity-40 transition-opacity" aria-hidden="true">
         <ChevronUp className="h-3 w-3 -mb-1" />
         <ChevronDown className="h-3 w-3" />
       </span>
     )
   }
   return (
-    <span className="ml-1 inline-flex text-[color:var(--accent)]">
+    <span className="ml-1 inline-flex text-[color:var(--accent)]" aria-hidden="true">
       {dir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
     </span>
   )
@@ -170,6 +170,7 @@ export function DataTable<T>({
                 return (
                   <th
                     key={col.key}
+                    scope="col"
                     className={cn(
                       'px-4 py-3 text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest select-none',
                       alignCell[col.align ?? 'left'],
@@ -178,6 +179,14 @@ export function DataTable<T>({
                     )}
                     style={col.width ? { width: col.width } : undefined}
                     onClick={isSortable ? () => onSort(col.key) : undefined}
+                    onKeyDown={isSortable ? (e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onSort!(col.key)
+                      }
+                    } : undefined}
+                    tabIndex={isSortable ? 0 : undefined}
+                    role={isSortable ? 'columnheader' : undefined}
                     aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
                   >
                     <span className="inline-flex items-center">
