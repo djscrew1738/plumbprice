@@ -93,6 +93,57 @@ _MARKET_RANGES: dict[str, str] = {
     "ROUGH_IN_KITCHEN":         "$1,500-$3,500",
     "TOP_OUT_FULL_BATH":        "$800-$1,800",
     "FINAL_SET_FULL_BATH":      "$600-$1,500",
+    # ── Expanded DFW Templates (2025-2026 additions) ─────────────────────────
+    # Water Heater additions
+    "WH_50G_ELECTRIC_ATTIC":    "$1,000-$2,000",
+    "WH_TANKLESS_ELECTRIC":     "$1,200-$2,800",
+    "WH_HYBRID_HEAT_PUMP":      "$2,500-$4,500",
+    "WH_RECIRCULATION_LINE_NEW":"$1,200-$2,500",
+    "WH_PAN_DRAIN_OVERFLOW_ONLY":"$125-$275",
+    # Drain & Sewer additions
+    "DRAIN_CLEAN_FLOOR":        "$100-$200",
+    "DRAIN_CLEAN_MAIN_HYDRO_COMBO":"$600-$1,100",
+    "SEWER_CAMERA_LOCATOR":     "$250-$450",
+    "SEWER_LINER_CIPP":         "$3,500-$8,000/50ft",
+    "SEWER_BELLY_REPAIR":       "$2,500-$6,500",
+    "DRAIN_POP_UP_REPLACE":     "$85-$175",
+    "CONDENSATE_DRAIN_INSTALL": "$175-$350",
+    # Fixture additions
+    "BIDET_STANDALONE_INSTALL": "$400-$900",
+    "PEDESTAL_SINK_INSTALL":    "$300-$650",
+    "UNDERMOUNT_SINK_INSTALL":  "$450-$950",
+    "FREESTANDING_TUB_INSTALL": "$800-$2,000",
+    "WALK_IN_SHOWER_VALVE_INSTALL":"$1,200-$3,000",
+    "WET_BAR_SINK_INSTALL":     "$350-$750",
+    "UTILITY_SINK_INSTALL":     "$275-$550",
+    "POT_FILLER_INSTALL":       "$350-$800",
+    # Pipe repair additions
+    "COPPER_PINHOLE_REPAIR":    "$200-$450",
+    "POLYBUTYLENE_SECTION_REPLACE":"$275-$600",
+    "PIPE_BURST_EMERGENCY":     "$400-$1,200",
+    "FREEZE_DAMAGE_THAW_REPAIR":"$500-$1,500",
+    "PIPE_INSULATION_INSTALL":  "$150-$350/50ft",
+    # Gas line additions
+    "GAS_LINE_DRYER":           "$200-$400",
+    "GAS_LINE_RANGE_OVEN":      "$200-$425",
+    "GAS_LINE_FIREPLACE":       "$500-$1,200",
+    "GAS_LINE_GRILL_OUTDOOR":   "$450-$1,100",
+    "GAS_LEAK_DETECTION":       "$100-$200",
+    # Commercial additions
+    "COMMERCIAL_GREASE_TRAP_CLEAN":"$250-$500",
+    "COMMERCIAL_GREASE_TRAP_INSTALL":"$2,000-$5,500",
+    "COMMERCIAL_FLOOR_DRAIN_INSTALL":"$800-$2,000",
+    "FLUSHOMETER_REPLACE":      "$300-$600",
+    "COMMERCIAL_WATER_HEATER_INSTALL":"$2,500-$5,000",
+    # Outdoor/Irrigation additions
+    "IRRIGATION_BACKFLOW_INSTALL":"$350-$800",
+    "IRRIGATION_VALVE_REPAIR":  "$100-$225",
+    "CATCH_BASIN_INSTALL":      "$450-$900",
+    "YARD_HYDRANT_INSTALL":     "$400-$850",
+    # Specialty additions
+    "ADA_GRAB_BAR_INSTALL":     "$125-$275",
+    "WATER_HEATER_TIMER_INSTALL":"$125-$250",
+    "EMERGENCY_SHUTOFF_VALVE_INSTALL":"$500-$1,200",
 }
 
 _CATEGORY_ORDER = ["service", "construction", "commercial"]

@@ -85,6 +85,18 @@ _PERMIT_REQUIRED: dict[str, str] = {
     "CLEAN_OUT_INSTALL":        "sewer",
     "BACKFLOW_PREVENTER_INSTALL": "backflow",
     "BACKFLOW_TEST_ANNUAL":     "backflow",
+    # ── DFW expansion: new permit-required templates ──
+    "WH_50G_ELECTRIC_ATTIC":        "water_heater",
+    "WH_TANKLESS_ELECTRIC":         "water_heater",
+    "WH_HYBRID_HEAT_PUMP":          "water_heater",
+    "COMMERCIAL_WATER_HEATER_INSTALL": "water_heater",
+    "GAS_LINE_DRYER":               "gas",
+    "GAS_LINE_RANGE_OVEN":          "gas",
+    "GAS_LINE_FIREPLACE":           "gas",
+    "GAS_LINE_GRILL_OUTDOOR":       "gas",
+    "SEWER_LINER_CIPP":             "sewer",
+    "SEWER_BELLY_REPAIR":           "sewer",
+    "IRRIGATION_BACKFLOW_INSTALL":  "backflow",
 }
 
 # ─── Trip / Service Call Charge ───────────────────────────────────────────────
@@ -192,7 +204,7 @@ CITY_ZONE_MULTIPLIERS: dict[str, float] = {
     # ─── Johnson County ───────────────────────────────────────────────────────
     "alvarado":         0.92,
     "joshua":           0.92,
-    "burleson":         0.97,
+    # NOTE: burleson already defined above (South/west section) at 0.97
     # ─── SE Dallas additions ───────────────────────────────────────────────────
     "balch springs":    0.92,
     "seagoville":       0.93,
@@ -766,7 +778,15 @@ class PricingEngine:
             tax_total=round(result.tax_total * q, 2),
             markup_total=round(result.markup_total * q, 2),
             misc_total=round(result.misc_total * q, 2),
-            subtotal=round(result.subtotal * q, 2),
+            subtotal=round(
+                result.labor_total * q
+                + result.materials_total * q
+                + result.markup_total * q
+                + result.misc_total * q
+                + trip_total
+                + permit_total,
+                2,
+            ),
             grand_total=grand_total,
             confidence_score=result.confidence_score,
             confidence_label=result.confidence_label,

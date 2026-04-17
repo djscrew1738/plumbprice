@@ -16,6 +16,7 @@ from app.services.pricing_engine import (
     get_trip_charge,
     TAX_RATES,
     CITY_ZONE_MULTIPLIERS,
+    _PERMIT_REQUIRED,
 )
 from app.services.labor_engine import (
     LaborTemplateData,
@@ -24,6 +25,8 @@ from app.services.labor_engine import (
     AccessType,
     UrgencyType,
 )
+from app.services.pricing_table import _MARKET_RANGES
+from app.services.supplier_service import MATERIAL_ASSEMBLIES, CANONICAL_MAP
 
 engine = PricingEngine()
 
@@ -401,3 +404,153 @@ class TestPricingEngineServiceEstimate:
         # Both are 8.25% in 2025, so equal; test ensures no crash and both positive
         assert dallas.tax_total > 0
         assert tarrant.tax_total > 0
+
+
+# ─── DFW Expansion: data integrity tests ─────────────────────────────────────
+
+# All 45 new template codes added in the DFW 2025-2026 expansion
+_NEW_TEMPLATE_CODES = [
+    "WH_50G_ELECTRIC_ATTIC", "WH_TANKLESS_ELECTRIC", "WH_HYBRID_HEAT_PUMP",
+    "WH_RECIRCULATION_LINE_NEW", "WH_PAN_DRAIN_OVERFLOW_ONLY",
+    "DRAIN_CLEAN_FLOOR", "DRAIN_CLEAN_MAIN_HYDRO_COMBO", "SEWER_CAMERA_LOCATOR",
+    "SEWER_LINER_CIPP", "SEWER_BELLY_REPAIR", "DRAIN_POP_UP_REPLACE",
+    "CONDENSATE_DRAIN_INSTALL",
+    "BIDET_STANDALONE_INSTALL", "PEDESTAL_SINK_INSTALL", "UNDERMOUNT_SINK_INSTALL",
+    "FREESTANDING_TUB_INSTALL", "WALK_IN_SHOWER_VALVE_INSTALL",
+    "WET_BAR_SINK_INSTALL", "UTILITY_SINK_INSTALL", "POT_FILLER_INSTALL",
+    "COPPER_PINHOLE_REPAIR", "POLYBUTYLENE_SECTION_REPLACE",
+    "PIPE_BURST_EMERGENCY", "FREEZE_DAMAGE_THAW_REPAIR", "PIPE_INSULATION_INSTALL",
+    "GAS_LINE_DRYER", "GAS_LINE_RANGE_OVEN", "GAS_LINE_FIREPLACE",
+    "GAS_LINE_GRILL_OUTDOOR", "GAS_LEAK_DETECTION",
+    "COMMERCIAL_GREASE_TRAP_CLEAN", "COMMERCIAL_GREASE_TRAP_INSTALL",
+    "COMMERCIAL_FLOOR_DRAIN_INSTALL", "FLUSHOMETER_REPLACE",
+    "COMMERCIAL_WATER_HEATER_INSTALL",
+    "IRRIGATION_BACKFLOW_INSTALL", "IRRIGATION_VALVE_REPAIR",
+    "CATCH_BASIN_INSTALL", "YARD_HYDRANT_INSTALL",
+    "ADA_GRAB_BAR_INSTALL", "WATER_HEATER_TIMER_INSTALL",
+    "EMERGENCY_SHUTOFF_VALVE_INSTALL",
+]
+
+
+class TestNewLaborTemplatesExist:
+    """Every new DFW template code must be registered in LABOR_TEMPLATES."""
+
+    @pytest.mark.parametrize("code", _NEW_TEMPLATE_CODES)
+    def test_template_exists(self, code):
+        assert code in LABOR_TEMPLATES, f"Missing labor template: {code}"
+
+    @pytest.mark.parametrize("code", _NEW_TEMPLATE_CODES)
+    def test_template_has_valid_base_hours(self, code):
+        tmpl = LABOR_TEMPLATES[code]
+        assert tmpl.base_hours > 0, f"{code} base_hours must be positive"
+
+    @pytest.mark.parametrize("code", _NEW_TEMPLATE_CODES)
+    def test_template_calculates_labor(self, code):
+        """Every new template must produce a valid labor cost dict."""
+        tmpl = LABOR_TEMPLATES[code]
+        result = tmpl.calculate_labor_cost()
+        assert result["total_labor_cost"] > 0
+
+
+class TestNewMarketRangesExist:
+    """Every labor template must have a matching market range."""
+
+    @pytest.mark.parametrize("code", _NEW_TEMPLATE_CODES)
+    def test_market_range_exists(self, code):
+        assert code in _MARKET_RANGES, f"Missing market range for template: {code}"
+
+    @pytest.mark.parametrize("code", _NEW_TEMPLATE_CODES)
+    def test_market_range_has_dollar_sign(self, code):
+        rng = _MARKET_RANGES[code]
+        assert "$" in rng, f"Market range for {code} should contain a $ sign"
+
+
+class TestMaterialAssembliesIntegrity:
+    """Every assembly must link to a valid labor template and valid canonical items."""
+
+    def test_all_assembly_templates_exist(self):
+        for asm_code, asm in MATERIAL_ASSEMBLIES.items():
+            lt = asm.get("labor_template")
+            if lt:
+                assert lt in LABOR_TEMPLATES, (
+                    f"Assembly {asm_code} references missing template: {lt}"
+                )
+
+    def test_all_assembly_items_in_canonical_map(self):
+        for asm_code, asm in MATERIAL_ASSEMBLIES.items():
+            for item_id, qty in asm.get("items", {}).items():
+                assert item_id in CANONICAL_MAP, (
+                    f"Assembly {asm_code} references missing canonical item: {item_id}"
+                )
+                assert qty > 0, (
+                    f"Assembly {asm_code} item {item_id} has non-positive qty"
+                )
+
+    def test_new_templates_have_assemblies(self):
+        """Templates that reference applicable_assemblies should have those assemblies defined."""
+        for code in _NEW_TEMPLATE_CODES:
+            tmpl = LABOR_TEMPLATES[code]
+            if tmpl.applicable_assemblies:
+                for asm_code in tmpl.applicable_assemblies:
+                    assert asm_code in MATERIAL_ASSEMBLIES, (
+                        f"Template {code} references missing assembly: {asm_code}"
+                    )
+
+
+class TestNewPermitMappings:
+    """New gas/sewer/backflow/WH templates must have permit mappings."""
+
+    _EXPECTED_PERMITS = {
+        "WH_50G_ELECTRIC_ATTIC": "water_heater",
+        "WH_TANKLESS_ELECTRIC": "water_heater",
+        "WH_HYBRID_HEAT_PUMP": "water_heater",
+        "COMMERCIAL_WATER_HEATER_INSTALL": "water_heater",
+        "GAS_LINE_DRYER": "gas",
+        "GAS_LINE_RANGE_OVEN": "gas",
+        "GAS_LINE_FIREPLACE": "gas",
+        "GAS_LINE_GRILL_OUTDOOR": "gas",
+        "SEWER_LINER_CIPP": "sewer",
+        "SEWER_BELLY_REPAIR": "sewer",
+        "IRRIGATION_BACKFLOW_INSTALL": "backflow",
+    }
+
+    @pytest.mark.parametrize("code,ptype", list(_EXPECTED_PERMITS.items()))
+    def test_permit_mapped(self, code, ptype):
+        assert _PERMIT_REQUIRED.get(code) == ptype, (
+            f"{code} should require '{ptype}' permit"
+        )
+
+    @pytest.mark.parametrize("code,ptype", list(_EXPECTED_PERMITS.items()))
+    def test_permit_cost_positive(self, code, ptype):
+        cost = get_permit_cost(code, "Dallas")
+        assert cost > 0, f"{code} should have a positive permit cost in Dallas"
+
+
+class TestScaleEstimateRegression:
+    """Regression: scaled subtotal must never exceed grand_total."""
+
+    def _toilet_materials(self):
+        return [
+            MaterialItem("toilet.american_std_champion", "Toilet", 1, "ea", 289.00, "ferguson"),
+            MaterialItem("toilet.wax_ring",              "Wax Ring", 1, "ea", 5.49, "ferguson"),
+        ]
+
+    def test_single_qty_subtotal_le_grand_total(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        assert result.subtotal <= result.grand_total
+
+    def test_scaled_qty_subtotal_le_grand_total(self):
+        result = engine.calculate_service_estimate(
+            task_code="TOILET_REPLACE_STANDARD",
+            materials=self._toilet_materials(),
+            county="Dallas",
+        )
+        for qty in [2, 3, 5, 10]:
+            scaled = engine.scale_estimate(result, qty)
+            assert scaled.subtotal <= scaled.grand_total, (
+                f"qty={qty}: subtotal ${scaled.subtotal} > grand_total ${scaled.grand_total}"
+            )

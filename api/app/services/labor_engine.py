@@ -1251,6 +1251,682 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         applicable_assemblies=["BIDET_SEAT_KIT"],
         notes="Requires GFI outlet by others. Includes T-valve and seat mounting.",
     ),
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # EXPANDED DFW PRICING — 2025-2026 ADDITIONS
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # ── Water Heater Additions ───────────────────────────────────────────────
+
+    "WH_50G_ELECTRIC_ATTIC": LaborTemplateData(
+        code="WH_50G_ELECTRIC_ATTIC",
+        name="Water Heater 50G Electric — Attic Install",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        access_multipliers={"attic": 1.0},
+        urgency_multipliers={"standard": 1.0, "same_day": 1.3, "emergency": 1.6},
+        applicable_assemblies=["WH_50G_ELECTRIC_ATTIC_KIT"],
+        notes="Electric WH attic pull. Requires 2-man crew. Drain pan + overflow mandatory. Electrical by others.",
+    ),
+
+    "WH_TANKLESS_ELECTRIC": LaborTemplateData(
+        code="WH_TANKLESS_ELECTRIC",
+        name="Tankless Water Heater Electric — Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.5,
+        applicable_assemblies=["WH_TANKLESS_ELECTRIC_KIT"],
+        notes="Requires 200A panel with dedicated breaker(s). Electrical by others. No gas line needed.",
+    ),
+
+    "WH_HYBRID_HEAT_PUMP": LaborTemplateData(
+        code="WH_HYBRID_HEAT_PUMP",
+        name="Hybrid Heat Pump Water Heater — Install",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["WH_HYBRID_HEAT_PUMP_KIT"],
+        notes=(
+            "Rheem ProTerra or AO Smith HPA. Needs 7ft ceiling clearance and conditioned space. "
+            "DFW Energy Star rebates may apply. Electrical 240V by others. "
+            "Condensate drain required — tie into existing drain or install new."
+        ),
+    ),
+
+    "WH_RECIRCULATION_LINE_NEW": LaborTemplateData(
+        code="WH_RECIRCULATION_LINE_NEW",
+        name="Dedicated Hot Water Return Line — New Install",
+        category="service",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=0.0,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.3,
+            "attic": 1.1,
+            "crawlspace": 1.4,
+            "slab": 1.8,
+            "basement": 1.1,
+        },
+        applicable_assemblies=["WH_RECIRC_LINE_KIT"],
+        notes=(
+            "Full dedicated return line from furthest fixture back to WH. "
+            "DFW large homes (3,000+ sqft) often need this for instant hot water. "
+            "Includes pump, controller, and insulated PEX return line."
+        ),
+    ),
+
+    "WH_PAN_DRAIN_OVERFLOW_ONLY": LaborTemplateData(
+        code="WH_PAN_DRAIN_OVERFLOW_ONLY",
+        name="Water Heater Drain Pan & Overflow — Standalone",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WH_PAN_KIT"],
+        notes="Standalone drain pan and CPVC overflow install. Required by DFW code for attic/2nd floor WH.",
+    ),
+
+    # ── Drain & Sewer Additions ──────────────────────────────────────────────
+
+    "DRAIN_CLEAN_FLOOR": LaborTemplateData(
+        code="DRAIN_CLEAN_FLOOR",
+        name="Floor Drain Cleaning (garage/laundry/basement)",
+        category="service",
+        base_hours=0.75,
+        helper_required=False,
+        disposal_hours=0.0,
+        notes="Garage or laundry floor drain. Sediment/debris removal. DFW clay soil causes frequent floor drain backup.",
+    ),
+
+    "DRAIN_CLEAN_MAIN_HYDRO_COMBO": LaborTemplateData(
+        code="DRAIN_CLEAN_MAIN_HYDRO_COMBO",
+        name="Main Line Snake + Hydro-Jet Combo Service",
+        category="service",
+        base_hours=3.5,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.0,
+        notes=(
+            "Main line cable machine followed by hydro-jetting for thorough root/grease removal. "
+            "Most effective for DFW root intrusion (live oak, hackberry). "
+            "Camera inspection recommended after to verify clear."
+        ),
+    ),
+
+    "SEWER_CAMERA_LOCATOR": LaborTemplateData(
+        code="SEWER_CAMERA_LOCATOR",
+        name="Sewer Camera + Locator Mark-Out",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        notes=(
+            "Full video inspection with sonde locator. Mark depth/location on surface with paint. "
+            "Required before any DFW sewer repair for permit. Written report with screenshots."
+        ),
+    ),
+
+    "SEWER_LINER_CIPP": LaborTemplateData(
+        code="SEWER_LINER_CIPP",
+        name="Trenchless Sewer Liner — CIPP (per 50 LF)",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=0.5,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.2, "emergency": 1.4},
+        applicable_assemblies=["SEWER_LINER_KIT"],
+        notes=(
+            "Cured-in-place pipe lining. No excavation — preserves landscape. "
+            "DFW clay soil makes this attractive vs open-cut. "
+            "Per 50 LF section. Requires camera before and after. UV or ambient cure."
+        ),
+    ),
+
+    "SEWER_BELLY_REPAIR": LaborTemplateData(
+        code="SEWER_BELLY_REPAIR",
+        name="Sewer Belly / Sag Repair (excavate & regrade)",
+        category="service",
+        base_hours=8.0,
+        helper_required=True,
+        helper_hours=8.0,
+        disposal_hours=1.0,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.0,
+            "attic": 1.0,
+            "crawlspace": 1.0,
+            "slab": 2.0,
+            "basement": 1.4,
+        },
+        urgency_multipliers={"standard": 1.0, "same_day": 1.2, "emergency": 1.5},
+        applicable_assemblies=["SEWER_BELLY_KIT"],
+        notes=(
+            "DFW expansive clay soil causes sewer bellies (sags) that trap debris. "
+            "Excavate, regrade bedding, replace pipe section, compact backfill. "
+            "Deeper than 4ft or under driveways adds significant labor."
+        ),
+    ),
+
+    "DRAIN_POP_UP_REPLACE": LaborTemplateData(
+        code="DRAIN_POP_UP_REPLACE",
+        name="Lavatory Pop-Up Drain Assembly Replace",
+        category="service",
+        base_hours=0.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["POP_UP_DRAIN_KIT"],
+        notes="Replace pop-up stopper mechanism, pivot rod, and tailpiece if corroded.",
+    ),
+
+    "CONDENSATE_DRAIN_INSTALL": LaborTemplateData(
+        code="CONDENSATE_DRAIN_INSTALL",
+        name="HVAC Condensate Drain Line — Plumbing Tie-In",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["CONDENSATE_DRAIN_KIT"],
+        notes=(
+            "PVC condensate drain from HVAC unit to plumbing drain or exterior. "
+            "DFW code requires indirect waste connection with air gap. "
+            "Includes P-trap, cleanout tee, and safety pan if attic."
+        ),
+    ),
+
+    # ── Fixture Install/Repair Additions ─────────────────────────────────────
+
+    "BIDET_STANDALONE_INSTALL": LaborTemplateData(
+        code="BIDET_STANDALONE_INSTALL",
+        name="Standalone Bidet — Full Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.25,
+        applicable_assemblies=["BIDET_STANDALONE_KIT"],
+        notes="Full floor-mount bidet. Requires hot/cold supply and dedicated drain. Rough-in must be present.",
+    ),
+
+    "PEDESTAL_SINK_INSTALL": LaborTemplateData(
+        code="PEDESTAL_SINK_INSTALL",
+        name="Pedestal Sink Install/Replace",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.25,
+        applicable_assemblies=["PEDESTAL_SINK_KIT"],
+        notes="Includes wall mount bracket, supply lines, P-trap. Wall blocking required for support.",
+    ),
+
+    "UNDERMOUNT_SINK_INSTALL": LaborTemplateData(
+        code="UNDERMOUNT_SINK_INSTALL",
+        name="Undermount Sink Install (kitchen or bath)",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.5,
+        applicable_assemblies=["UNDERMOUNT_SINK_KIT"],
+        notes=(
+            "Undermount requires silicone cure time — 2-visit job. "
+            "First visit: set sink, connect temporary. Second visit: final connect after 24hr cure. "
+            "Countertop cutout by GC if needed."
+        ),
+    ),
+
+    "FREESTANDING_TUB_INSTALL": LaborTemplateData(
+        code="FREESTANDING_TUB_INSTALL",
+        name="Freestanding Tub — Plumbing Rough & Set",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["FREESTANDING_TUB_KIT"],
+        notes=(
+            "Floor-mount tub filler + drain for freestanding tub. "
+            "DFW luxury market demand. Requires floor access for drain repositioning. "
+            "Tub filler rough-in and trim included. Tub unit NOT included."
+        ),
+    ),
+
+    "WALK_IN_SHOWER_VALVE_INSTALL": LaborTemplateData(
+        code="WALK_IN_SHOWER_VALVE_INSTALL",
+        name="Walk-In Shower Multi-Valve System Install",
+        category="service",
+        base_hours=5.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.25,
+        applicable_assemblies=["WALK_IN_SHOWER_KIT"],
+        notes=(
+            "Thermostatic valve + diverter + body sprays (2-4) + rain head. "
+            "DFW luxury remodel staple. Requires 3/4\" supply for adequate flow. "
+            "Tile/glass work NOT included."
+        ),
+    ),
+
+    "WET_BAR_SINK_INSTALL": LaborTemplateData(
+        code="WET_BAR_SINK_INSTALL",
+        name="Wet Bar Sink — New Install",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WET_BAR_SINK_KIT"],
+        notes=(
+            "Small bar sink with faucet, drain, and supply lines. "
+            "Common DFW entertaining upgrade. Includes PEX stub-out from nearest supply."
+        ),
+    ),
+
+    "UTILITY_SINK_INSTALL": LaborTemplateData(
+        code="UTILITY_SINK_INSTALL",
+        name="Utility / Laundry Tub Sink — Install",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["UTILITY_SINK_KIT"],
+        notes="Freestanding laundry/garage utility tub. Includes faucet, drain tie-in, supply lines.",
+    ),
+
+    "POT_FILLER_INSTALL": LaborTemplateData(
+        code="POT_FILLER_INSTALL",
+        name="Pot Filler Faucet — Wall Mount Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.2,
+            "attic": 1.0,
+            "crawlspace": 1.0,
+            "slab": 1.0,
+            "basement": 1.0,
+        },
+        applicable_assemblies=["POT_FILLER_KIT"],
+        notes=(
+            "Wall-mount articulated pot filler above range. "
+            "Requires cold water stub-out behind tile/backsplash. "
+            "DFW kitchen remodel add-on. Tile repair NOT included."
+        ),
+    ),
+
+    # ── Pipe Repair & Leak Additions ─────────────────────────────────────────
+
+    "COPPER_PINHOLE_REPAIR": LaborTemplateData(
+        code="COPPER_PINHOLE_REPAIR",
+        name="Copper Pinhole Leak Repair (per repair)",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.2,
+            "attic": 1.4,
+            "crawlspace": 1.3,
+            "slab": 1.8,
+            "basement": 1.1,
+        },
+        applicable_assemblies=["COPPER_REPAIR_KIT"],
+        notes=(
+            "DFW aggressive water chemistry causes copper pitting/pinhole leaks. "
+            "Per repair point — cut out section, solder or ProPress coupling. "
+            "If multiple pinholes found, recommend repipe evaluation."
+        ),
+    ),
+
+    "POLYBUTYLENE_SECTION_REPLACE": LaborTemplateData(
+        code="POLYBUTYLENE_SECTION_REPLACE",
+        name="Polybutylene Pipe Section Replace (per section)",
+        category="service",
+        base_hours=2.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        access_multipliers={
+            "first_floor": 1.0,
+            "second_floor": 1.2,
+            "attic": 1.3,
+            "crawlspace": 1.4,
+            "slab": 1.6,
+            "basement": 1.1,
+        },
+        applicable_assemblies=["POLY_B_REPAIR_KIT"],
+        notes=(
+            "Replace failed poly-B section with PEX-A transition. "
+            "DFW has thousands of 1980s poly-B homes. Per section — if multiple failures, upsell whole-house repipe."
+        ),
+    ),
+
+    "PIPE_BURST_EMERGENCY": LaborTemplateData(
+        code="PIPE_BURST_EMERGENCY",
+        name="Burst Pipe Emergency Response & Repair",
+        category="service",
+        base_hours=2.5,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.5,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.5, "emergency": 2.0},
+        applicable_assemblies=["PIPE_BURST_KIT"],
+        notes=(
+            "Emergency shutoff, water extraction assist, pipe repair. "
+            "DFW freeze events (2021 Uri, 2022, 2024) create surge demand. "
+            "Includes temporary clamp + permanent repair. Drywall/floor repair NOT included."
+        ),
+    ),
+
+    "FREEZE_DAMAGE_THAW_REPAIR": LaborTemplateData(
+        code="FREEZE_DAMAGE_THAW_REPAIR",
+        name="Freeze Damage — Thaw & Multi-Point Repair",
+        category="service",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.5,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.4, "emergency": 1.8},
+        applicable_assemblies=["FREEZE_REPAIR_KIT"],
+        notes=(
+            "Post-freeze assessment and multi-point repair (up to 3 points). "
+            "DFW pipes in exterior walls and attics are most vulnerable. "
+            "Includes controlled thaw, pressure test, and repair. Additional points billed hourly."
+        ),
+    ),
+
+    "PIPE_INSULATION_INSTALL": LaborTemplateData(
+        code="PIPE_INSULATION_INSTALL",
+        name="Pipe Insulation — Freeze Protection (per 50 LF)",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["PIPE_INSULATION_KIT"],
+        notes=(
+            "Foam pipe insulation on exposed supply lines. Per 50 LF. "
+            "DFW preventive measure for exterior wall and attic pipes. "
+            "UPC/IRC requires insulation on hot water lines in unconditioned spaces."
+        ),
+    ),
+
+    # ── Gas Line Additions ───────────────────────────────────────────────────
+
+    "GAS_LINE_DRYER": LaborTemplateData(
+        code="GAS_LINE_DRYER",
+        name="Gas Line — Dryer Hookup",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_DRYER_KIT"],
+        notes=(
+            "Gas dryer connection from existing stub-out. "
+            "Includes flex connector, shutoff valve, and leak test. "
+            "If no stub-out exists, use GAS_LINE_NEW_RUN for new line."
+        ),
+    ),
+
+    "GAS_LINE_RANGE_OVEN": LaborTemplateData(
+        code="GAS_LINE_RANGE_OVEN",
+        name="Gas Line — Range/Oven Hookup",
+        category="service",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_RANGE_KIT"],
+        notes=(
+            "Gas range/oven connection from existing stub-out. "
+            "Includes flex connector (48\" stainless), shutoff valve, and leak test with solution."
+        ),
+    ),
+
+    "GAS_LINE_FIREPLACE": LaborTemplateData(
+        code="GAS_LINE_FIREPLACE",
+        name="Gas Line — Fireplace Install",
+        category="service",
+        base_hours=3.5,
+        helper_required=True,
+        helper_hours=1.5,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_FIREPLACE_KIT"],
+        notes=(
+            "New gas line run to fireplace. CSST or black iron per local code. "
+            "DFW new builds commonly spec gas fireplaces. "
+            "Includes shutoff valve, pressure test, and permit coordination."
+        ),
+    ),
+
+    "GAS_LINE_GRILL_OUTDOOR": LaborTemplateData(
+        code="GAS_LINE_GRILL_OUTDOOR",
+        name="Gas Line — Outdoor Grill/Kitchen Hookup",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=1.0,
+        disposal_hours=0.0,
+        applicable_assemblies=["GAS_OUTDOOR_KIT"],
+        notes=(
+            "Permanent gas line to outdoor grill or kitchen. "
+            "DFW outdoor living is huge — very common upgrade. "
+            "Includes quick-disconnect, shutoff, and underground or wall run. Permit required."
+        ),
+    ),
+
+    "GAS_LEAK_DETECTION": LaborTemplateData(
+        code="GAS_LEAK_DETECTION",
+        name="Gas Leak Detection Survey (whole-house)",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        notes=(
+            "Electronic gas leak survey of all connections, fittings, and appliances. "
+            "Combustible gas detector + soap solution at each joint. "
+            "Written report provided. If leak found: GAS_LINE_REPAIR_MINOR for fix."
+        ),
+    ),
+
+    # ── Commercial/Multi-Family Additions ────────────────────────────────────
+
+    "COMMERCIAL_GREASE_TRAP_CLEAN": LaborTemplateData(
+        code="COMMERCIAL_GREASE_TRAP_CLEAN",
+        name="Grease Trap/Interceptor — Pump & Clean",
+        category="commercial",
+        base_hours=2.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.5,
+        notes=(
+            "Interior grease trap pump and clean (up to 50 gal). "
+            "DFW health dept requires quarterly for restaurants. "
+            "Includes scrape, flush, and reinstall baffles. Grease hauling fee extra."
+        ),
+    ),
+
+    "COMMERCIAL_GREASE_TRAP_INSTALL": LaborTemplateData(
+        code="COMMERCIAL_GREASE_TRAP_INSTALL",
+        name="Grease Trap/Interceptor — New Install",
+        category="commercial",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=6.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["GREASE_TRAP_KIT"],
+        notes=(
+            "Interior or exterior grease interceptor install. "
+            "DFW code requires for all new food service establishments. "
+            "Includes excavation (if exterior), plumbing connections, and permit."
+        ),
+    ),
+
+    "COMMERCIAL_FLOOR_DRAIN_INSTALL": LaborTemplateData(
+        code="COMMERCIAL_FLOOR_DRAIN_INSTALL",
+        name="Commercial Floor Drain — New Install",
+        category="commercial",
+        base_hours=4.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["COMMERCIAL_FLOOR_DRAIN_KIT"],
+        notes=(
+            "6\" or 8\" floor drain with adjustable strainer. "
+            "Concrete cutting and patching included. "
+            "Tie-in to existing sewer or new connection. Trap primer recommended."
+        ),
+    ),
+
+    "FLUSHOMETER_REPLACE": LaborTemplateData(
+        code="FLUSHOMETER_REPLACE",
+        name="Flushometer Valve Replace (toilet)",
+        category="commercial",
+        base_hours=1.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["FLUSHOMETER_KIT"],
+        notes=(
+            "Sloan Royal 111 or Zurn equivalent for floor-mount commercial toilet. "
+            "Includes vacuum breaker, handle kit, and tailpiece gasket. "
+            "DFW offices, retail, and restaurant common call."
+        ),
+    ),
+
+    "COMMERCIAL_WATER_HEATER_INSTALL": LaborTemplateData(
+        code="COMMERCIAL_WATER_HEATER_INSTALL",
+        name="Commercial Water Heater Install (75-100G)",
+        category="commercial",
+        base_hours=6.0,
+        helper_required=True,
+        helper_hours=4.0,
+        disposal_hours=1.0,
+        urgency_multipliers={"standard": 1.0, "same_day": 1.3, "emergency": 1.6},
+        applicable_assemblies=["COMMERCIAL_WH_KIT"],
+        notes=(
+            "75-100G commercial gas water heater. Requires mechanical room access. "
+            "Includes flue/vent modifications, expansion tank, mixing valve, and T&P piping. "
+            "Permit required in all DFW jurisdictions."
+        ),
+    ),
+
+    # ── Outdoor/Irrigation Additions ─────────────────────────────────────────
+
+    "IRRIGATION_BACKFLOW_INSTALL": LaborTemplateData(
+        code="IRRIGATION_BACKFLOW_INSTALL",
+        name="Irrigation Backflow Preventer Install",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["IRRIGATION_BACKFLOW_KIT"],
+        notes=(
+            "PVB or RPZ backflow preventer for sprinkler system. "
+            "DFW municipalities require backflow device on all irrigation systems. "
+            "Includes initial test and certification filing."
+        ),
+    ),
+
+    "IRRIGATION_VALVE_REPAIR": LaborTemplateData(
+        code="IRRIGATION_VALVE_REPAIR",
+        name="Irrigation Zone Valve Repair/Replace",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["IRRIGATION_VALVE_KIT"],
+        notes=(
+            "Replace failed solenoid valve, diaphragm, or entire zone valve body. "
+            "DFW sun exposure and mineral buildup cause frequent valve failures."
+        ),
+    ),
+
+    "CATCH_BASIN_INSTALL": LaborTemplateData(
+        code="CATCH_BASIN_INSTALL",
+        name="Surface Water Catch Basin — Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=3.0,
+        disposal_hours=0.5,
+        applicable_assemblies=["CATCH_BASIN_KIT"],
+        notes=(
+            "12\" or 18\" catch basin with grate. Includes excavation, basin set, "
+            "and 4\" corrugated pipe connection to discharge point. "
+            "DFW clay soil drainage is a major homeowner concern."
+        ),
+    ),
+
+    "YARD_HYDRANT_INSTALL": LaborTemplateData(
+        code="YARD_HYDRANT_INSTALL",
+        name="Frost-Proof Yard Hydrant — Install",
+        category="service",
+        base_hours=3.0,
+        helper_required=True,
+        helper_hours=2.0,
+        disposal_hours=0.0,
+        applicable_assemblies=["YARD_HYDRANT_KIT"],
+        notes=(
+            "Frost-proof yard hydrant with bury depth below frost line (12\" in DFW). "
+            "Includes trenching to water main, supply line, and gravel base. "
+            "Common on DFW acreage/rural properties."
+        ),
+    ),
+
+    # ── Accessibility & Specialty Additions ──────────────────────────────────
+
+    "ADA_GRAB_BAR_INSTALL": LaborTemplateData(
+        code="ADA_GRAB_BAR_INSTALL",
+        name="ADA Grab Bar — Install with Blocking",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["GRAB_BAR_KIT"],
+        notes=(
+            "Per grab bar. Includes locating studs, adding blocking if needed, "
+            "and SS grab bar mount. DFW aging population driving high demand. "
+            "Tile drilling with diamond bit if needed."
+        ),
+    ),
+
+    "WATER_HEATER_TIMER_INSTALL": LaborTemplateData(
+        code="WATER_HEATER_TIMER_INSTALL",
+        name="Water Heater Timer/Controller Install",
+        category="service",
+        base_hours=1.0,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["WH_TIMER_KIT"],
+        notes=(
+            "Programmable timer for electric or gas WH. "
+            "DFW TXU/Oncor time-of-use rate savings. "
+            "Electrical connection by plumber (low-voltage control) or electrician (240V)."
+        ),
+    ),
+
+    "EMERGENCY_SHUTOFF_VALVE_INSTALL": LaborTemplateData(
+        code="EMERGENCY_SHUTOFF_VALVE_INSTALL",
+        name="Automatic Water Shutoff Valve — Install",
+        category="service",
+        base_hours=2.5,
+        helper_required=False,
+        disposal_hours=0.0,
+        applicable_assemblies=["AUTO_SHUTOFF_KIT"],
+        notes=(
+            "Whole-house automatic shutoff valve with leak detection sensors. "
+            "Flo by Moen, Phyn Plus, or StreamLabs Control. "
+            "DFW insurance companies increasingly offer premium discounts for these."
+        ),
+    ),
 }
 
 

@@ -647,6 +647,257 @@ CANONICAL_MAP: dict[str, dict[str, dict]] = {
         "moore_supply":{"sku": "BS-1000",   "name": "Electronic Bidet Seat",                             "cost": 265.00},
         "apex":        {"sku": "BD-APX",    "name": "Bidet Washlet Seat",                                "cost": 298.00},
     },
+    "toilet.flapper_fluidmaster": {
+        "ferguson":    {"sku": "FM-502",    "name": "Fluidmaster 502 Toilet Flapper 2\"",                "cost": 4.95},
+        "moore_supply":{"sku": "FL-502M",   "name": "Fluidmaster 2\" Flapper",                           "cost": 4.25},
+        "apex":        {"sku": "FL502-A",   "name": "2\" Universal Toilet Flapper",                      "cost": 5.25},
+    },
+    "toilet.fill_valve_600": {
+        "ferguson":    {"sku": "FM-400A",   "name": "Fluidmaster 400A Fill Valve Universal",             "cost": 8.49},
+        "moore_supply":{"sku": "FV-400M",   "name": "Fluidmaster Fill Valve Universal",                  "cost": 7.95},
+        "apex":        {"sku": "FV400-A",   "name": "Universal Fill Valve",                              "cost": 8.95},
+    },
+
+    # ─── Expanded DFW Canonical Items (2025-2026 additions) ──────────────────
+
+    # Water Heater expansion
+    "wh.50g_electric_attic_unit": {
+        "ferguson":    {"sku": "XE50-ATT",  "name": "Rheem 50G Electric WH (attic-rated)",              "cost": 548.00},
+        "moore_supply":{"sku": "AOS-E50A",  "name": "AO Smith 50G Electric WH attic",                   "cost": 524.00},
+        "apex":        {"sku": "PME50A",    "name": "ProMax 50G Electric WH attic",                      "cost": 575.00},
+    },
+    "wh.tankless_electric_unit": {
+        "ferguson":    {"sku": "ECO27",     "name": "EcoSmart ECO 27 Tankless Electric WH 27kW",        "cost": 425.00},
+        "moore_supply":{"sku": "ECO-27M",   "name": "ECO 27 Electric Tankless",                         "cost": 398.00},
+        "apex":        {"sku": "ECO27-A",   "name": "EcoSmart ECO27 Tankless",                           "cost": 448.00},
+    },
+    "wh.hybrid_heat_pump_unit": {
+        "ferguson":    {"sku": "REHP50",    "name": "Rheem ProTerra 50G Heat Pump WH",                  "cost": 1485.00},
+        "moore_supply":{"sku": "AOS-HPA50", "name": "AO Smith 50G Heat Pump WH",                        "cost": 1425.00},
+        "apex":        {"sku": "HP50-A",    "name": "Heat Pump Water Heater 50G",                        "cost": 1548.00},
+    },
+    "wh.condensate_pump_kit": {
+        "ferguson":    {"sku": "CP-120",    "name": "HVAC/WH condensate pump kit 120V",                 "cost": 48.50},
+        "moore_supply":{"sku": "COND-PMP",  "name": "Condensate removal pump",                           "cost": 44.25},
+        "apex":        {"sku": "CP120-A",   "name": "Condensate pump 120V",                               "cost": 52.00},
+    },
+    # Drain/Sewer expansion
+    "sewer.cipp_liner_4in_50ft": {
+        "ferguson":    {"sku": "CIPP-450",  "name": "CIPP liner kit 4\" x 50ft UV cure",                "cost": 1250.00},
+        "moore_supply":{"sku": "CIPP-4-50", "name": "4\" CIPP trenchless liner 50ft",                   "cost": 1175.00},
+        "apex":        {"sku": "CIPP450-A", "name": "CIPP pipe liner 4\" 50ft",                          "cost": 1325.00},
+    },
+    "drain.pop_up_assembly_chrome": {
+        "ferguson":    {"sku": "PUA-CHR",   "name": "Pop-up drain assembly chrome 1-1/4\"",             "cost": 18.50},
+        "moore_supply":{"sku": "POP-CHR",   "name": "Chrome pop-up drain asm",                           "cost": 16.25},
+        "apex":        {"sku": "PUA-C-A",   "name": "Pop-up drain chrome",                                "cost": 19.75},
+    },
+    "drain.condensate_ptrap_34": {
+        "ferguson":    {"sku": "CPT-34",    "name": "HVAC condensate P-trap 3/4\" PVC",                 "cost": 5.50},
+        "moore_supply":{"sku": "CT-34",     "name": "3/4\" condensate trap",                              "cost": 4.75},
+        "apex":        {"sku": "CPT34-A",   "name": "Condensate P-trap 3/4\"",                            "cost": 6.25},
+    },
+    "drain.condensate_pvc_34_10ft": {
+        "ferguson":    {"sku": "CPVC-34",   "name": "3/4\" PVC pipe 10ft for condensate",               "cost": 4.25},
+        "moore_supply":{"sku": "PVC34-10",  "name": "3/4\" PVC 10ft",                                    "cost": 3.75},
+        "apex":        {"sku": "PVC34-A",   "name": "PVC 3/4\" pipe 10ft",                                "cost": 4.75},
+    },
+    "sewer.belly_bedding_gravel_bag": {
+        "ferguson":    {"sku": "GRV-50",    "name": "Pea gravel bedding 50lb bag",                       "cost": 6.50},
+        "moore_supply":{"sku": "GRVL-50",   "name": "50lb gravel bag",                                    "cost": 5.75},
+        "apex":        {"sku": "GRV50-A",   "name": "Pea gravel 50lb",                                    "cost": 7.25},
+    },
+    # Fixture expansion
+    "bidet.standalone_unit": {
+        "ferguson":    {"sku": "BD-STND",   "name": "Kohler floor-mount bidet white",                   "cost": 385.00},
+        "moore_supply":{"sku": "BD-FM",     "name": "Floor-mount bidet white",                           "cost": 358.00},
+        "apex":        {"sku": "BD-STD-A",  "name": "Standalone bidet white",                             "cost": 412.00},
+    },
+    "sink.pedestal_unit_white": {
+        "ferguson":    {"sku": "PED-WHT",   "name": "Pedestal sink white vitreous china",               "cost": 168.00},
+        "moore_supply":{"sku": "PS-WHT",    "name": "White pedestal lav sink",                           "cost": 155.00},
+        "apex":        {"sku": "PED-W-A",   "name": "Pedestal sink white",                                "cost": 178.00},
+    },
+    "sink.undermount_ss_single": {
+        "ferguson":    {"sku": "UMS-3219",  "name": "32x19 undermount SS single bowl kitchen sink",     "cost": 225.00},
+        "moore_supply":{"sku": "UMSS-32",   "name": "SS undermount kitchen 32\"",                        "cost": 208.00},
+        "apex":        {"sku": "UMS32-A",   "name": "Undermount stainless 32\" single",                   "cost": 238.00},
+    },
+    "tub.freestanding_drain_kit": {
+        "ferguson":    {"sku": "FTD-KIT",   "name": "Freestanding tub drain assembly w/ overflow",      "cost": 85.00},
+        "moore_supply":{"sku": "FTDK",      "name": "Freestanding tub drain kit",                        "cost": 78.00},
+        "apex":        {"sku": "FTD-A",     "name": "Tub drain kit freestanding",                         "cost": 92.00},
+    },
+    "tub.freestanding_filler_floor": {
+        "ferguson":    {"sku": "FTF-CHR",   "name": "Floor-mount tub filler chrome w/ handshower",      "cost": 425.00},
+        "moore_supply":{"sku": "FTFC",      "name": "Floor-mount tub filler chrome",                     "cost": 395.00},
+        "apex":        {"sku": "FTF-A",     "name": "Chrome floor tub filler",                            "cost": 448.00},
+    },
+    "shower.thermostatic_valve_body": {
+        "ferguson":    {"sku": "TVB-34",    "name": "3/4\" thermostatic valve body w/ diverter",         "cost": 285.00},
+        "moore_supply":{"sku": "TVBD-34",   "name": "Thermostatic shower valve 3/4\"",                   "cost": 265.00},
+        "apex":        {"sku": "TVB34-A",   "name": "3/4\" thermostatic diverter valve",                  "cost": 298.00},
+    },
+    "shower.body_spray_jet": {
+        "ferguson":    {"sku": "BSJ-CHR",   "name": "Body spray jet chrome adjustable",                  "cost": 62.00},
+        "moore_supply":{"sku": "BS-JET",    "name": "Chrome body spray jet",                              "cost": 56.00},
+        "apex":        {"sku": "BSJ-A",     "name": "Adjustable body spray chrome",                        "cost": 68.00},
+    },
+    "shower.rain_head_12in": {
+        "ferguson":    {"sku": "RH-12C",    "name": "12\" rain shower head chrome ceiling mount",        "cost": 95.00},
+        "moore_supply":{"sku": "RSH-12",    "name": "12\" rain head chrome",                              "cost": 88.00},
+        "apex":        {"sku": "RH12-A",    "name": "12\" ceiling rain shower head",                       "cost": 102.00},
+    },
+    "sink.bar_sink_ss_15": {
+        "ferguson":    {"sku": "BS-15SS",   "name": "15\" stainless bar sink single bowl",               "cost": 98.00},
+        "moore_supply":{"sku": "BSS-15",    "name": "SS bar sink 15\"",                                   "cost": 88.00},
+        "apex":        {"sku": "BS15-A",    "name": "Bar sink stainless 15\"",                             "cost": 108.00},
+    },
+    "sink.bar_faucet_chrome": {
+        "ferguson":    {"sku": "BF-CHR",    "name": "Bar/prep faucet single lever chrome",               "cost": 85.00},
+        "moore_supply":{"sku": "BFC",       "name": "Chrome bar faucet single lever",                     "cost": 78.00},
+        "apex":        {"sku": "BF-C-A",    "name": "Bar faucet chrome",                                   "cost": 92.00},
+    },
+    "sink.utility_tub_24": {
+        "ferguson":    {"sku": "UT-24",     "name": "24\" utility laundry tub freestanding poly",        "cost": 85.00},
+        "moore_supply":{"sku": "UTUB-24",   "name": "24\" utility sink poly",                             "cost": 78.00},
+        "apex":        {"sku": "UT24-A",    "name": "Utility tub 24\" poly",                               "cost": 92.00},
+    },
+    "faucet.utility_chrome": {
+        "ferguson":    {"sku": "UF-CHR",    "name": "Utility faucet chrome 4\" centerset",               "cost": 42.00},
+        "moore_supply":{"sku": "UFC",       "name": "Chrome utility faucet",                               "cost": 38.00},
+        "apex":        {"sku": "UF-A",      "name": "4\" utility faucet chrome",                            "cost": 45.00},
+    },
+    "faucet.pot_filler_chrome": {
+        "ferguson":    {"sku": "PF-CHR",    "name": "Pot filler wall-mount articulated chrome",          "cost": 195.00},
+        "moore_supply":{"sku": "PFC",       "name": "Chrome wall pot filler",                              "cost": 178.00},
+        "apex":        {"sku": "PF-C-A",    "name": "Articulated pot filler chrome",                        "cost": 208.00},
+    },
+    # Pipe repair expansion
+    "pipe.copper_coupling_propress_half": {
+        "ferguson":    {"sku": "PP-CH",     "name": "ProPress copper coupling 1/2\"",                    "cost": 8.50},
+        "moore_supply":{"sku": "PPC-H",     "name": "1/2\" ProPress coupling",                            "cost": 7.75},
+        "apex":        {"sku": "PPH-A",     "name": "ProPress 1/2\" coupling",                              "cost": 9.25},
+    },
+    "pipe.copper_coupling_propress_34": {
+        "ferguson":    {"sku": "PP-C34",    "name": "ProPress copper coupling 3/4\"",                    "cost": 12.50},
+        "moore_supply":{"sku": "PPC-34",    "name": "3/4\" ProPress coupling",                            "cost": 11.25},
+        "apex":        {"sku": "PP34-A",    "name": "ProPress 3/4\" coupling",                              "cost": 13.50},
+    },
+    "pipe.pex_transition_poly_b_half": {
+        "ferguson":    {"sku": "PBT-H",     "name": "Poly-B to PEX transition coupling 1/2\"",           "cost": 12.50},
+        "moore_supply":{"sku": "PBTC-H",    "name": "1/2\" poly-B to PEX coupler",                        "cost": 11.25},
+        "apex":        {"sku": "PBT-HA",    "name": "Poly-B transition 1/2\"",                              "cost": 13.50},
+    },
+    "pipe.repair_clamp_half": {
+        "ferguson":    {"sku": "RC-H",      "name": "Pipe repair clamp 1/2\" stainless",                 "cost": 14.50},
+        "moore_supply":{"sku": "PRC-H",     "name": "1/2\" SS repair clamp",                               "cost": 12.75},
+        "apex":        {"sku": "RC-HA",     "name": "Repair clamp 1/2\" SS",                                "cost": 15.50},
+    },
+    "pipe.insulation_foam_half_50ft": {
+        "ferguson":    {"sku": "FI-H50",    "name": "Foam pipe insulation 1/2\" x 50ft self-seal",       "cost": 22.50},
+        "moore_supply":{"sku": "INS-H50",   "name": "1/2\" pipe insulation 50ft",                         "cost": 19.75},
+        "apex":        {"sku": "FIH50-A",   "name": "Foam insulation 1/2\" 50ft",                          "cost": 24.50},
+    },
+    "pipe.insulation_foam_34_50ft": {
+        "ferguson":    {"sku": "FI-34-50",  "name": "Foam pipe insulation 3/4\" x 50ft self-seal",       "cost": 28.50},
+        "moore_supply":{"sku": "INS-3450",  "name": "3/4\" pipe insulation 50ft",                         "cost": 25.75},
+        "apex":        {"sku": "FI3450-A",  "name": "Foam insulation 3/4\" 50ft",                          "cost": 30.25},
+    },
+    # Gas line expansion
+    "gas.flex_connector_48_range": {
+        "ferguson":    {"sku": "GFC-48R",   "name": "48\" stainless gas flex connector for range",       "cost": 28.50},
+        "moore_supply":{"sku": "GF-48R",    "name": "48\" gas flex range connector",                      "cost": 25.75},
+        "apex":        {"sku": "GFC48-A",   "name": "Gas flex 48\" range",                                 "cost": 30.25},
+    },
+    "gas.flex_connector_36_dryer": {
+        "ferguson":    {"sku": "GFC-36D",   "name": "36\" stainless gas flex connector for dryer",       "cost": 22.50},
+        "moore_supply":{"sku": "GF-36D",    "name": "36\" gas flex dryer connector",                      "cost": 19.75},
+        "apex":        {"sku": "GFC36-A",   "name": "Gas flex 36\" dryer",                                 "cost": 24.50},
+    },
+    "gas.quick_disconnect_outdoor": {
+        "ferguson":    {"sku": "GQD-34",    "name": "3/4\" gas quick disconnect for outdoor grill",      "cost": 32.50},
+        "moore_supply":{"sku": "QD-34G",    "name": "Gas quick-disconnect 3/4\"",                          "cost": 29.75},
+        "apex":        {"sku": "GQD-A",     "name": "Outdoor gas quick disconnect",                        "cost": 35.00},
+    },
+    "gas.csst_34_25ft": {
+        "ferguson":    {"sku": "CSST-25",   "name": "CSST gas tubing 3/4\" x 25ft coil",                "cost": 85.00},
+        "moore_supply":{"sku": "CS-3425",   "name": "3/4\" CSST 25ft",                                    "cost": 78.00},
+        "apex":        {"sku": "CSST25-A",  "name": "CSST tubing 3/4\" 25ft",                              "cost": 92.00},
+    },
+    # Commercial expansion
+    "comm.grease_trap_50gal": {
+        "ferguson":    {"sku": "GT-50",     "name": "Interior grease trap 50 GPM",                       "cost": 485.00},
+        "moore_supply":{"sku": "GIT-50",    "name": "50 GPM grease interceptor",                          "cost": 448.00},
+        "apex":        {"sku": "GT50-A",    "name": "Grease trap 50 GPM interior",                         "cost": 512.00},
+    },
+    "comm.floor_drain_6in": {
+        "ferguson":    {"sku": "FD-6SS",    "name": "6\" floor drain SS strainer heavy-duty",            "cost": 68.00},
+        "moore_supply":{"sku": "FDR-6",     "name": "6\" HD floor drain",                                  "cost": 62.00},
+        "apex":        {"sku": "FD6-A",     "name": "Floor drain 6\" SS",                                   "cost": 72.00},
+    },
+    "comm.trap_primer_valve": {
+        "ferguson":    {"sku": "TPV-STD",   "name": "Trap primer valve 1/2\"",                            "cost": 42.50},
+        "moore_supply":{"sku": "TP-PRIME",  "name": "1/2\" trap primer",                                   "cost": 38.75},
+        "apex":        {"sku": "TPV-A",     "name": "Trap primer valve",                                    "cost": 45.00},
+    },
+    "comm.flushometer_sloan_111": {
+        "ferguson":    {"sku": "SLN-111",   "name": "Sloan Royal 111 toilet flushometer 1.6 GPF",        "cost": 195.00},
+        "moore_supply":{"sku": "SR-111",    "name": "Sloan 111 flushometer",                               "cost": 182.00},
+        "apex":        {"sku": "SLN111-A",  "name": "Sloan Royal 111 flush valve",                          "cost": 208.00},
+    },
+    "wh.commercial_75g_gas": {
+        "ferguson":    {"sku": "CWH-75G",   "name": "Commercial 75G gas WH 75,000 BTU",                  "cost": 1850.00},
+        "moore_supply":{"sku": "CG75-WH",   "name": "75G commercial gas WH",                               "cost": 1725.00},
+        "apex":        {"sku": "CWH75-A",   "name": "Commercial WH 75G gas",                                "cost": 1950.00},
+    },
+    # Outdoor/Irrigation expansion
+    "irrigation.pvb_backflow_1in": {
+        "ferguson":    {"sku": "PVB-1",     "name": "1\" PVB backflow preventer for irrigation",          "cost": 125.00},
+        "moore_supply":{"sku": "PVBBF-1",   "name": "1\" PVB irrigation backflow",                        "cost": 115.00},
+        "apex":        {"sku": "PVB1-A",    "name": "PVB backflow 1\" irrigation",                          "cost": 135.00},
+    },
+    "irrigation.zone_valve_1in": {
+        "ferguson":    {"sku": "ZV-1",      "name": "1\" irrigation zone valve w/ solenoid",              "cost": 28.50},
+        "moore_supply":{"sku": "IZV-1",     "name": "1\" zone valve irrigation",                           "cost": 25.75},
+        "apex":        {"sku": "ZV1-A",     "name": "Irrigation zone valve 1\"",                            "cost": 30.25},
+    },
+    "drain.catch_basin_12in": {
+        "ferguson":    {"sku": "CB-12",     "name": "12\" catch basin with grate (green)",               "cost": 48.50},
+        "moore_supply":{"sku": "CBAS-12",   "name": "12\" catch basin kit",                                "cost": 44.25},
+        "apex":        {"sku": "CB12-A",    "name": "Catch basin 12\" with grate",                          "cost": 52.00},
+    },
+    "outdoor.yard_hydrant_3ft": {
+        "ferguson":    {"sku": "YH-3",      "name": "Frost-proof yard hydrant 3ft bury",                 "cost": 125.00},
+        "moore_supply":{"sku": "YHFP-3",    "name": "3ft frost-proof yard hydrant",                       "cost": 115.00},
+        "apex":        {"sku": "YH3-A",     "name": "Yard hydrant frost-proof 3ft",                        "cost": 135.00},
+    },
+    # Specialty expansion
+    "safety.grab_bar_24_ss": {
+        "ferguson":    {"sku": "GB-24SS",   "name": "24\" stainless ADA grab bar",                       "cost": 38.50},
+        "moore_supply":{"sku": "ADAGB-24",  "name": "24\" SS grab bar ADA",                               "cost": 35.00},
+        "apex":        {"sku": "GB24-A",    "name": "ADA grab bar 24\" SS",                                 "cost": 42.00},
+    },
+    "safety.grab_bar_blocking": {
+        "ferguson":    {"sku": "GBB-KIT",   "name": "Grab bar blocking kit (2x8 + backing plate)",      "cost": 12.50},
+        "moore_supply":{"sku": "GBLK",      "name": "Grab bar blocking kit",                               "cost": 11.25},
+        "apex":        {"sku": "GBB-A",     "name": "Blocking kit for grab bar",                            "cost": 13.50},
+    },
+    "wh.timer_programmable": {
+        "ferguson":    {"sku": "WHT-PRG",   "name": "WH programmable timer 240V/40A",                    "cost": 38.50},
+        "moore_supply":{"sku": "WHTMR",     "name": "Water heater timer",                                  "cost": 35.00},
+        "apex":        {"sku": "WHT-A",     "name": "Programmable WH timer",                                "cost": 42.00},
+    },
+    "safety.auto_shutoff_valve_1in": {
+        "ferguson":    {"sku": "ASV-1",     "name": "Automatic shutoff valve 1\" w/ WiFi controller",    "cost": 385.00},
+        "moore_supply":{"sku": "ASHUT-1",   "name": "1\" smart auto shutoff valve",                       "cost": 358.00},
+        "apex":        {"sku": "ASV1-A",    "name": "Auto water shutoff 1\" smart",                        "cost": 412.00},
+    },
+    "safety.leak_sensor_3pk": {
+        "ferguson":    {"sku": "LS-3PK",    "name": "Water leak sensor 3-pack WiFi",                     "cost": 65.00},
+        "moore_supply":{"sku": "WLS-3",     "name": "WiFi leak sensor 3-pack",                             "cost": 58.00},
+        "apex":        {"sku": "LS3-A",     "name": "Leak sensor pack of 3 WiFi",                          "cost": 72.00},
+    },
 }
 
 
@@ -1153,6 +1404,358 @@ MATERIAL_ASSEMBLIES: dict[str, dict] = {
         "labor_template": "BIDET_SEAT_INSTALL",
         "items": {
             "toilet.bidet_seat_brondell": 1,
+        },
+    },
+
+    # ─── Expanded DFW Material Assemblies (2025-2026 additions) ──────────────
+
+    "WH_50G_ELECTRIC_ATTIC_KIT": {
+        "name": "50G Electric WH Attic Install Kit",
+        "labor_template": "WH_50G_ELECTRIC_ATTIC",
+        "items": {
+            "wh.50g_electric_attic_unit": 1,
+            "wh.drain_pan_26":            1,
+            "wh.overflow_line_075":       1,
+            "wh.expansion_tank_2g":       1,
+            "wh.water_supply_line_18":    2,
+        },
+    },
+
+    "WH_TANKLESS_ELECTRIC_KIT": {
+        "name": "Tankless Electric WH Install Kit",
+        "labor_template": "WH_TANKLESS_ELECTRIC",
+        "items": {
+            "wh.tankless_electric_unit":  1,
+            "wh.water_supply_line_18":    2,
+        },
+    },
+
+    "WH_HYBRID_HEAT_PUMP_KIT": {
+        "name": "Hybrid Heat Pump WH Install Kit",
+        "labor_template": "WH_HYBRID_HEAT_PUMP",
+        "items": {
+            "wh.hybrid_heat_pump_unit":   1,
+            "wh.expansion_tank_2g":       1,
+            "wh.water_supply_line_18":    2,
+            "wh.condensate_pump_kit":     1,
+            "wh.drain_pan_26":            1,
+        },
+    },
+
+    "WH_RECIRC_LINE_KIT": {
+        "name": "Dedicated Recirculation Return Line Kit",
+        "labor_template": "WH_RECIRCULATION_LINE_NEW",
+        "items": {
+            "recirc.pump_grundfos_up15":  1,
+            "reroute.pex_a_half_100ft":   1,
+            "pipe.insulation_foam_half_50ft": 2,
+        },
+    },
+
+    "WH_PAN_KIT": {
+        "name": "WH Drain Pan & Overflow Kit",
+        "labor_template": "WH_PAN_DRAIN_OVERFLOW_ONLY",
+        "items": {
+            "wh.drain_pan_26":            1,
+            "wh.overflow_line_075":       1,
+        },
+    },
+
+    "SEWER_LINER_KIT": {
+        "name": "CIPP Trenchless Liner Kit (50 LF)",
+        "labor_template": "SEWER_LINER_CIPP",
+        "items": {
+            "sewer.cipp_liner_4in_50ft":  1,
+        },
+    },
+
+    "SEWER_BELLY_KIT": {
+        "name": "Sewer Belly Repair Kit",
+        "labor_template": "SEWER_BELLY_REPAIR",
+        "items": {
+            "sewer.pvc_pipe_4_10ft":       2,
+            "sewer.fernco_4in_mission":    2,
+            "sewer.belly_bedding_gravel_bag": 4,
+        },
+    },
+
+    "POP_UP_DRAIN_KIT": {
+        "name": "Pop-Up Drain Assembly Kit",
+        "labor_template": "DRAIN_POP_UP_REPLACE",
+        "items": {
+            "drain.pop_up_assembly_chrome": 1,
+        },
+    },
+
+    "CONDENSATE_DRAIN_KIT": {
+        "name": "HVAC Condensate Drain Tie-In Kit",
+        "labor_template": "CONDENSATE_DRAIN_INSTALL",
+        "items": {
+            "drain.condensate_ptrap_34":   1,
+            "drain.condensate_pvc_34_10ft": 2,
+        },
+    },
+
+    "BIDET_STANDALONE_KIT": {
+        "name": "Standalone Bidet Install Kit",
+        "labor_template": "BIDET_STANDALONE_INSTALL",
+        "items": {
+            "bidet.standalone_unit":       1,
+            "lav.supply_lines_12_pair":    1,
+            "ptrap.chrome_1_5_inch":       1,
+        },
+    },
+
+    "PEDESTAL_SINK_KIT": {
+        "name": "Pedestal Sink Install Kit",
+        "labor_template": "PEDESTAL_SINK_INSTALL",
+        "items": {
+            "sink.pedestal_unit_white":    1,
+            "lav.supply_lines_12_pair":    1,
+            "lav.pop_up_drain":            1,
+            "ptrap.chrome_1_5_inch":       1,
+        },
+    },
+
+    "UNDERMOUNT_SINK_KIT": {
+        "name": "Undermount Sink Install Kit",
+        "labor_template": "UNDERMOUNT_SINK_INSTALL",
+        "items": {
+            "sink.undermount_ss_single":   1,
+            "sink.basket_strainer_chrome":  1,
+            "sink.ptrap_1p5_abs":          1,
+            "sink.supply_line_braided_12in": 2,
+        },
+    },
+
+    "FREESTANDING_TUB_KIT": {
+        "name": "Freestanding Tub Plumbing Kit",
+        "labor_template": "FREESTANDING_TUB_INSTALL",
+        "items": {
+            "tub.freestanding_drain_kit":    1,
+            "tub.freestanding_filler_floor": 1,
+        },
+    },
+
+    "WALK_IN_SHOWER_KIT": {
+        "name": "Walk-In Shower Multi-Valve Kit",
+        "labor_template": "WALK_IN_SHOWER_VALVE_INSTALL",
+        "items": {
+            "shower.thermostatic_valve_body": 1,
+            "shower.body_spray_jet":          3,
+            "shower.rain_head_12in":          1,
+        },
+    },
+
+    "WET_BAR_SINK_KIT": {
+        "name": "Wet Bar Sink Install Kit",
+        "labor_template": "WET_BAR_SINK_INSTALL",
+        "items": {
+            "sink.bar_sink_ss_15":          1,
+            "sink.bar_faucet_chrome":       1,
+            "ptrap.chrome_1_5_inch":        1,
+            "angle_stop.quarter_turn_3_8":  2,
+        },
+    },
+
+    "UTILITY_SINK_KIT": {
+        "name": "Utility/Laundry Sink Install Kit",
+        "labor_template": "UTILITY_SINK_INSTALL",
+        "items": {
+            "sink.utility_tub_24":          1,
+            "faucet.utility_chrome":        1,
+            "ptrap.chrome_1_5_inch":        1,
+        },
+    },
+
+    "POT_FILLER_KIT": {
+        "name": "Pot Filler Faucet Kit",
+        "labor_template": "POT_FILLER_INSTALL",
+        "items": {
+            "faucet.pot_filler_chrome":     1,
+        },
+    },
+
+    "COPPER_REPAIR_KIT": {
+        "name": "Copper Pinhole Repair Kit (per point)",
+        "labor_template": "COPPER_PINHOLE_REPAIR",
+        "items": {
+            "pipe.copper_coupling_propress_half": 2,
+        },
+    },
+
+    "POLY_B_REPAIR_KIT": {
+        "name": "Polybutylene Section Repair Kit",
+        "labor_template": "POLYBUTYLENE_SECTION_REPLACE",
+        "items": {
+            "pipe.pex_transition_poly_b_half": 2,
+            "repipe.pex_a_12_10ft":             1,
+        },
+    },
+
+    "PIPE_BURST_KIT": {
+        "name": "Burst Pipe Emergency Kit",
+        "labor_template": "PIPE_BURST_EMERGENCY",
+        "items": {
+            "pipe.repair_clamp_half":           1,
+            "pipe.copper_coupling_propress_half": 2,
+            "pipe.copper_coupling_propress_34":   1,
+        },
+    },
+
+    "FREEZE_REPAIR_KIT": {
+        "name": "Freeze Damage Repair Kit (up to 3 points)",
+        "labor_template": "FREEZE_DAMAGE_THAW_REPAIR",
+        "items": {
+            "pipe.copper_coupling_propress_half": 3,
+            "pipe.copper_coupling_propress_34":   2,
+            "pipe.repair_clamp_half":             1,
+        },
+    },
+
+    "PIPE_INSULATION_KIT": {
+        "name": "Pipe Insulation Kit (50 LF)",
+        "labor_template": "PIPE_INSULATION_INSTALL",
+        "items": {
+            "pipe.insulation_foam_half_50ft":  1,
+            "pipe.insulation_foam_34_50ft":    1,
+        },
+    },
+
+    "GAS_DRYER_KIT": {
+        "name": "Gas Dryer Hookup Kit",
+        "labor_template": "GAS_LINE_DRYER",
+        "items": {
+            "gas.flex_connector_36_dryer":     1,
+            "gas.ball_valve_3_4":              1,
+            "gas.teflon_tape_yellow":          1,
+        },
+    },
+
+    "GAS_RANGE_KIT": {
+        "name": "Gas Range/Oven Hookup Kit",
+        "labor_template": "GAS_LINE_RANGE_OVEN",
+        "items": {
+            "gas.flex_connector_48_range":     1,
+            "gas.ball_valve_3_4":              1,
+            "gas.teflon_tape_yellow":          1,
+        },
+    },
+
+    "GAS_FIREPLACE_KIT": {
+        "name": "Gas Fireplace Line Kit",
+        "labor_template": "GAS_LINE_FIREPLACE",
+        "items": {
+            "gas.csst_34_25ft":                1,
+            "gas.ball_valve_3_4":              1,
+            "gas.teflon_tape_yellow":          1,
+        },
+    },
+
+    "GAS_OUTDOOR_KIT": {
+        "name": "Outdoor Grill Gas Line Kit",
+        "labor_template": "GAS_LINE_GRILL_OUTDOOR",
+        "items": {
+            "gas.csst_34_25ft":                1,
+            "gas.quick_disconnect_outdoor":    1,
+            "gas.ball_valve_3_4":              1,
+            "gas.teflon_tape_yellow":          1,
+        },
+    },
+
+    "GREASE_TRAP_KIT": {
+        "name": "Commercial Grease Trap Install Kit",
+        "labor_template": "COMMERCIAL_GREASE_TRAP_INSTALL",
+        "items": {
+            "comm.grease_trap_50gal":          1,
+        },
+    },
+
+    "COMMERCIAL_FLOOR_DRAIN_KIT": {
+        "name": "Commercial Floor Drain Install Kit",
+        "labor_template": "COMMERCIAL_FLOOR_DRAIN_INSTALL",
+        "items": {
+            "comm.floor_drain_6in":            1,
+            "comm.trap_primer_valve":          1,
+        },
+    },
+
+    "FLUSHOMETER_KIT": {
+        "name": "Flushometer Valve Replacement Kit",
+        "labor_template": "FLUSHOMETER_REPLACE",
+        "items": {
+            "comm.flushometer_sloan_111":      1,
+        },
+    },
+
+    "COMMERCIAL_WH_KIT": {
+        "name": "Commercial Water Heater Install Kit",
+        "labor_template": "COMMERCIAL_WATER_HEATER_INSTALL",
+        "items": {
+            "wh.commercial_75g_gas":           1,
+            "wh.expansion_tank_2g":            1,
+            "wh.tp_valve_075":                 1,
+            "wh.dielectric_union_pair":        2,
+        },
+    },
+
+    "IRRIGATION_BACKFLOW_KIT": {
+        "name": "Irrigation Backflow Preventer Kit",
+        "labor_template": "IRRIGATION_BACKFLOW_INSTALL",
+        "items": {
+            "irrigation.pvb_backflow_1in":     1,
+        },
+    },
+
+    "IRRIGATION_VALVE_KIT": {
+        "name": "Irrigation Zone Valve Repair Kit",
+        "labor_template": "IRRIGATION_VALVE_REPAIR",
+        "items": {
+            "irrigation.zone_valve_1in":       1,
+        },
+    },
+
+    "CATCH_BASIN_KIT": {
+        "name": "Catch Basin Install Kit",
+        "labor_template": "CATCH_BASIN_INSTALL",
+        "items": {
+            "drain.catch_basin_12in":          1,
+            "drain.perf_pipe_4in_10ft":        2,
+            "drain.popup_emitter_4in":         1,
+        },
+    },
+
+    "YARD_HYDRANT_KIT": {
+        "name": "Frost-Proof Yard Hydrant Kit",
+        "labor_template": "YARD_HYDRANT_INSTALL",
+        "items": {
+            "outdoor.yard_hydrant_3ft":        1,
+        },
+    },
+
+    "GRAB_BAR_KIT": {
+        "name": "ADA Grab Bar Install Kit (per bar)",
+        "labor_template": "ADA_GRAB_BAR_INSTALL",
+        "items": {
+            "safety.grab_bar_24_ss":           1,
+            "safety.grab_bar_blocking":        1,
+        },
+    },
+
+    "WH_TIMER_KIT": {
+        "name": "Water Heater Timer Kit",
+        "labor_template": "WATER_HEATER_TIMER_INSTALL",
+        "items": {
+            "wh.timer_programmable":           1,
+        },
+    },
+
+    "AUTO_SHUTOFF_KIT": {
+        "name": "Automatic Water Shutoff System Kit",
+        "labor_template": "EMERGENCY_SHUTOFF_VALVE_INSTALL",
+        "items": {
+            "safety.auto_shutoff_valve_1in":   1,
+            "safety.leak_sensor_3pk":          1,
         },
     },
     }
