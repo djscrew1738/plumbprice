@@ -2,31 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import {
-  ArrowLeft, Calendar, MapPin, Layers, CircleDollarSign,
-  FileText, TrendingUp, Tag, Printer, Download,
-  Copy, Trash2, Zap, RefreshCw, Mail,
-} from 'lucide-react'
-import { format, isValid } from 'date-fns'
 import { api, outcomesApi, proposalsApi, type OutcomeValue } from '@/lib/api'
-import { Modal } from '@/components/ui/Modal'
-import { cn, formatCurrency, formatCurrencyDecimal } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
-import { Badge } from '@/components/ui/Badge'
 import { ErrorState } from '@/components/ui/ErrorState'
-
-interface LineItem {
-  line_type: string
-  description: string
-  quantity: number
-  unit: string
-  unit_cost: number
-  total_cost: number
-  supplier?: string | null
-  sku?: string | null
-  canonical_item?: string | null
-}
+import { EstimateHeader } from './EstimateHeader'
+import { CostBreakdownCard } from './CostBreakdownCard'
+import { LineItemsTable, type LineItem } from './LineItemsTable'
+import { OutcomeRecorderCard, type SentProposal } from './OutcomeRecorderCard'
+import { ProposalSendModal } from './ProposalSendModal'
+import { EstimateActionsBar } from './EstimateActionsBar'
 
 interface EstimateDetail {
   id: number
@@ -56,27 +40,6 @@ const JOB_TYPE_VARIANT: Record<string, 'accent' | 'success' | 'warning' | 'dange
   commercial: 'info',
 }
 
-const LINE_TYPE_LABEL: Record<string, string> = {
-  labor: 'Labor',
-  material: 'Material',
-  markup: 'Markup',
-  tax: 'Tax',
-  misc: 'Misc',
-}
-
-const LINE_TYPE_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent'> = {
-  labor:    'info',
-  material: 'success',
-  markup:   'warning',
-  tax:      'neutral',
-  misc:     'info',
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
-  return isValid(d) ? format(d, 'MMMM d, yyyy · h:mm a') : '—'
-}
-
 export function EstimateDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -96,10 +59,7 @@ export function EstimateDetailPage() {
   const [proposalName,     setProposalName]     = useState('')
   const [proposalMsg,      setProposalMsg]      = useState('')
   const [proposalSending,  setProposalSending]  = useState(false)
-  const [sentProposals, setSentProposals] = useState<Array<{
-    id: number; recipient_email: string; recipient_name: string | null;
-    sent_at: string | null; created_at: string
-  }>>([])
+  const [sentProposals, setSentProposals] = useState<SentProposal[]>([])
 
   const exportCSV = useCallback(() => {
     if (!estimate) return
@@ -243,409 +203,91 @@ export function EstimateDetailPage() {
     )
   }
 
-  const laborLines    = estimate.line_items.filter(l => l.line_type === 'labor')
-  const materialLines = estimate.line_items.filter(l => l.line_type === 'material')
-  const otherLines    = estimate.line_items.filter(l => !['labor','material'].includes(l.line_type))
-
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
 
       {/* ── Sticky header ────────────────────────────────────────────────────── */}
-      <div className="bg-[hsl(var(--background))]/80 backdrop-blur-xl border-b border-white/[0.06] px-4 py-3 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            aria-label="Go back"
-            className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-[color:var(--ink)] truncate">{estimate.title || `Estimate #${estimate.id}`}</h1>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <Badge variant={JOB_TYPE_VARIANT[estimate.job_type] ?? 'accent'} size="sm">
-                {estimate.job_type}
-              </Badge>
-              <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.county} County</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Open in estimator */}
-            <button
-              onClick={() => router.push(`/estimator?estimateId=${estimate.id}`)}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-              title="Open in Estimator"
-              aria-label="Open in Estimator"
-            >
-              <Zap size={15} />
-            </button>
-            {/* Duplicate */}
-            <button
-              onClick={() => void handleDuplicate()}
-              disabled={duplicating}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
-              title="Duplicate estimate"
-              aria-label="Duplicate estimate"
-            >
-              {duplicating ? <RefreshCw size={15} className="animate-spin" /> : <Copy size={15} />}
-            </button>
-            <button
-              onClick={exportCSV}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-              title="Export CSV"
-              aria-label="Export as CSV"
-            >
-              <Download size={16} />
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-              title="Print / Save as PDF"
-              aria-label="Print or save as PDF"
-            >
-              <Printer size={16} />
-            </button>
-            {/* Send Proposal */}
-            <button
-              onClick={() => setProposalOpen(true)}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-              title="Send proposal email"
-              aria-label="Send proposal"
-            >
-              <Mail size={15} />
-            </button>
-
-            {/* Win / Lost outcome */}
-            {outcome ? (
-              <span className={cn(
-                'px-2 py-1 rounded-lg text-[11px] font-semibold border',
-                outcome === 'won'
-                  ? 'bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]'
-                  : 'bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.3)]',
-              )}>
-                {outcome === 'won' ? 'Won' : 'Lost'}
-              </span>
-            ) : (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => void handleRecordOutcome('won')}
-                  disabled={outcomeSubmitting}
-                  title="Mark as won"
-                  className="px-2 py-1 rounded-lg text-[11px] font-semibold border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.18)] transition-colors disabled:opacity-40"
-                >
-                  Won
-                </button>
-                <button
-                  onClick={() => void handleRecordOutcome('lost')}
-                  disabled={outcomeSubmitting}
-                  title="Mark as lost"
-                  className="px-2 py-1 rounded-lg text-[11px] font-semibold border border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.18)] transition-colors disabled:opacity-40"
-                >
-                  Lost
-                </button>
-              </div>
-            )}
-
-            {/* Delete with inline confirm */}
-            {confirmDelete ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-[hsl(var(--danger))] font-medium">Delete?</span>
-                <button
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="px-2 py-1 rounded-lg bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] text-[11px] font-semibold hover:bg-[hsl(var(--danger)/0.25)] transition-colors disabled:opacity-40"
-                >
-                  {deleting ? <RefreshCw size={11} className="animate-spin" /> : 'Yes'}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="px-2 py-1 rounded-lg bg-white/[0.05] text-[color:var(--muted-ink)] text-[11px] font-semibold hover:bg-white/[0.08] transition-colors"
-                >No</button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors"
-                title="Delete estimate"
-                aria-label="Delete estimate"
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
-            <div className="text-right ml-1">
-              <div className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">
-                {formatCurrency(estimate.grand_total)}
-              </div>
-              <div className="text-[10px] text-[color:var(--muted-ink)]">grand total</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <EstimateHeader
+        estimate={estimate}
+        outcome={outcome}
+        outcomeSubmitting={outcomeSubmitting}
+        duplicating={duplicating}
+        confirmDelete={confirmDelete}
+        deleting={deleting}
+        jobTypeVariant={JOB_TYPE_VARIANT}
+        onBack={() => router.back()}
+        onOpenEstimator={() => router.push(`/estimator?estimateId=${estimate.id}`)}
+        onDuplicate={() => void handleDuplicate()}
+        onExportCSV={exportCSV}
+        onPrint={() => window.print()}
+        onSendProposal={() => setProposalOpen(true)}
+        onRecordOutcome={(v) => void handleRecordOutcome(v)}
+        onDeleteClick={() => setConfirmDelete(true)}
+        onDeleteConfirm={() => void handleDelete()}
+        onDeleteCancel={() => setConfirmDelete(false)}
+      />
 
       <div className="max-w-4xl mx-auto px-4 py-5 space-y-4">
 
-        {/* ── Summary cards ────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3"
-        >
-          {[
-            { label: 'Labor',     value: estimate.labor_total,     icon: TrendingUp,       bg: 'bg-[hsl(var(--info)/0.1)] border-[hsl(var(--info)/0.2)]'     },
-            { label: 'Materials', value: estimate.materials_total,  icon: Layers,           bg: 'bg-[hsl(var(--success)/0.1)] border-[hsl(var(--success)/0.2)]'},
-            { label: 'Markup',    value: estimate.markup_total,     icon: Tag,              bg: 'bg-[hsl(var(--warning)/0.1)] border-[hsl(var(--warning)/0.2)]'   },
-            { label: 'Tax',       value: estimate.tax_total,        icon: CircleDollarSign, bg: 'bg-white/[0.03] border-white/[0.08]'   },
-          ].map(({ label, value, icon: Icon, bg }) => (
-            <div key={label} className="card p-3.5 flex items-center gap-3">
-              <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center border shrink-0', bg)}>
-                <Icon size={13} className="text-[color:var(--accent)]" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] text-[color:var(--muted-ink)] font-bold uppercase tracking-wider">{label}</div>
-                <div className="text-sm font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(value)}</div>
-              </div>
-            </div>
-          ))}
-        </motion.div>
+        {/* ── Cost breakdown + metadata ──────────────────────────────────────── */}
+        <CostBreakdownCard
+          laborTotal={estimate.labor_total}
+          materialsTotal={estimate.materials_total}
+          markupTotal={estimate.markup_total}
+          taxTotal={estimate.tax_total}
+          county={estimate.county}
+          taxRate={estimate.tax_rate}
+          preferredSupplier={estimate.preferred_supplier}
+          confidenceLabel={estimate.confidence_label}
+          confidenceScore={estimate.confidence_score}
+          createdAt={estimate.created_at}
+        />
 
-        {/* ── Metadata row ─────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0.05 }}
-          className="card p-4 flex flex-wrap gap-4 text-sm"
-        >
-          <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
-            <Calendar size={13} className="text-[color:var(--muted-ink)] shrink-0" />
-            <span className="text-xs">{formatDate(estimate.created_at)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
-            <MapPin size={13} className="text-[color:var(--muted-ink)] shrink-0" />
-            <span className="text-xs">{estimate.county} County · {(estimate.tax_rate * 100).toFixed(2)}% tax</span>
-          </div>
-          {estimate.preferred_supplier && (
-            <div className="flex items-center gap-2 text-[color:var(--muted-ink)]">
-              <FileText size={13} className="text-[color:var(--muted-ink)] shrink-0" />
-              <span className="text-xs">Supplier: {estimate.preferred_supplier}</span>
-            </div>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            <Badge variant={estimate.confidence_label?.toLowerCase() === 'high' ? 'success' : estimate.confidence_label?.toLowerCase() === 'medium' ? 'warning' : 'danger'} size="sm">
-              {estimate.confidence_label} confidence
-            </Badge>
-            <span className="text-xs text-[color:var(--muted-ink)] tabular-nums">
-              {Math.round(estimate.confidence_score * 100)}%
-            </span>
-          </div>
-        </motion.div>
+        {/* ── Line items ─────────────────────────────────────────────────────── */}
+        <LineItemsTable
+          lineItems={estimate.line_items}
+          subtotal={estimate.subtotal}
+          taxTotal={estimate.tax_total}
+          taxRate={estimate.tax_rate}
+          grandTotal={estimate.grand_total}
+        />
 
-        {/* ── Line items ───────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0.1 }}
-          className="card overflow-hidden"
-        >
-          <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="text-xs font-bold text-[color:var(--ink)] uppercase tracking-wider">Line Items</h2>
-            <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.line_items.length} {estimate.line_items.length === 1 ? 'item' : 'items'}</span>
-          </div>
+        {/* ── Assumptions & Sent Proposals ───────────────────────────────────── */}
+        <OutcomeRecorderCard
+          assumptions={estimate.assumptions}
+          sentProposals={sentProposals}
+        />
 
-          {/* Labor */}
-          {laborLines.length > 0 && (
-            <LineItemSection title="Labor" items={laborLines} />
-          )}
-
-          {/* Materials */}
-          {materialLines.length > 0 && (
-            <LineItemSection title="Materials" items={materialLines} />
-          )}
-
-          {/* Other (markup, tax, misc) */}
-          {otherLines.length > 0 && (
-            <LineItemSection title="Fees & Taxes" items={otherLines} />
-          )}
-
-          {/* Totals footer */}
-          <div className="bg-white/[0.02] border-t border-white/[0.06] divide-y divide-white/[0.04]">
-            {[
-              { label: 'Subtotal',  value: estimate.subtotal },
-              { label: `Tax (${(estimate.tax_rate * 100).toFixed(2)}%)`, value: estimate.tax_total },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between px-5 py-2.5 text-sm">
-                <span className="text-[color:var(--muted-ink)]">{label}</span>
-                <span className="text-[color:var(--foreground)] font-semibold tabular-nums">{formatCurrencyDecimal(value)}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between px-5 py-3">
-              <span className="text-sm font-bold text-[color:var(--ink)]">Grand Total</span>
-              <span className="text-xl font-extrabold text-[color:var(--ink)] tabular-nums">{formatCurrencyDecimal(estimate.grand_total)}</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Assumptions ──────────────────────────────────────────────────── */}
-        {estimate.assumptions.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: 0.15 }}
-            className="card p-4"
-          >
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Assumptions</h2>
-            <ul className="space-y-2">
-              {estimate.assumptions.map((a, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-xs text-zinc-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-700 mt-1.5 shrink-0" />
-                  {a}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-
-        {/* ── Sent Proposals ───────────────────────────────────────────────── */}
-        {sentProposals.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: 0.2 }}
-            className="card p-4"
-          >
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Sent Proposals</h2>
-            <ul className="space-y-2">
-              {sentProposals.map(p => (
-                <li key={p.id} className="flex items-center justify-between text-xs">
-                  <span className="text-[color:var(--foreground)]">
-                    {p.recipient_name ? `${p.recipient_name} <${p.recipient_email}>` : p.recipient_email}
-                  </span>
-                  <span className="text-[color:var(--muted-ink)] shrink-0 ml-4">
-                    {p.sent_at
-                      ? new Date(p.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    }
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
+        {/* ── Bottom actions bar ─────────────────────────────────────────────── */}
+        <EstimateActionsBar
+          estimateTitle={estimate.title}
+          estimateId={estimate.id}
+          duplicating={duplicating}
+          confirmDelete={confirmDelete}
+          deleting={deleting}
+          onDuplicate={() => void handleDuplicate()}
+          onExportCSV={exportCSV}
+          onPrint={() => window.print()}
+          onDeleteClick={() => setConfirmDelete(true)}
+          onDeleteConfirm={() => void handleDelete()}
+          onDeleteCancel={() => setConfirmDelete(false)}
+        />
       </div>
 
       {/* ── Send Proposal modal ──────────────────────────────────────────── */}
-      <Modal
+      <ProposalSendModal
         open={proposalOpen}
+        estimateId={estimate.id}
+        proposalEmail={proposalEmail}
+        proposalName={proposalName}
+        proposalMsg={proposalMsg}
+        proposalSending={proposalSending}
         onClose={() => setProposalOpen(false)}
-        title="Send Proposal"
-        description={`Email estimate #${estimate.id} as a proposal to your customer.`}
-        size="sm"
-      >
-        <form
-          onSubmit={e => { e.preventDefault(); void handleSendProposal() }}
-          className="space-y-3"
-        >
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
-              Recipient email *
-            </label>
-            <input
-              type="email"
-              required
-              value={proposalEmail}
-              onChange={e => setProposalEmail(e.target.value)}
-              placeholder="customer@example.com"
-              className="input w-full"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
-              Recipient name
-            </label>
-            <input
-              type="text"
-              value={proposalName}
-              onChange={e => setProposalName(e.target.value)}
-              placeholder="John Smith"
-              className="input w-full"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
-              Personal message
-            </label>
-            <textarea
-              value={proposalMsg}
-              onChange={e => setProposalMsg(e.target.value)}
-              placeholder="Thank you for considering us for this project…"
-              rows={3}
-              className="input w-full resize-none"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setProposalOpen(false)}
-              className="rounded-xl border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!proposalEmail.trim() || proposalSending}
-              className="btn-primary rounded-xl px-4 py-2 text-sm disabled:opacity-40"
-            >
-              {proposalSending ? <RefreshCw size={14} className="animate-spin" /> : 'Send'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-    </div>
-  )
-}
-
-function LineItemSection({ title, items }: { title: string; items: LineItem[] }) {
-  return (
-    <div>
-      <div className="px-4 py-2 bg-white/[0.015] border-y border-white/[0.04]">
-        <span className="text-[10px] font-bold text-[color:var(--muted-ink)] uppercase tracking-widest">{title}</span>
-      </div>
-      <div className="divide-y divide-white/[0.04]">
-        {items.map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: 0.05 * i }}
-            className="px-4 py-3 flex items-start gap-3 hover:bg-white/[0.015] transition-colors"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-[color:var(--foreground)] font-medium">{item.description}</div>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                {item.supplier && (
-                  <span className="text-[10px] text-[color:var(--muted-ink)]">{item.supplier}</span>
-                )}
-                {item.sku && (
-                  <span className="text-[10px] text-[color:var(--muted-ink)] font-mono">SKU: {item.sku}</span>
-                )}
-                <Badge variant={LINE_TYPE_VARIANT[item.line_type] ?? 'neutral'} size="sm">
-                  {LINE_TYPE_LABEL[item.line_type] ?? item.line_type}
-                </Badge>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-sm font-semibold text-[color:var(--ink)] tabular-nums">
-                {formatCurrencyDecimal(item.total_cost)}
-              </div>
-              {item.quantity !== 1 && (
-                <div className="text-[10px] text-[color:var(--muted-ink)] tabular-nums">
-                  {item.quantity} × {formatCurrencyDecimal(item.unit_cost)} / {item.unit}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        ))}
-      </div>
+        onEmailChange={setProposalEmail}
+        onNameChange={setProposalName}
+        onMsgChange={setProposalMsg}
+        onSend={() => void handleSendProposal()}
+      />
     </div>
   )
 }
