@@ -2,17 +2,20 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Send, RotateCcw, Zap, Copy, Check, FileUp, X, Square } from 'lucide-react'
+import { FileUp, X } from 'lucide-react'
 import { chatApi, estimatesApi, templatesApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
-import { ConfidenceBadge } from './ConfidenceBadge'
-import { ChatSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
-import { cn } from '@/lib/utils'
 import type { ChatMessage, EstimateBreakdown as EstimateBreakdownType, LineItem } from '@/types'
-import ReactMarkdown from 'react-markdown'
 import { WorkspaceEntryBar, type WorkspaceEntryMode } from '@/components/workspace/WorkspaceEntryBar'
+// EstimateBreakdownRail role is fulfilled by WorkspaceSummaryRail, which wraps
+// EstimateBreakdown.tsx with desktop aside + mobile bottom-sheet behaviour.
+// Creating a separate EstimateBreakdownRail would duplicate that logic, so we
+// reuse WorkspaceSummaryRail directly.
 import { WorkspaceSummaryRail } from '@/components/workspace/WorkspaceSummaryRail'
+import { SuggestionGrid } from './SuggestionGrid'
+import { SuggestionChipBar } from './SuggestionChipBar'
+import { ChatMessageList } from './ChatMessageList'
+import { ChatInputBar } from './ChatInputBar'
 
 const SUGGESTIONS = [
   { short: 'Toilet replace', full: 'How much to replace a toilet first floor Dallas?', hint: '$285–$485' },
@@ -24,10 +27,6 @@ const SUGGESTIONS = [
 ]
 
 const COUNTIES = ['Dallas', 'Tarrant', 'Collin', 'Denton', 'Rockwall', 'Parker']
-
-function formatTime(d: Date) {
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-}
 
 function normalizeCounty(county?: string) {
   if (!county) {
@@ -103,6 +102,7 @@ export function EstimatorPage() {
   const [blueprintName, setBlueprintName] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [pricingTemplates, setPricingTemplates] = useState<PricingTemplateSummary[]>([])
+  const [keyboardOffset, setKeyboardOffset] = useState(0)
 
   const MAX_INPUT = 2000
 
@@ -134,6 +134,22 @@ export function EstimatorPage() {
   useEffect(() => {
     resumeErrorRef.current = error
   }, [error])
+
+  // Track on-screen keyboard height to prevent input overlap on iOS/Android
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const handler = () => {
+      const offset = window.innerHeight - viewport.height - viewport.offsetTop
+      setKeyboardOffset(Math.max(0, offset))
+    }
+    viewport.addEventListener('resize', handler)
+    viewport.addEventListener('scroll', handler)
+    return () => {
+      viewport.removeEventListener('resize', handler)
+      viewport.removeEventListener('scroll', handler)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -236,6 +252,21 @@ export function EstimatorPage() {
       error('Failed to copy — try selecting the text manually')
     })
   }
+
+  const handleViewBreakdown = useCallback((message: ChatMessage) => {
+    setSelectedEstimate(message)
+    setSheetOpen(true)
+  }, [])
+
+  const handleTemplateSelect = useCallback(async (id: string) => {
+    try {
+      const { data: tpl } = await templatesApi.get(id)
+      const price = tpl.base_price != null ? ` (~$${tpl.base_price})` : ''
+      const prompt = `Price for ${tpl.name} (SKU: ${tpl.sku ?? 'N/A'}) in ${county}?${price}`
+      setInput(prompt)
+      inputRef.current?.focus()
+    } catch { /* ignore */ }
+  }, [county])
 
   const sendMessage = useCallback(async (text?: string) => {
     const message = (text ?? input).trim()
@@ -357,7 +388,7 @@ export function EstimatorPage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-54px)] flex-col">
+    <div className="flex flex-col" style={{ height: `calc(100dvh - 54px - ${keyboardOffset}px)` }}>
       <WorkspaceEntryBar
         county={county}
         counties={COUNTIES}
@@ -368,55 +399,14 @@ export function EstimatorPage() {
 
       <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 sm:gap-4 sm:px-4 sm:pb-4">
         <section className="shell-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="border-b border-[color:var(--line)] bg-[hsl(var(--panel-hsl)/0.95)] backdrop-blur-xl px-3 py-2.5">
-            {uploadMode ? (
-              <div className="shell-chip">
-                <FileUp size={13} />
-                Upload workflow coming next.
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-                {/* Pricing template selector (populated from backend) */}
-                {pricingTemplates.length > 0 && (
-                  <select
-                    defaultValue=""
-                    onChange={async e => {
-                      const id = e.target.value
-                      if (!id) return
-                      e.target.value = ''
-                      try {
-                        const { data: tpl } = await templatesApi.get(id)
-                        const price = tpl.base_price != null ? ` (~$${tpl.base_price})` : ''
-                        const prompt = `Price for ${tpl.name} (SKU: ${tpl.sku ?? 'N/A'}) in ${county}?${price}`
-                        setInput(prompt)
-                        inputRef.current?.focus()
-                      } catch { /* ignore */ }
-                    }}
-                    className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1 text-[11px] font-medium text-[color:var(--muted-ink)]"
-                  >
-                    <option value="">Templates…</option>
-                    {pricingTemplates.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}{t.base_price != null ? ` — $${t.base_price}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                {SUGGESTIONS.map(suggestion => (
-                  <button
-                    key={suggestion.short}
-                    type="button"
-                    onClick={() => void sendMessage(suggestion.full)}
-                    disabled={loading}
-                    className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--accent-soft)] hover:text-[color:var(--accent-strong)] disabled:opacity-40"
-                  >
-                    {suggestion.short}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <SuggestionChipBar
+            suggestions={SUGGESTIONS}
+            uploadMode={uploadMode}
+            loading={loading}
+            pricingTemplates={pricingTemplates}
+            onSendMessage={(text) => void sendMessage(text)}
+            onTemplateSelect={handleTemplateSelect}
+          />
 
           <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
             {showUploadPlaceholder && (
@@ -458,7 +448,8 @@ export function EstimatorPage() {
                 <span className="flex-1 truncate text-[color:var(--ink)] font-medium">{uploadedFile.name}</span>
                 <button
                   onClick={() => { setUploadedFile(null); setInput('') }}
-                  className="p-1 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                  aria-label="Clear uploaded file"
                 >
                   <X size={13} />
                 </button>
@@ -474,7 +465,7 @@ export function EstimatorPage() {
                 </span>
                 <button
                   onClick={() => setBlueprintName(null)}
-                  className="p-1 rounded text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
                   aria-label="Clear loaded blueprint"
                 >
                   <X size={13} />
@@ -483,209 +474,41 @@ export function EstimatorPage() {
             )}
 
             {!showUploadPlaceholder && messages.length === 0 && (
-              <div className="flex h-full flex-col items-center justify-center px-4 pb-8 text-center">
-                <div className="mb-5 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[color:var(--accent-soft)] to-[color:var(--accent)]/10 text-[color:var(--accent-strong)] shadow-sm">
-                  <Zap size={32} />
-                </div>
-
-                <h2 className="text-2xl font-bold tracking-tight text-[color:var(--ink)]">Quick Quote</h2>
-                <p className="mt-2 max-w-[320px] text-sm leading-relaxed text-[color:var(--muted-ink)]">
-                  Describe the plumbing job in natural language. I&apos;ll generate a detailed estimate with local DFW pricing.
-                </p>
-
-                <div className="mb-8 mt-4 h-6 overflow-hidden">
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={activeSuggestion}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.3 }}
-                      className="text-xs font-bold text-[color:var(--accent-strong)]"
-                    >
-                      Try: &ldquo;{SUGGESTIONS[activeSuggestion].full}&rdquo;
-                    </motion.p>
-                  </AnimatePresence>
-                </div>
-
-                <div className="grid w-full max-w-sm grid-cols-2 gap-3">
-                  {SUGGESTIONS.map((suggestion, index) => (
-                    <motion.button
-                      key={suggestion.short}
-                      type="button"
-                      onClick={() => void sendMessage(suggestion.full)}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02, backgroundColor: 'var(--panel-strong)' }}
-                      whileTap={{ scale: 0.97 }}
-                      className="flex flex-col rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-3.5 text-left transition-colors"
-                    >
-                      <div className="text-xs font-bold text-[color:var(--ink)]">{suggestion.short}</div>
-                      <div className="mt-1 line-clamp-1 text-[10px] leading-tight text-[color:var(--muted-ink)]">{suggestion.full}</div>
-                      <div className="mt-2 text-[11px] font-extrabold text-[color:var(--accent-strong)]">{suggestion.hint}</div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
+              <SuggestionGrid
+                suggestions={SUGGESTIONS}
+                activeSuggestion={activeSuggestion}
+                onSelect={(text) => void sendMessage(text)}
+              />
             )}
 
-            {!showUploadPlaceholder && messages.map((message, index) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30, delay: index > messages.length - 3 ? 0.04 : 0 }}
-                className={cn('mb-6 flex gap-3 group', message.role === 'user' ? 'flex-row-reverse' : 'justify-start')}
-              >
-                <div className={cn(
-                  'mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold shadow-sm',
-                  message.role === 'assistant' 
-                    ? 'border border-[color:var(--accent)]/20 bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]' 
-                    : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)]'
-                )}>
-                  {message.role === 'assistant' ? 'AI' : 'U'}
-                </div>
-
-                <div className={cn('flex max-w-[85%] flex-col gap-1.5', message.role === 'user' ? 'items-end' : 'items-start')}>
-                  <div className={cn('relative px-4 py-3 text-sm leading-relaxed shadow-sm transition-all', message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant')}>
-                    {message.role === 'assistant' ? (
-                      <>
-                        <div className="chat-prose pr-4">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => copyMessage(message.id, message.content)}
-                          className="absolute right-2 top-2 rounded-lg p-1.5 text-[color:var(--muted-ink)] opacity-0 transition-all hover:bg-[color:var(--panel-strong)] group-hover:opacity-100"
-                          title="Copy"
-                          aria-label="Copy response"
-                        >
-                          {copiedId === message.id ? <Check size={13} className="text-[hsl(var(--success))]" /> : <Copy size={13} />}
-                        </button>
-                      </>
-                    ) : (
-                      message.content
-                    )}
-
-                    {message.estimate && message.confidence_label && (
-                      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[color:var(--line)]/50 pt-3">
-                        <ConfidenceBadge label={message.confidence_label} score={message.confidence || 0} size="sm" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedEstimate(message)
-                            setSheetOpen(true)
-                          }}
-                          className="text-xs font-bold text-[color:var(--accent-strong)] underline-offset-2 transition-colors hover:text-[color:var(--accent)] hover:underline"
-                        >
-                          View Full Breakdown
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <span className="text-[10px] font-medium text-[color:var(--muted-ink)] opacity-0 transition-opacity group-hover:opacity-100">
-                    {formatTime(message.timestamp)}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-
-            {!showUploadPlaceholder && loading && messages.length === 0 && (
-              <ChatSkeleton />
-            )}
-
-            {!showUploadPlaceholder && loading && messages.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} className="flex gap-3">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[color:var(--accent)]/20 bg-[color:var(--accent-soft)] text-[10px] font-bold text-[color:var(--accent-strong)] shadow-sm">
-                  AI
-                </div>
-                <div className="chat-bubble-assistant px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleStopGenerating}
-                      className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
-                    >
-                      <Square size={9} />
-                      Stop
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
+            {!showUploadPlaceholder && (
+              <ChatMessageList
+                messages={messages}
+                loading={loading}
+                copiedId={copiedId}
+                onCopyMessage={copyMessage}
+                onViewBreakdown={handleViewBreakdown}
+                onStopGenerating={handleStopGenerating}
+              />
             )}
 
             <div ref={bottomRef} />
           </div>
 
-          <div className="border-t border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 pb-20 pt-2.5 lg:pb-3">
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={uploadMode && !uploadedFile ? 'Select a file above to begin…' : 'Ask a pricing question…'}
-                rows={1}
-                maxLength={MAX_INPUT}
-                disabled={uploadMode && !uploadedFile}
-                className="input max-h-[120px] resize-none overflow-auto py-2.5 disabled:cursor-not-allowed disabled:opacity-65"
-                style={{ minHeight: '46px' }}
-              />
-              {loading ? (
-                <motion.button
-                  type="button"
-                  onClick={handleStopGenerating}
-                  whileTap={{ scale: 0.9 }}
-                  className="btn-primary h-11 w-11 shrink-0 rounded-2xl bg-[hsl(var(--danger))] p-0 hover:bg-[hsl(var(--danger)/0.85)]"
-                  aria-label="Stop generating"
-                >
-                  <Square size={14} />
-                </motion.button>
-              ) : (
-                <motion.button
-                  type="button"
-                  onClick={() => void sendMessage()}
-                  disabled={!input.trim() || (uploadMode && !uploadedFile)}
-                  whileTap={{ scale: 0.9 }}
-                  className="btn-primary h-11 w-11 shrink-0 rounded-2xl p-0 disabled:opacity-40"
-                  aria-label="Send message"
-                >
-                  <Send size={16} />
-                </motion.button>
-              )}
-            </div>
-            <div className="mt-1.5 flex items-center justify-between px-0.5">
-              {uploadMode && !uploadedFile ? (
-                <span className="text-[11px] text-[color:var(--muted-ink)]">Select a file to unlock chat.</span>
-              ) : messages.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="inline-flex items-center gap-1.5 text-[11px] text-[color:var(--muted-ink)] transition-colors hover:text-[color:var(--ink)]"
-                >
-                  <RotateCcw size={11} />
-                  New conversation
-                </button>
-              ) : (
-                <span className="text-[11px] text-[color:var(--muted-ink)]">Enter to send · Shift+Enter for newline</span>
-              )}
-              {input.length > 0 && (
-                <span className={cn(
-                  'text-[10px] tabular-nums transition-colors',
-                  input.length >= MAX_INPUT ? 'text-[hsl(var(--danger))] font-semibold' : input.length > MAX_INPUT * 0.8 ? 'text-[hsl(var(--warning))]' : 'text-[color:var(--muted-ink)] opacity-60'
-                )}>
-                  {input.length}/{MAX_INPUT}
-                </span>
-              )}
-            </div>
-          </div>
+          <ChatInputBar
+            input={input}
+            loading={loading}
+            uploadMode={uploadMode}
+            uploadedFile={uploadedFile}
+            hasMessages={messages.length > 0}
+            maxInput={MAX_INPUT}
+            onInputChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onSend={() => void sendMessage()}
+            onStopGenerating={handleStopGenerating}
+            onReset={handleReset}
+            inputRef={inputRef}
+          />
         </section>
 
         <WorkspaceSummaryRail
