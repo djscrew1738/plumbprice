@@ -275,6 +275,7 @@ async def get_estimate(
         "county": estimate.county,
         "tax_rate": estimate.tax_rate,
         "preferred_supplier": estimate.preferred_supplier,
+        "blueprint_job_id": estimate.blueprint_job_id,
         "valid_until": estimate.valid_until,
         "is_expired": _is_expired(estimate),
         "created_at": estimate.created_at,

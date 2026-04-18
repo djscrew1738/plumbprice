@@ -17,6 +17,7 @@ import { SuggestionChipBar } from './SuggestionChipBar'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatInputBar } from './ChatInputBar'
 import { TemplateBrowser } from './TemplateBrowser'
+import { BlueprintUploadFlow } from './BlueprintUploadFlow'
 
 const SUGGESTIONS = [
   { short: 'Toilet replace', full: 'How much to replace a toilet first floor Dallas?', hint: '$285–$485' },
@@ -89,6 +90,8 @@ export function EstimatorPage() {
   const estimateId = searchParams.get('estimateId')
   const entryParam = searchParams.get('entry')
   const sessionParam = searchParams.get('session')
+  const projectIdParam = searchParams.get('projectId') || searchParams.get('project_id')
+  const projectId = projectIdParam ? Number(projectIdParam) : undefined
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -101,7 +104,6 @@ export function EstimatorPage() {
   const [activeSuggestion, setActiveSuggestion] = useState(0)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
-  const [blueprintName, setBlueprintName] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [pricingTemplates, setPricingTemplates] = useState<PricingTemplateSummary[]>([])
   const [keyboardOffset, setKeyboardOffset] = useState(0)
@@ -112,28 +114,14 @@ export function EstimatorPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const resumeErrorRef = useRef(error)
   const abortRef = useRef<AbortController | null>(null)
 
   const uploadMode = entryMode === 'upload-job-files'
-  const showUploadPlaceholder = uploadMode && messages.length === 0 && !uploadedFile
 
   useEffect(() => {
     setEntryMode(normalizeEntryMode(entryParam))
   }, [entryParam])
-
-  // Read blueprint filename from sessionStorage when landing from Blueprints page
-  useEffect(() => {
-    const isBlueprintEntry = searchParams.get('blueprint') === '1'
-    if (isBlueprintEntry && typeof window !== 'undefined') {
-      const name = sessionStorage.getItem('blueprint_filename')
-      if (name) {
-        setBlueprintName(name)
-        sessionStorage.removeItem('blueprint_filename')
-      }
-    }
-  }, [searchParams])
 
   useEffect(() => {
     resumeErrorRef.current = error
@@ -534,121 +522,78 @@ export function EstimatorPage() {
 
       <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 sm:gap-4 sm:px-4 sm:pb-4">
         <section className="shell-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <SuggestionChipBar
-            suggestions={SUGGESTIONS}
-            uploadMode={uploadMode}
-            loading={loading}
-            pricingTemplates={pricingTemplates}
-            onSendMessage={(text) => void sendMessage(text)}
-            onTemplateSelect={handleTemplateSelect}
-            onOpenTemplateBrowser={() => setTemplateBrowserOpen(true)}
-          />
-
-          <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
-            {showUploadPlaceholder && (
-              <div className="flex h-full items-center justify-center px-4 py-8">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.webp"
-                  className="hidden"
-                  onChange={e => {
-                    const f = e.target.files?.[0]
-                    if (f) {
-                      setUploadedFile(f)
-                      setInput(`I have a job file: "${f.name}". Please help me price the plumbing work described.`)
-                      setTimeout(() => inputRef.current?.focus(), 50)
-                    }
-                  }}
-                />
-                <div
-                  className="w-full max-w-sm text-center cursor-pointer group"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] transition-colors group-hover:border-[color:var(--accent-strong)] group-hover:bg-[color:var(--accent-soft)]">
-                    <FileUp size={26} />
-                  </div>
-                  <h2 className="text-xl font-semibold text-[color:var(--ink)]">Upload Job File</h2>
-                  <p className="mt-2 text-sm text-[color:var(--muted-ink)]">
-                    Click to browse or drag a PDF, photo, or plan sheet — then describe the scope in chat.
-                  </p>
-                  <p className="mt-3 text-[11px] text-[color:var(--muted-ink)] opacity-60">PDF · PNG · JPG · WEBP · up to 20 MB</p>
-                </div>
-              </div>
-            )}
-
-            {/* Uploaded file banner */}
-            {uploadMode && uploadedFile && messages.length === 0 && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-2.5 mb-3 text-sm">
-                <FileUp size={14} className="text-[color:var(--accent-strong)] shrink-0" />
-                <span className="flex-1 truncate text-[color:var(--ink)] font-medium">{uploadedFile.name}</span>
-                <button
-                  onClick={() => { setUploadedFile(null); setInput('') }}
-                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-                  aria-label="Clear uploaded file"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            )}
-
-            {/* Blueprint loaded banner */}
-            {blueprintName && messages.length === 0 && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] px-3 py-2.5 mb-3 text-sm">
-                <FileUp size={14} className="text-[color:var(--accent-strong)] shrink-0" />
-                <span className="flex-1 truncate text-[color:var(--ink)]">
-                  Blueprint loaded: <span className="font-medium">{blueprintName}</span> — describe the scope to price it.
-                </span>
-                <button
-                  onClick={() => setBlueprintName(null)}
-                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-                  aria-label="Clear loaded blueprint"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            )}
-
-            {!showUploadPlaceholder && messages.length === 0 && (
-              <SuggestionGrid
+          {uploadMode ? (
+            <div className="flex-1 overflow-y-auto">
+              <BlueprintUploadFlow projectId={projectId} />
+            </div>
+          ) : (
+            <>
+              <SuggestionChipBar
                 suggestions={SUGGESTIONS}
-                activeSuggestion={activeSuggestion}
-                onSelect={(text) => void sendMessage(text)}
-              />
-            )}
-
-            {!showUploadPlaceholder && (
-              <ChatMessageList
-                messages={messages}
+                uploadMode={uploadMode}
                 loading={loading}
-                copiedId={copiedId}
-                editingMessageId={editingMessageId}
-                onCopyMessage={copyMessage}
-                onViewBreakdown={handleViewBreakdown}
-                onStopGenerating={handleStopGenerating}
-                onEditLineItems={handleEditLineItems}
-                onSaveLineItems={handleSaveLineItems}
-                onCancelEditLineItems={handleCancelEditLineItems}
+                pricingTemplates={pricingTemplates}
+                onSendMessage={(text) => void sendMessage(text)}
+                onTemplateSelect={handleTemplateSelect}
+                onOpenTemplateBrowser={() => setTemplateBrowserOpen(true)}
               />
-            )}
 
-            <div ref={bottomRef} />
-          </div>
+              <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
+                {/* Uploaded file banner — shown in chat mode when a user attaches a file via ChatInputBar */}
+                {uploadedFile && messages.length === 0 && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-2.5 mb-3 text-sm">
+                    <FileUp size={14} className="text-[color:var(--accent-strong)] shrink-0" />
+                    <span className="flex-1 truncate text-[color:var(--ink)] font-medium">{uploadedFile.name}</span>
+                    <button
+                      onClick={() => { setUploadedFile(null); setInput('') }}
+                      className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                      aria-label="Clear uploaded file"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
 
-          <ChatInputBar
-            input={input}
-            loading={loading}
-            uploadMode={uploadMode}
-            uploadedFile={uploadedFile}
-            hasMessages={messages.length > 0}
-            maxInput={MAX_INPUT}
-            onInputChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onSend={() => void sendMessage()}
-            onStopGenerating={handleStopGenerating}
-            onReset={handleReset}
-            inputRef={inputRef}
-          />
+                {messages.length === 0 && (
+                  <SuggestionGrid
+                    suggestions={SUGGESTIONS}
+                    activeSuggestion={activeSuggestion}
+                    onSelect={(text) => void sendMessage(text)}
+                  />
+                )}
+
+                <ChatMessageList
+                  messages={messages}
+                  loading={loading}
+                  copiedId={copiedId}
+                  editingMessageId={editingMessageId}
+                  onCopyMessage={copyMessage}
+                  onViewBreakdown={handleViewBreakdown}
+                  onStopGenerating={handleStopGenerating}
+                  onEditLineItems={handleEditLineItems}
+                  onSaveLineItems={handleSaveLineItems}
+                  onCancelEditLineItems={handleCancelEditLineItems}
+                />
+
+                <div ref={bottomRef} />
+              </div>
+
+              <ChatInputBar
+                input={input}
+                loading={loading}
+                uploadMode={uploadMode}
+                uploadedFile={uploadedFile}
+                hasMessages={messages.length > 0}
+                maxInput={MAX_INPUT}
+                onInputChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onSend={() => void sendMessage()}
+                onStopGenerating={handleStopGenerating}
+                onReset={handleReset}
+                inputRef={inputRef}
+              />
+            </>
+          )}
         </section>
 
         <WorkspaceSummaryRail

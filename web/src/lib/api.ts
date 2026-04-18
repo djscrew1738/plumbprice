@@ -362,6 +362,8 @@ export const blueprintsApi = {
     api.get(`/blueprints/${jobId}/status`),
   getTakeoff: (jobId: string) =>
     api.get(`/blueprints/${jobId}/takeoff`),
+  toEstimate: (jobId: string | number, body?: { project_id?: number }) =>
+    api.post(`/blueprints/${jobId}/to-estimate`, body ?? {}),
   delete: (jobId: string) =>
     api.delete(`/blueprints/${jobId}`),
 }

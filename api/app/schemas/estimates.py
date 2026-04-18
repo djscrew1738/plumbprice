@@ -56,6 +56,7 @@ class EstimateResponse(BaseModel):
     tax_rate: float
     preferred_supplier: Optional[str]
     line_items: list[dict]
+    blueprint_job_id: Optional[int] = None
     created_at: datetime
 
     class Config:

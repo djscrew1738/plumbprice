@@ -1,15 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 import uuid
 import os
 import io
+from typing import Optional
 
 from app.core.auth import get_current_user
 from app.core.broker import broker_available
 from app.database import get_db
 from app.schemas.blueprints import BlueprintJobResponse
 from app.services.blueprint_service import blueprint_service
+from app.services.blueprint_to_estimate import (
+    EmptyTakeoffError,
+    create_estimate_from_blueprint,
+)
 from app.models.blueprints import BlueprintJob
 from app.models.users import User
 from app.core.storage import storage_client
@@ -142,3 +148,34 @@ async def get_takeoff(
         raise HTTPException(status_code=404, detail="Blueprint job not found")
 
     return await blueprint_service.generate_takeoff(db, job_id)
+
+
+class BlueprintToEstimateRequest(BaseModel):
+    project_id: Optional[int] = None
+
+
+class BlueprintToEstimateResponse(BaseModel):
+    estimate_id: int
+
+
+@router.post("/{job_id}/to-estimate", response_model=BlueprintToEstimateResponse)
+async def blueprint_to_estimate(
+    job_id: int,
+    body: Optional[BlueprintToEstimateRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Convert a completed blueprint takeoff into a draft Estimate."""
+    try:
+        estimate = await create_estimate_from_blueprint(
+            db=db,
+            job_id=job_id,
+            current_user=current_user,
+            project_id=body.project_id if body else None,
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Blueprint job not found")
+    except EmptyTakeoffError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    return BlueprintToEstimateResponse(estimate_id=estimate.id)
