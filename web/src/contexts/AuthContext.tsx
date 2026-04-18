@@ -24,6 +24,24 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 const TOKEN_KEY = 'pp_token'
 const USER_KEY  = 'pp_user'
 
+/** Return the remaining JWT lifetime in seconds (capped at 0). */
+function cookieLifetimeFromJwt(token: string): number {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return 3600
+    // Base64URL -> Base64 -> JSON
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized + '==='.slice((normalized.length + 3) % 4)
+    const decoded = JSON.parse(atob(padded)) as { exp?: number }
+    if (typeof decoded.exp !== 'number') return 3600
+    const remaining = decoded.exp - Math.floor(Date.now() / 1000)
+    // Clamp to [60s, 7d] so a clock skew doesn't produce a useless cookie.
+    return Math.max(60, Math.min(remaining, 60 * 60 * 24 * 7))
+  } catch {
+    return 3600
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user,    setUser]    = useState<AuthUser | null>(null)
   const [token,   setToken]   = useState<string | null>(null)
@@ -35,9 +53,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedUser  = localStorage.getItem(USER_KEY)
     if (storedToken && storedUser) {
       try {
-        setToken(storedToken)
-        setUser(JSON.parse(storedUser) as AuthUser)
-        api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
+        const remaining = cookieLifetimeFromJwt(storedToken)
+        if (remaining <= 60) {
+          // Token is already expired (or within the 60s clamp floor) — clear state.
+          localStorage.removeItem(TOKEN_KEY)
+          localStorage.removeItem(USER_KEY)
+          document.cookie = 'pp_token=; path=/; max-age=0'
+        } else {
+          setToken(storedToken)
+          setUser(JSON.parse(storedUser) as AuthUser)
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
+          document.cookie = `pp_token=${storedToken}; path=/; max-age=${remaining}; SameSite=Lax`
+        }
       } catch {
         localStorage.removeItem(TOKEN_KEY)
         localStorage.removeItem(USER_KEY)
@@ -60,8 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.setItem(TOKEN_KEY, access_token)
     localStorage.setItem(USER_KEY, JSON.stringify(userData))
-    // Set cookie so Next.js middleware can read the token for route guards
-    document.cookie = `pp_token=${access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    // Derive cookie lifetime from the JWT's actual exp so middleware and the
+    // token expire together. Falls back to 1h if the token is malformed.
+    const cookieMaxAge = cookieLifetimeFromJwt(access_token)
+    document.cookie = `pp_token=${access_token}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`
     api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
     setToken(access_token)
     setUser(userData)

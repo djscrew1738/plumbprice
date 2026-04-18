@@ -34,6 +34,67 @@ logger = structlog.get_logger()
 limiter = Limiter(key_func=get_remote_address)
 
 
+# Dev-default secrets that must never be used in production. Fail fast if we
+# detect any of these when ENVIRONMENT == "production".
+_INSECURE_SECRET_DEFAULTS = {
+    "",
+    "change-me",
+    "changeme",
+    "secret",
+    "dev-secret",
+    "development",
+    "plumbprice-dev",
+}
+
+
+def _validate_env() -> None:
+    """Validate required config at startup.
+
+    In production: fail fast if secrets are missing or use dev defaults, and
+    warn loudly for optional-but-important keys (Resend, Sentry).
+    In development: just log informational warnings.
+    """
+    is_prod = settings.environment.lower() in ("production", "prod")
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    secret_value = (settings.secret_key or "").strip().lower()
+    if not settings.secret_key:
+        errors.append("SECRET_KEY is not set")
+    elif is_prod and (secret_value in _INSECURE_SECRET_DEFAULTS or len(settings.secret_key) < 32):
+        errors.append("SECRET_KEY appears to be a default/dev value; must be a strong random string in production")
+
+    if not settings.database_url:
+        errors.append("DATABASE_URL is not set")
+    elif is_prod and "localhost" in settings.database_url:
+        warnings.append("DATABASE_URL points at localhost in a production environment")
+
+    if is_prod:
+        if not settings.resend_api_key:
+            warnings.append("RESEND_API_KEY not set — proposal emails will not be delivered")
+        if not settings.sentry_dsn:
+            warnings.append("SENTRY_DSN not set — error telemetry disabled")
+        if settings.debug:
+            warnings.append("DEBUG is enabled in production")
+
+    for msg in warnings:
+        logger.warning("env.validation_warning", message=msg)
+
+    if errors:
+        for msg in errors:
+            logger.error("env.validation_error", message=msg)
+        if is_prod:
+            raise RuntimeError(
+                "Startup aborted due to environment misconfiguration: "
+                + "; ".join(errors)
+            )
+        logger.warning(
+            "env.validation_errors_ignored_in_dev",
+            count=len(errors),
+            note="would abort startup in production",
+        )
+
+
 async def _ensure_seeded():
     """Seed DB with canonical data on first run if suppliers table is empty."""
     from sqlalchemy import select, func
@@ -170,6 +231,7 @@ async def _sync_runtime_config():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting PlumbPrice AI API", version=settings.version, env=settings.environment)
+    _validate_env()
     from app.core.storage import storage_client
     try:
         storage_client.ensure_buckets()

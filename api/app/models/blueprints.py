@@ -10,6 +10,7 @@ class BlueprintJob(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
     filename = Column(String(500), nullable=False)
+    original_filename = Column(String(500), nullable=True)
     storage_path = Column(String(1000), nullable=True)
     status = Column(String(50), default="uploaded")  # uploaded, processing, complete, error
     page_count = Column(Integer, nullable=True)

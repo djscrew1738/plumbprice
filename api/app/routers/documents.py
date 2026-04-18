@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.core.auth import get_current_user
+from app.core.broker import broker_available
 from app.database import get_db
 from app.models.documents import UploadedDocument
 from app.models.users import User
@@ -45,6 +46,14 @@ async def upload_document(
     if file.content_type not in _ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=415, detail=f"Unsupported file type: {file.content_type}")
 
+    if not _worker_available or not _process_document:
+        raise HTTPException(status_code=503, detail="Document processing worker is not deployed")
+    if not await broker_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Document processing queue is unavailable; please retry shortly",
+        )
+
     content = await file.read()
     if len(content) > _MAX_FILE_BYTES:
         raise HTTPException(status_code=413, detail="File exceeds 50 MB limit")
@@ -77,10 +86,8 @@ async def upload_document(
     await db.commit()
     await db.refresh(doc)
 
-    if _worker_available and _process_document:
-        _process_document.delay(doc.id, doc.storage_path, doc.doc_type)
-    else:
-        logger.warning("document.worker_unavailable", doc_id=doc.id)
+    # Broker was checked before upload — enqueue directly.
+    _process_document.delay(doc.id, doc.storage_path, doc.doc_type)
 
     logger.info("document.uploaded", doc_id=doc.id, user_id=current_user.id, doc_type=doc_type)
     return {

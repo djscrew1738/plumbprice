@@ -6,6 +6,7 @@ import os
 import io
 
 from app.core.auth import get_current_user
+from app.core.broker import broker_available
 from app.database import get_db
 from app.schemas.blueprints import BlueprintJobResponse
 from app.services.blueprint_service import blueprint_service
@@ -38,6 +39,16 @@ async def upload_blueprint(
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
+    # Fail fast if the background worker broker is down — otherwise the PDF
+    # would land in MinIO and never be processed.
+    if not _worker_available or not _analyze_blueprint:
+        raise HTTPException(status_code=503, detail="Blueprint worker is not deployed")
+    if not await broker_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Blueprint analysis queue is unavailable; please retry shortly",
+        )
+
     # 1. Generate unique filename
     unique_filename = f"blueprints/{uuid.uuid4()}.pdf"
 
@@ -63,16 +74,14 @@ async def upload_blueprint(
         storage_path=unique_filename,
         status="uploaded",
         project_id=project_id,
+        created_by=current_user.id,
     )
     db.add(job)
     await db.commit()
     await db.refresh(job)
 
-    # 4. Trigger background analysis (requires Celery worker)
-    if _worker_available and _analyze_blueprint:
-        _analyze_blueprint.delay(job.id, job.storage_path)
-    else:
-        logger.warning("blueprint.worker_unavailable", job_id=job.id)
+    # 4. Trigger background analysis — broker checked above, so enqueue directly.
+    _analyze_blueprint.delay(job.id, job.storage_path)
 
     logger.info("blueprint.uploaded", job_id=job.id, user_id=current_user.id)
     return BlueprintJobResponse(
@@ -84,6 +93,14 @@ async def upload_blueprint(
     )
 
 
+def _user_owns_blueprint(job: BlueprintJob, user: User) -> bool:
+    """Blueprint jobs don't yet carry org_id, so scope by uploader or admin."""
+    return (
+        job.created_by == user.id
+        or getattr(user, "is_admin", False)
+    )
+
+
 @router.get("/{job_id}/status", response_model=BlueprintJobResponse)
 async def get_blueprint_status(
     job_id: int,
@@ -91,16 +108,19 @@ async def get_blueprint_status(
     db: AsyncSession = Depends(get_db),
 ):
     """Get blueprint processing status."""
-    status_data = await blueprint_service.get_job_status(db, job_id)
-    if not status_data:
+    from sqlalchemy import select as _select
+
+    result = await db.execute(_select(BlueprintJob).where(BlueprintJob.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job or not _user_owns_blueprint(job, current_user):
         raise HTTPException(status_code=404, detail="Blueprint job not found")
-        
+
     return BlueprintJobResponse(
-        id=status_data["id"],
-        filename="", # Not needed for status
-        status=status_data["status"],
-        page_count=status_data["page_count"],
-        created_at=None, # Mocking for response model compatibility
+        id=job.id,
+        filename=job.original_filename or job.filename,
+        status=job.status,
+        page_count=job.page_count,
+        created_at=job.created_at,
     )
 
 
@@ -111,5 +131,11 @@ async def get_takeoff(
     db: AsyncSession = Depends(get_db),
 ):
     """Get takeoff results (Phase 4)."""
-    result = await blueprint_service.generate_takeoff(db, job_id)
-    return result
+    from sqlalchemy import select as _select
+
+    result = await db.execute(_select(BlueprintJob).where(BlueprintJob.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job or not _user_owns_blueprint(job, current_user):
+        raise HTTPException(status_code=404, detail="Blueprint job not found")
+
+    return await blueprint_service.generate_takeoff(db, job_id)

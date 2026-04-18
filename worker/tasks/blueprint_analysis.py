@@ -3,6 +3,7 @@
 import asyncio
 import io
 import os
+import random
 import fitz  # PyMuPDF
 import structlog
 from worker.worker import app
@@ -103,8 +104,12 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                     job.status = "error"
                     job.processing_error = str(e)
                     await db.commit()
-            except:
-                pass
+            except Exception as status_update_exc:
+                logger.warning(
+                    "vision.status_update_failed",
+                    job_id=job_id,
+                    error=str(status_update_exc),
+                )
             raise e
 
 
@@ -121,5 +126,7 @@ def analyze_blueprint(self, job_id: int, storage_path: str):
         return result
 
     except Exception as exc:
-        logger.error("Blueprint analysis failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc, countdown=120)
+        logger.error("Blueprint analysis failed", job_id=job_id, error=str(exc), exc_info=True)
+        # Exponential backoff with jitter, capped at 10 minutes
+        backoff = min(60 * (2 ** self.request.retries) + random.uniform(0, 30), 600)
+        raise self.retry(exc=exc, countdown=backoff)
