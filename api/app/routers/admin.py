@@ -10,6 +10,7 @@ from app.models.labor import LaborTemplate, MarkupRule
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.services.labor_engine import LABOR_TEMPLATES, list_template_codes, get_template
 from app.core.auth import get_current_user, get_current_admin
+from app.core.cache import cache_get, cache_set, cache_invalidate
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -18,6 +19,10 @@ router = APIRouter()
 @router.get("/labor-templates")
 async def list_labor_templates(db: AsyncSession = Depends(get_db)):
     """List all labor templates (in-memory + DB overrides)."""
+    cached = await cache_get("admin:labor-templates")
+    if cached is not None:
+        return cached
+
     templates = []
     for code, tmpl in LABOR_TEMPLATES.items():
         templates.append({
@@ -34,7 +39,9 @@ async def list_labor_templates(db: AsyncSession = Depends(get_db)):
             "access_multipliers": tmpl.access_multipliers,
             "urgency_multipliers": tmpl.urgency_multipliers,
         })
-    return {"count": len(templates), "templates": templates}
+    response = {"count": len(templates), "templates": templates}
+    await cache_set("admin:labor-templates", response, ttl=600)
+    return response
 
 
 @router.get("/labor-templates/{code}")
@@ -63,12 +70,16 @@ async def get_labor_template(code: str):
 @router.get("/markup-rules")
 async def get_markup_rules(db: AsyncSession = Depends(get_db)):
     """Get markup rules."""
+    cached = await cache_get("admin:markup-rules")
+    if cached is not None:
+        return cached
+
     from app.services.pricing_engine import MARKUP_RULES
     result = await db.execute(select(MarkupRule).where(MarkupRule.is_active == True))
     db_rules = result.scalars().all()
 
     if db_rules:
-        return [
+        response = [
             {
                 "id": r.id,
                 "name": r.name,
@@ -79,12 +90,14 @@ async def get_markup_rules(db: AsyncSession = Depends(get_db)):
             }
             for r in db_rules
         ]
+    else:
+        response = [
+            {"id": None, "name": f"{jt.capitalize()} Default", "job_type": jt, **rules}
+            for jt, rules in MARKUP_RULES.items()
+        ]
 
-    # Return in-memory defaults
-    return [
-        {"id": None, "name": f"{jt.capitalize()} Default", "job_type": jt, **rules}
-        for jt, rules in MARKUP_RULES.items()
-    ]
+    await cache_set("admin:markup-rules", response, ttl=300)
+    return response
 
 
 class MarkupRuleUpdate(BaseModel):
@@ -123,6 +136,9 @@ async def update_markup_rules(
         db.add(rule)
 
     await db.commit()
+
+    # Invalidate markup-rules cache so next GET reflects the change
+    await cache_invalidate("admin:markup-rules")
 
     # Immediately reflect change in the in-memory pricing dict
     from app.services.pricing_engine import MARKUP_RULES

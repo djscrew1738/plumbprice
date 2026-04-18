@@ -10,6 +10,7 @@ from app.schemas.suppliers import (
     SupplierProductUpdate, BulkPriceUpload
 )
 from app.services.supplier_service import supplier_service, CANONICAL_MAP
+from app.core.cache import cache_get, cache_set, cache_invalidate
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -18,11 +19,15 @@ router = APIRouter()
 @router.get("", response_model=list[SupplierResponse])
 async def list_suppliers(db: AsyncSession = Depends(get_db)):
     """List all active suppliers."""
+    cached = await cache_get("suppliers:list")
+    if cached is not None:
+        return [SupplierResponse(**s) for s in cached]
+
     result = await db.execute(select(Supplier).where(Supplier.is_active == True))
     suppliers = result.scalars().all()
     if not suppliers:
         # Return seed data if DB empty
-        return [
+        seed = [
             SupplierResponse(id=1, name="Ferguson Enterprises", slug="ferguson", type="wholesale",
                            website="https://www.ferguson.com", phone="972-555-0101",
                            city="Dallas", is_active=True),
@@ -33,13 +38,18 @@ async def list_suppliers(db: AsyncSession = Depends(get_db)):
                            website="https://www.apexsupply.com", phone="817-555-0103",
                            city="Fort Worth", is_active=True),
         ]
-    return [
+        await cache_set("suppliers:list", [s.model_dump() for s in seed], ttl=300)
+        return seed
+
+    response = [
         SupplierResponse(
             id=s.id, name=s.name, slug=s.slug, type=s.type,
             website=s.website, phone=s.phone, city=s.city, is_active=s.is_active
         )
         for s in suppliers
     ]
+    await cache_set("suppliers:list", [s.model_dump() for s in response], ttl=300)
+    return response
 
 
 @router.get("/compare")
@@ -153,4 +163,5 @@ async def bulk_upload_prices(
             created += 1
 
     await db.commit()
+    await cache_invalidate("suppliers:list")
     return {"supplier_id": supplier_id, "updated": updated, "created": created}
