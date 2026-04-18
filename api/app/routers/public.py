@@ -20,6 +20,7 @@ from app.models.users import User
 from app.models.projects import Project
 from app.services.proposal_service import proposal_status, send_notification_email
 from app.services import activity_service
+from app.services.notifications_service import notify as _notify
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -215,6 +216,18 @@ async def accept_public_proposal(
             )
         except Exception as e:  # pragma: no cover - defensive
             logger.warning("proposal.accept_activity_failed", error=str(e))
+
+    # Create in-app notification for the proposal sender.
+    try:
+        await _notify(
+            db=db,
+            user_id=proposal.created_by,
+            kind="proposal_accepted",
+            title=f"Proposal accepted – {estimate_title}",
+            link=f"/estimates/{estimate_id}",
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.warning("proposal.accept_notify_failed", error=str(exc))
 
     await db.commit()
     await db.refresh(proposal)

@@ -111,4 +111,31 @@ def process_document(self, document_id: int, storage_path: str, doc_type: str):
     except Exception as exc:
         logger.error("Document processing failed", document_id=document_id, error=str(exc), exc_info=True)
         backoff = min(60 * (2 ** self.request.retries) + random.uniform(0, 30), 600)
-        raise self.retry(exc=exc, countdown=backoff)
+        try:
+            raise self.retry(exc=exc, countdown=backoff)
+        except self.MaxRetriesExceededError:
+            try:
+                asyncio.run(_notify_document_failure(document_id, str(exc)))
+            except Exception as notify_exc:  # pragma: no cover
+                logger.warning("rag.notify_failed", document_id=document_id, error=str(notify_exc))
+            raise
+
+
+async def _notify_document_failure(document_id: int, error: str) -> None:
+    """Best-effort notification to the document uploader on terminal failure."""
+    from app.services.notifications_service import notify as _notify
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(UploadedDocument).where(UploadedDocument.id == document_id))
+        doc = result.scalar_one_or_none()
+        if not doc or doc.uploaded_by is None:
+            return
+        await _notify(
+            db=db,
+            user_id=doc.uploaded_by,
+            kind="job_failed",
+            title="Document processing failed",
+            body=(error or "Unknown error")[:500],
+            link=f"/documents/{document_id}",
+        )
+        await db.commit()

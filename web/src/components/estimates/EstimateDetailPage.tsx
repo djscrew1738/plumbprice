@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { History } from 'lucide-react'
+import { History, Pencil } from 'lucide-react'
 import { api, outcomesApi, proposalsApi, type OutcomeValue } from '@/lib/api'
 import { useEstimate } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { EstimateHeader } from './EstimateHeader'
 import { CostBreakdownCard } from './CostBreakdownCard'
 import { LineItemsTable, type LineItem } from './LineItemsTable'
+import { EstimateEditor } from './EstimateEditor'
 import { OutcomeRecorderCard, type SentProposal } from './OutcomeRecorderCard'
 import { ProposalSendModal } from './ProposalSendModal'
 import { EstimateActionsBar } from './EstimateActionsBar'
@@ -84,6 +85,7 @@ export function EstimateDetailPage() {
   const [diffOpen, setDiffOpen] = useState(false)
   const [diffV1, setDiffV1] = useState('')
   const [diffV2, setDiffV2] = useState('')
+  const [editing, setEditing] = useState(false)
   const exportCSV = useCallback(() => {
     if (!estimate) return
     const rows = [
@@ -264,13 +266,36 @@ export function EstimateDetailPage() {
         />
 
         {/* ── Line items ─────────────────────────────────────────────────────── */}
-        <LineItemsTable
-          lineItems={estimate.line_items}
-          subtotal={estimate.subtotal}
-          taxTotal={estimate.tax_total}
-          taxRate={estimate.tax_rate}
-          grandTotal={estimate.grand_total}
-        />
+        {editing ? (
+          <EstimateEditor
+            estimateId={estimate.id}
+            initialLineItems={estimate.line_items}
+            taxRate={estimate.tax_rate}
+            onCancel={() => setEditing(false)}
+            onSaved={() => setEditing(false)}
+          />
+        ) : (
+          <>
+            {estimate.status === 'draft' && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="btn btn-ghost text-xs flex items-center gap-1"
+                >
+                  <Pencil size={13} /> Edit line items
+                </button>
+              </div>
+            )}
+            <LineItemsTable
+              lineItems={estimate.line_items}
+              subtotal={estimate.subtotal}
+              taxTotal={estimate.tax_total}
+              taxRate={estimate.tax_rate}
+              grandTotal={estimate.grand_total}
+            />
+          </>
+        )}
 
         {/* ── Assumptions & Sent Proposals ───────────────────────────────────── */}
         <OutcomeRecorderCard

@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Settings,
   SlidersHorizontal,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -43,6 +44,7 @@ export const SECONDARY_NAV: AppNavItem[] = [
 
 export const MORE_LINKS: AppNavItem[] = [
   ...SECONDARY_NAV,
+  { href: '/admin/users', label: 'Team', icon: Users },
   { href: '/admin/jobs', label: 'Failed Jobs', icon: RefreshCw },
   { href: '/blueprints', label: 'Blueprints', icon: Layers },
   { href: '/proposals', label: 'Proposals', icon: FileOutput },
@@ -63,6 +65,7 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/analytics': { title: 'Analytics', eyebrow: 'Outcome insights and performance trends' },
   '/suppliers': { title: 'Suppliers', eyebrow: 'Compare catalog pricing' },
   '/admin': { title: 'Admin', eyebrow: 'Manage pricing rules and templates' },
+  '/admin/users': { title: 'Team', eyebrow: 'Manage users, roles and invitations' },
   '/admin/jobs': { title: 'Failed Jobs', eyebrow: 'Worker observability and retries' },
   '/blueprints': { title: 'Blueprints', eyebrow: 'Upload-led estimating entry point' },
   '/proposals': { title: 'Proposals', eyebrow: 'Customer-ready bid outputs' },

@@ -152,4 +152,32 @@ def analyze_blueprint(self, job_id: int, storage_path: str):
         logger.error("Blueprint analysis failed", job_id=job_id, error=str(exc), exc_info=True)
         # Exponential backoff with jitter, capped at 10 minutes
         backoff = min(60 * (2 ** self.request.retries) + random.uniform(0, 30), 600)
-        raise self.retry(exc=exc, countdown=backoff)
+        try:
+            raise self.retry(exc=exc, countdown=backoff)
+        except self.MaxRetriesExceededError:
+            # Terminal failure — notify job owner (best-effort).
+            try:
+                asyncio.run(_notify_blueprint_failure(job_id, str(exc)))
+            except Exception as notify_exc:  # pragma: no cover
+                logger.warning("vision.notify_failed", job_id=job_id, error=str(notify_exc))
+            raise
+
+
+async def _notify_blueprint_failure(job_id: int, error: str) -> None:
+    """Best-effort notification to the blueprint job owner on terminal failure."""
+    from app.services.notifications_service import notify as _notify
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(BlueprintJob).where(BlueprintJob.id == job_id))
+        job = result.scalar_one_or_none()
+        if not job or job.created_by is None:
+            return
+        await _notify(
+            db=db,
+            user_id=job.created_by,
+            kind="job_failed",
+            title="Blueprint analysis failed",
+            body=(error or "Unknown error")[:500],
+            link=f"/blueprints/{job_id}",
+        )
+        await db.commit()

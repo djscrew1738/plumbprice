@@ -1,4 +1,4 @@
-from app.models.users import User, Organization
+from app.models.users import User, Organization, UserInvite
 from app.models.projects import Project
 from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion, Proposal
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
@@ -11,9 +11,10 @@ from app.models.pricing_template import PricingTemplate
 from app.models.sessions import ChatSession, ChatMessage
 from app.models.outcomes import EstimateOutcome
 from app.models.auth_tokens import PasswordResetToken
+from app.models.notifications import Notification
 
 __all__ = [
-    "User", "Organization",
+    "User", "Organization", "UserInvite",
     "Project",
     "Estimate", "EstimateLineItem", "EstimateVersion", "Proposal",
     "Supplier", "SupplierProduct", "SupplierPriceHistory",
@@ -26,4 +27,5 @@ __all__ = [
     "ChatSession", "ChatMessage",
     "EstimateOutcome",
     "PasswordResetToken",
+    "Notification",
 ]

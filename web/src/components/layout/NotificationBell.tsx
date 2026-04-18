@@ -28,6 +28,11 @@ import type { NotificationType } from '@/lib/notifications'
 const TYPE_ICONS: Record<NotificationType, typeof Bell> = {
   blueprint_complete: FileImage,
   proposal_viewed: FileText,
+  proposal_accepted: CheckCheck,
+  proposal_declined: X,
+  project_assigned: Trophy,
+  job_failed: Info,
+  invite_accepted: Bell,
   price_alert: DollarSign,
   outcome_recorded: Trophy,
   system: Info,
@@ -36,6 +41,11 @@ const TYPE_ICONS: Record<NotificationType, typeof Bell> = {
 const TYPE_COLORS: Record<NotificationType, string> = {
   blueprint_complete: 'text-blue-500',
   proposal_viewed: 'text-violet-500',
+  proposal_accepted: 'text-emerald-500',
+  proposal_declined: 'text-red-500',
+  project_assigned: 'text-blue-500',
+  job_failed: 'text-red-500',
+  invite_accepted: 'text-violet-500',
   price_alert: 'text-amber-500',
   outcome_recorded: 'text-emerald-500',
   system: 'text-[color:var(--muted-ink)]',
@@ -91,7 +101,7 @@ export function NotificationBell() {
   }, [open])
 
   const handleClick = useCallback(
-    (id: string, link?: string) => {
+    (id: number, link?: string) => {
       markRead.mutate(id)
       if (link) {
         setOpen(false)
@@ -102,7 +112,7 @@ export function NotificationBell() {
   )
 
   const handleDismiss = useCallback(
-    (e: React.MouseEvent, id: string) => {
+    (e: React.MouseEvent, id: number) => {
       e.stopPropagation()
       dismiss.mutate(id)
     },

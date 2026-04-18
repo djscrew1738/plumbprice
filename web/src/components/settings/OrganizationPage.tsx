@@ -150,7 +150,7 @@ export function OrganizationPage() {
       width: '120px',
       render: (row) => (
         <span className="text-xs text-[color:var(--muted-ink)]">
-          {formatDate(row.joined_at)}
+          {formatDate(row.created_at ?? row.joined_at ?? '')}
         </span>
       ),
     },

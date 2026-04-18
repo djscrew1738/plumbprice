@@ -110,6 +110,12 @@ export function EstimatorPage() {
   const [templateBrowserOpen, setTemplateBrowserOpen] = useState(false)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
 
+  const [customerName, setCustomerName] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerAddress, setCustomerAddress] = useState('')
+  const [customerOpen, setCustomerOpen] = useState(!projectId)
+
   const MAX_INPUT = 2000
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -426,7 +432,21 @@ export function EstimatorPage() {
       let pricingData: { estimate?: ChatMessage['estimate']; confidence?: number; confidence_label?: string; assumptions?: string[] } = {}
       let narrative = ''
 
-      for await (const event of chatApi.priceStream({ message, county, history, session_id: sessionId })) {
+      for await (const event of chatApi.priceStream({
+        message,
+        county,
+        history,
+        session_id: sessionId,
+        project_id: projectId ?? null,
+        customer: (customerName || customerEmail || customerPhone || customerAddress)
+          ? {
+              name: customerName.trim() || undefined,
+              email: customerEmail.trim() || undefined,
+              phone: customerPhone.trim() || undefined,
+              address: customerAddress.trim() || undefined,
+            }
+          : null,
+      })) {
         if (event.type === 'pricing') {
           if (event.session_id != null) setSessionId(event.session_id)
           pricingData = {
@@ -493,7 +513,7 @@ export function EstimatorPage() {
     } finally {
       setLoading(false)
     }
-  }, [input, loading, county, uploadMode, uploadedFile, messages, sessionId])
+  }, [input, loading, county, uploadMode, uploadedFile, messages, sessionId, projectId, customerName, customerEmail, customerPhone, customerAddress])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -528,6 +548,51 @@ export function EstimatorPage() {
             </div>
           ) : (
             <>
+              {!projectId && (
+                <div className="mx-3 mt-2 sm:mx-4 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)]">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerOpen(o => !o)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-[color:var(--ink)]"
+                  >
+                    <span>Customer {customerEmail ? `· ${customerEmail}` : '(optional)'}</span>
+                    <span className="text-[color:var(--muted-ink)]">{customerOpen ? '−' : '+'}</span>
+                  </button>
+                  {customerOpen && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 pt-0">
+                      <input
+                        className="input text-xs"
+                        placeholder="Customer name"
+                        value={customerName}
+                        onChange={e => setCustomerName(e.target.value)}
+                      />
+                      <input
+                        className="input text-xs"
+                        placeholder="Email"
+                        type="email"
+                        value={customerEmail}
+                        onChange={e => setCustomerEmail(e.target.value)}
+                      />
+                      <input
+                        className="input text-xs"
+                        placeholder="Phone"
+                        value={customerPhone}
+                        onChange={e => setCustomerPhone(e.target.value)}
+                      />
+                      <input
+                        className="input text-xs"
+                        placeholder="Address"
+                        value={customerAddress}
+                        onChange={e => setCustomerAddress(e.target.value)}
+                      />
+                      <p className="col-span-full text-[11px] text-[color:var(--muted-ink)]">
+                        Providing an email auto-creates (or reuses) a lead project so this estimate is tied to the customer.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <SuggestionChipBar
                 suggestions={SUGGESTIONS}
                 uploadMode={uploadMode}

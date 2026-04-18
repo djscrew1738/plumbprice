@@ -1,9 +1,14 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func as sa_func
 import structlog
+import hashlib
+import io
+import secrets
+import uuid
+from datetime import datetime, timedelta, timezone
 
 from app.config import settings
 from app.database import get_db
@@ -11,6 +16,7 @@ from app.models.labor import LaborTemplate, MarkupRule
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.models.blueprints import BlueprintJob
 from app.models.documents import UploadedDocument
+from app.models.users import User, Organization, UserInvite
 from app.services.labor_engine import LABOR_TEMPLATES, list_template_codes, get_template
 from app.core.auth import get_current_user, get_current_admin
 from app.core.cache import cache_get, cache_set, cache_invalidate
@@ -594,3 +600,339 @@ async def retry_document_upload(
     task_id = getattr(async_result, "id", None)
     logger.info("admin.document_retry", document_id=doc_id_local, task_id=task_id)
     return {"task_id": task_id, "document_id": doc_id_local, "status": "pending"}
+
+
+# ─── User invite + management ─────────────────────────────────────────────────
+
+_ALLOWED_ROLES = {"admin", "estimator", "viewer"}
+_INVITE_TTL_DAYS = 7
+
+
+class InviteRequest(BaseModel):
+    email: str
+    role: str = "estimator"
+    full_name: Optional[str] = None
+
+
+class PatchUserRequest(BaseModel):
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    full_name: Optional[str] = None
+
+
+async def _count_org_admins(db: AsyncSession, organization_id: Optional[int]) -> int:
+    result = await db.execute(
+        select(sa_func.count(User.id)).where(
+            User.organization_id == organization_id,
+            User.is_admin == True,
+            User.is_active == True,
+        )
+    )
+    return result.scalar_one() or 0
+
+
+@router.post("/users/invite")
+async def invite_user(
+    body: InviteRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    if body.role not in _ALLOWED_ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {sorted(_ALLOWED_ROLES)}")
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    invite = UserInvite(
+        id=uuid.uuid4(),
+        email=body.email,
+        role=body.role,
+        full_name=body.full_name,
+        token_hash=token_hash,
+        invited_by=current_user.id,
+        organization_id=current_user.organization_id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=_INVITE_TTL_DAYS),
+    )
+    db.add(invite)
+    await db.commit()
+
+    try:
+        from app.services.email_service import send_invite_email
+        frontend_base = getattr(settings, "frontend_url", None) or "https://app.ctlplumbingllc.com"
+        invite_url = f"{frontend_base.rstrip('/')}/accept-invite?token={raw_token}"
+        await send_invite_email(body.email, invite_url, body.full_name)
+    except Exception as exc:
+        logger.warning("invite.email_failed", error=str(exc))
+
+    logger.info("invite.created", email=body.email, invited_by=current_user.id)
+    return {"message": "Invite sent", "email": body.email}
+
+
+@router.get("/users")
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    result = await db.execute(
+        select(User).where(User.organization_id == current_user.organization_id)
+    )
+    users = result.scalars().all()
+    return [
+        {
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name,
+            "role": u.role,
+            "is_active": u.is_active,
+            "last_login": u.last_login.isoformat() if u.last_login else None,
+        }
+        for u in users
+    ]
+
+
+@router.patch("/users/{user_id}")
+async def patch_user(
+    user_id: int,
+    body: PatchUserRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    target = result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Cannot change own role
+    if body.role is not None and target.id == current_user.id:
+        raise HTTPException(status_code=409, detail="Cannot change your own role")
+
+    # Cannot demote/deactivate the last admin in an org
+    is_demoting = body.role is not None and body.role != "admin" and target.is_admin
+    is_deactivating = body.is_active is False and target.is_active and target.is_admin
+    if is_demoting or is_deactivating:
+        admin_count = await _count_org_admins(db, target.organization_id)
+        if admin_count <= 1:
+            raise HTTPException(status_code=409, detail="Cannot demote or deactivate the last admin")
+
+    if body.role is not None:
+        if body.role not in _ALLOWED_ROLES:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        target.role = body.role
+        target.is_admin = body.role == "admin"
+    if body.is_active is not None:
+        target.is_active = body.is_active
+    if body.full_name is not None:
+        target.full_name = body.full_name
+
+    await db.commit()
+    await db.refresh(target)
+    return {
+        "id": target.id,
+        "email": target.email,
+        "full_name": target.full_name,
+        "role": target.role,
+        "is_active": target.is_active,
+    }
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    target = result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target.id == current_user.id:
+        raise HTTPException(status_code=409, detail="Cannot deactivate your own account")
+
+    if target.is_admin:
+        admin_count = await _count_org_admins(db, target.organization_id)
+        if admin_count <= 1:
+            raise HTTPException(status_code=409, detail="Cannot deactivate the last admin")
+
+    target.is_active = False
+    await db.commit()
+    return {"message": "User deactivated"}
+
+
+@router.get("/invites")
+async def list_invites(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(UserInvite).where(
+            UserInvite.organization_id == current_user.organization_id,
+            UserInvite.accepted_at == None,
+            UserInvite.expires_at > now,
+        )
+    )
+    invites = result.scalars().all()
+    return [
+        {
+            "id": str(inv.id),
+            "email": inv.email,
+            "role": inv.role,
+            "full_name": inv.full_name,
+            "expires_at": inv.expires_at.isoformat(),
+            "created_at": inv.created_at.isoformat() if inv.created_at else None,
+        }
+        for inv in invites
+    ]
+
+
+@router.delete("/invites/{invite_id}")
+async def revoke_invite(
+    invite_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    result = await db.execute(
+        select(UserInvite).where(UserInvite.id == invite_id)
+    )
+    invite = result.scalar_one_or_none()
+    if invite is None:
+        raise HTTPException(status_code=404, detail="Invite not found")
+
+    # Mark as consumed so it can't be accepted
+    invite.accepted_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"message": "Invite revoked"}
+
+
+# ─── Organization settings ────────────────────────────────────────────────────
+
+class OrgPatchRequest(BaseModel):
+    name: Optional[str] = None
+    billing_email: Optional[str] = None
+    logo_url: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    default_tax_rate: Optional[float] = Field(None, ge=0.0, le=1.0)
+    default_markup_percent: Optional[float] = Field(None, ge=0.0, le=10.0)
+
+
+async def _get_or_create_org(db: AsyncSession, current_user: User) -> Organization:
+    if current_user.organization_id:
+        result = await db.execute(
+            select(Organization).where(Organization.id == current_user.organization_id)
+        )
+        org = result.scalar_one_or_none()
+        if org:
+            return org
+
+    # If user has no org, create one on the fly
+    org = Organization(name=current_user.full_name or current_user.email)
+    db.add(org)
+    await db.flush()
+    # Attach user
+    result2 = await db.execute(select(User).where(User.id == current_user.id))
+    u = result2.scalar_one_or_none()
+    if u:
+        u.organization_id = org.id
+    await db.commit()
+    await db.refresh(org)
+    return org
+
+
+@router.get("/organizations/me")
+async def get_my_organization(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    org = await _get_or_create_org(db, current_user)
+    return {
+        "id": org.id,
+        "name": org.name,
+        "phone": org.phone,
+        "email": org.email,
+        "address": org.address,
+        "city": org.city,
+        "state": org.state,
+        "zip_code": org.zip_code,
+        "billing_email": org.billing_email,
+        "logo_url": org.logo_url,
+        "default_tax_rate": org.default_tax_rate,
+        "default_markup_percent": org.default_markup_percent,
+    }
+
+
+@router.patch("/organizations/me")
+async def patch_my_organization(
+    body: OrgPatchRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    org = await _get_or_create_org(db, current_user)
+
+    if body.name is not None:
+        org.name = body.name
+    if body.billing_email is not None:
+        org.billing_email = body.billing_email
+    if body.logo_url is not None:
+        org.logo_url = body.logo_url
+    if body.phone is not None:
+        org.phone = body.phone
+    if body.address is not None:
+        org.address = body.address
+    if body.default_tax_rate is not None:
+        org.default_tax_rate = body.default_tax_rate
+    if body.default_markup_percent is not None:
+        org.default_markup_percent = body.default_markup_percent
+
+    await db.commit()
+    await db.refresh(org)
+    return {
+        "id": org.id,
+        "name": org.name,
+        "phone": org.phone,
+        "email": org.email,
+        "address": org.address,
+        "city": org.city,
+        "state": org.state,
+        "zip_code": org.zip_code,
+        "billing_email": org.billing_email,
+        "logo_url": org.logo_url,
+        "default_tax_rate": org.default_tax_rate,
+        "default_markup_percent": org.default_markup_percent,
+    }
+
+
+@router.post("/organizations/me/logo")
+async def upload_org_logo(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    allowed_content_types = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
+    if file.content_type not in allowed_content_types:
+        raise HTTPException(status_code=415, detail="Only image files are accepted")
+
+    data = await file.read()
+    ext = (file.filename or "logo.png").rsplit(".", 1)[-1].lower()
+    object_name = f"org-logos/{current_user.organization_id or 'unknown'}/{uuid.uuid4()}.{ext}"
+
+    from app.core.storage import storage_client
+    try:
+        storage_client.upload_file(
+            bucket_name=settings.minio_bucket_documents,
+            object_name=object_name,
+            data=io.BytesIO(data),
+            length=len(data),
+            content_type=file.content_type,
+        )
+    except Exception as exc:
+        logger.warning("admin.logo_upload_failed", error=str(exc))
+
+    logo_url = f"/media/{object_name}"
+
+    org = await _get_or_create_org(db, current_user)
+    org.logo_url = logo_url
+    await db.commit()
+
+    return {"logo_url": logo_url}

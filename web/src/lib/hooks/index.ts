@@ -93,8 +93,11 @@ export {
   useInviteUser,
   useUpdateUserRole,
   useRemoveUser,
+  useOrgInvites,
+  useRevokeInvite,
   userKeys,
   type UserProfile,
   type Organization,
   type OrgUser,
+  type OrgInvite,
 } from './useUser'
