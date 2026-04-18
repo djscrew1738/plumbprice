@@ -194,8 +194,8 @@ export function PriceHistoryModal({ open, onClose, itemId, itemName }: PriceHist
                 </tr>
               </thead>
               <tbody className="divide-y divide-[color:var(--line)]">
-                {data.entries.slice().reverse().map((entry, i) => (
-                  <tr key={i} className="hover:bg-[color:var(--panel-strong)] transition-colors">
+                {data.entries.slice().reverse().map((entry) => (
+                  <tr key={entry.date} className="hover:bg-[color:var(--panel-strong)] transition-colors">
                     <td className="px-4 py-2 text-[color:var(--ink)]">
                       {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>

@@ -179,7 +179,7 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
       </p>
       <div className="space-y-1">
         {data.fixtures.map((f, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+          <div key={`${f.name}-${i}`} className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
             <span className="text-xs text-zinc-300 font-medium flex-1 truncate">{f.name}</span>
             <span className="text-[11px] text-zinc-500">×{f.quantity}{f.unit ? ` ${f.unit}` : ''}</span>
             <Badge

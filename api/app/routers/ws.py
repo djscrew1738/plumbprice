@@ -1,5 +1,9 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+"""WebSocket hub for real-time pipeline change notifications."""
+
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 import structlog
+
+from app.core.auth import decode_token
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -36,7 +40,21 @@ pipeline_hub = PipelineHub()
 
 
 @router.websocket("/pipeline")
-async def pipeline_ws(websocket: WebSocket):
+async def pipeline_ws(
+    websocket: WebSocket,
+    token: str = Query(...),
+):
+    """Pipeline real-time updates. Requires a valid JWT via ?token= query param."""
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if user_id is None:
+            await websocket.close(code=4001)
+            return
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
     await pipeline_hub.connect(websocket)
     try:
         while True:

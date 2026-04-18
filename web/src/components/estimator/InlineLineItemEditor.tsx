@@ -27,7 +27,12 @@ const lineTypeBadge = (type: string): 'info' | 'success' | 'warning' | 'neutral'
   }
 }
 
-function createEmptyLineItem(): LineItem {
+type KeyedLineItem = LineItem & { _key: number }
+
+let _keyCounter = 0
+function nextKey() { return ++_keyCounter }
+
+function createEmptyLineItem(): KeyedLineItem {
   return {
     line_type: 'material',
     description: '',
@@ -35,6 +40,7 @@ function createEmptyLineItem(): LineItem {
     unit: 'each',
     unit_cost: 0,
     total_cost: 0,
+    _key: nextKey(),
   }
 }
 
@@ -43,8 +49,8 @@ export function InlineLineItemEditor({
   onSave,
   onCancel,
 }: InlineLineItemEditorProps) {
-  const [items, setItems] = useState<LineItem[]>(() =>
-    initialItems.map(item => ({ ...item }))
+  const [items, setItems] = useState<KeyedLineItem[]>(() =>
+    initialItems.map(item => ({ ...item, _key: nextKey() }))
   )
   const [saving, setSaving] = useState(false)
 
@@ -77,8 +83,9 @@ export function InlineLineItemEditor({
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
-      // Recompute totals before saving
-      const computed = items.map(item => ({
+      // Strip internal _key, recompute totals before saving
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const computed = items.map(({ _key, ...item }) => ({
         ...item,
         total_cost: item.quantity * item.unit_cost,
       }))
@@ -143,7 +150,7 @@ export function InlineLineItemEditor({
           <tbody>
             {items.map((item, index) => (
               <tr
-                key={index}
+                key={item._key}
                 className="border-b border-[color:var(--line)]/50 transition-colors hover:bg-[color:var(--panel-strong)]/30"
               >
                 <td className="px-2 py-1">

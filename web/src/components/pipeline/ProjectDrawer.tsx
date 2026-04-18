@@ -280,8 +280,8 @@ export function ProjectDrawer({
                           { icon: Phone,    label: project.customer_phone || '—', aria: 'Phone number' },
                           { icon: Mail,     label: project.customer_email || '—', aria: 'Email address' },
                           { icon: MapPin,   label: [project.city, project.county + ' Co.', project.state].filter(Boolean).join(', ') || '—', aria: 'Address' },
-                        ].map(({ icon: Icon, label, aria }, i) => (
-                          <div key={i} className="flex items-center gap-2.5" aria-label={`${aria}: ${label}`}>
+                        ].map(({ icon: Icon, label, aria }) => (
+                          <div key={aria} className="flex items-center gap-2.5" aria-label={`${aria}: ${label}`}>
                             <Icon size={12} className="text-zinc-600 shrink-0" aria-hidden="true" />
                             <span className="text-xs text-zinc-300 truncate">{label}</span>
                           </div>

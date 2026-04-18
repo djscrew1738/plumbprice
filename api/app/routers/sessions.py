@@ -1,6 +1,6 @@
 """Chat session persistence — list, get, and delete conversation threads."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import structlog
@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/")
 async def list_sessions(
-    limit: int = 20,
+    limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -25,7 +25,7 @@ async def list_sessions(
         select(ChatSession)
         .where(ChatSession.user_id == current_user.id)
         .order_by(ChatSession.updated_at.desc())
-        .limit(min(limit, 100))
+        .limit(limit)
     )
     sessions = result.scalars().all()
     return [

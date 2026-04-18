@@ -5,11 +5,13 @@ import structlog
 
 from app.database import get_db
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
+from app.models.users import User
 from app.schemas.suppliers import (
     SupplierResponse, SupplierCompareRequest, SupplierCompareResponse,
     SupplierProductUpdate, BulkPriceUpload
 )
 from app.services.supplier_service import supplier_service, CANONICAL_MAP
+from app.core.auth import get_current_admin
 from app.core.cache import cache_get, cache_set, cache_invalidate
 
 logger = structlog.get_logger()
@@ -91,6 +93,7 @@ async def update_product_price(
     product_id: int,
     update: SupplierProductUpdate,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
 ):
     """Manually override a supplier product price."""
     result = await db.execute(select(SupplierProduct).where(SupplierProduct.id == product_id))
@@ -116,6 +119,7 @@ async def bulk_upload_prices(
     supplier_id: int,
     payload: BulkPriceUpload,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
 ):
     """Bulk upload prices for a supplier."""
     result = await db.execute(select(Supplier).where(Supplier.id == supplier_id))

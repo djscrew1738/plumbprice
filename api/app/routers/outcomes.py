@@ -2,7 +2,7 @@
 
 from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 import structlog
@@ -22,7 +22,7 @@ OutcomeValue = Literal["won", "lost", "pending", "no_bid"]
 class RecordOutcomeRequest(BaseModel):
     outcome: OutcomeValue
     final_price: Optional[float] = None
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=2000)
 
 
 @router.post("/{estimate_id}/outcome")

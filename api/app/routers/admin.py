@@ -110,6 +110,7 @@ async def update_markup_rules(
     job_type: str,
     body: MarkupRuleUpdate,
     db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_admin),
 ):
     """Update markup rules for a job type."""
     if job_type not in ("service", "construction", "commercial"):
