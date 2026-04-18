@@ -73,6 +73,24 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     }
   })();
 ` }} />
+        {/* Auto-reload on stale chunk errors (CDN caching mismatch) */}
+        <script dangerouslySetInnerHTML={{ __html: `
+  (function() {
+    var KEY = 'pp_chunk_reload';
+    var MAX = 2;
+    window.addEventListener('error', function(e) {
+      var src = e.target && (e.target.src || '');
+      if (e.target && e.target.tagName === 'SCRIPT' && src.indexOf('/_next/') !== -1) {
+        var count = parseInt(sessionStorage.getItem(KEY) || '0', 10);
+        if (count < MAX) {
+          sessionStorage.setItem(KEY, String(count + 1));
+          window.location.reload();
+        }
+      }
+    }, true);
+    window.addEventListener('load', function() { sessionStorage.removeItem(KEY); });
+  })();
+` }} />
       </head>
       <body className="bg-[hsl(var(--background))] text-[color:var(--ink)] antialiased">
         <OfflineBanner />
