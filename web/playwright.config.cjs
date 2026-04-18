@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Playwright loads this config as CommonJS. */
 const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({

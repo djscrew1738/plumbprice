@@ -3,7 +3,7 @@ import os
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -93,15 +93,21 @@ async def upload_document(
 
 @router.get("/")
 async def list_documents(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List documents belonging to the current user's organization."""
     from sqlalchemy import select
 
-    q = select(UploadedDocument).where(
-        UploadedDocument.organization_id == current_user.organization_id
-    ).order_by(UploadedDocument.created_at.desc())
+    q = (
+        select(UploadedDocument)
+        .where(UploadedDocument.organization_id == current_user.organization_id)
+        .order_by(UploadedDocument.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     result = await db.execute(q)
     docs = result.scalars().all()
     return [

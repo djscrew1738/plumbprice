@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/djscrew/projects/web/plumbprice-ai"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 WEB_DIR="$ROOT/web"
 ARCHIVE_DIR="$ROOT/.build-artifacts"
 

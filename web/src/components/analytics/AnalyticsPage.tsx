@@ -18,7 +18,7 @@ import { formatCurrency } from '@/lib/utils'
 
 import { StatCard } from '@/components/ui/StatCard'
 import { DonutChart, type DonutSegment } from '@/components/ui/DonutChart'
-import { BarChart, type BarDatum } from '@/components/ui/BarChart'
+import { BarChart } from '@/components/ui/BarChart'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { ProgressBar } from '@/components/ui/ProgressBar'

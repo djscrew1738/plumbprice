@@ -40,7 +40,7 @@ class Project(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id"), index=True)
     created_by = Column(Integer, ForeignKey("users.id"))
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), index=True)
 
     estimates = relationship("Estimate", back_populates="project")

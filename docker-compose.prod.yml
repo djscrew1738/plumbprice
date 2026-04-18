@@ -1,0 +1,38 @@
+services:
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
+
+  api:
+    restart: unless-stopped
+    volumes: []
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=${LOG_LEVEL:-WARNING}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["https://app.ctlplumbingllc.com"]}
+    ports:
+      - "127.0.0.1:${API_PORT:-8201}:8000"
+
+  web:
+    restart: unless-stopped
+    build:
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://app.ctlplumbingllc.com}
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://app.ctlplumbingllc.com}
+      - HOSTNAME=0.0.0.0
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3201}:3000"
+
+  worker:
+    restart: unless-stopped
+    volumes: []
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=${LOG_LEVEL:-WARNING}
+    command: celery -A worker.worker worker --loglevel=${WORKER_LOG_LEVEL:-warning} --concurrency=4

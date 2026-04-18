@@ -23,8 +23,8 @@ import structlog
 from app.config import settings
 
 _CIRCUIT_RESET_SECONDS = 120   # retry primary after this many seconds
-_CLASSIFY_TIMEOUT      = 20.0  # budget for intent classification
-_RESPONSE_TIMEOUT      = 30.0  # budget for conversational generation
+_CLASSIFY_TIMEOUT      = 8.0   # budget for intent classification
+_RESPONSE_TIMEOUT      = 12.0  # budget for conversational generation
 
 logger = structlog.get_logger()
 
@@ -297,6 +297,23 @@ class LLMService:
                 logger.debug("LLM response generation skipped", error=str(e))
             return None
 
+    @staticmethod
+    def make_static_narrative(
+        template_name: str,
+        grand_total: float,
+        labor_total: float,
+        materials_total: float,
+        county: str,
+        quantity: int = 1,
+    ) -> str:
+        qty_note = f" (×{quantity})" if quantity > 1 else ""
+        return (
+            f"For **{template_name}**{qty_note} in {county} County, TX, "
+            f"you're looking at **${grand_total:,.0f}** total — "
+            f"${labor_total:,.0f} labor and ${materials_total:,.0f} materials. "
+            f"See the full breakdown below."
+        )
+
     async def generate_response_stream(
         self,
         message: str,
@@ -312,13 +329,19 @@ class LLMService:
     ):
         """
         Async generator that yields text chunks for SSE streaming.
-        Yields nothing on failure so the caller can close the stream cleanly.
+        Yields a static fallback narrative when the LLM is blocked/unavailable.
         """
         if self._is_blocked():
+            yield self.make_static_narrative(
+                template_name, grand_total, labor_total, materials_total, county, quantity
+            )
             return
 
         client = self._make_client(timeout=_RESPONSE_TIMEOUT)
         if client is None:
+            yield self.make_static_narrative(
+                template_name, grand_total, labor_total, materials_total, county, quantity
+            )
             return
 
         qty_note = f" (×{quantity} units — ${grand_total / quantity:,.0f} each)" if quantity > 1 else ""
@@ -351,12 +374,25 @@ class LLMService:
                 max_tokens=200,
                 stream=True,
             )
+            yielded_any = False
             async for chunk in stream:
                 delta = chunk.choices[0].delta.content if chunk.choices else None
                 if delta:
+                    yielded_any = True
                     yield delta
+            if not yielded_any:
+                self._mark_unavailable("Model returned empty response")
+                yield self.make_static_narrative(
+                    template_name, grand_total, labor_total, materials_total, county, quantity
+                )
         except Exception as e:  # noqa: BLE001
+            err_type = type(e).__name__
+            if any(k in err_type for k in ("Timeout", "ReadTimeout", "Connection", "Connect")):
+                self._mark_unavailable(str(e))
             logger.debug("LLM stream generation skipped", error=str(e))
+            yield self.make_static_narrative(
+                template_name, grand_total, labor_total, materials_total, county, quantity
+            )
 
     async def check_available(self) -> bool:
         """

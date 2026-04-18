@@ -9,6 +9,25 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
+# Module-level singletons — reuse connection pools across requests
+_classify_client: httpx.AsyncClient | None = None
+_extract_client: httpx.AsyncClient | None = None
+
+
+def _get_classify_client() -> httpx.AsyncClient:
+    global _classify_client
+    if _classify_client is None or _classify_client.is_closed:
+        _classify_client = httpx.AsyncClient(timeout=60.0)
+    return _classify_client
+
+
+def _get_extract_client() -> httpx.AsyncClient:
+    global _extract_client
+    if _extract_client is None or _extract_client.is_closed:
+        _extract_client = httpx.AsyncClient(timeout=90.0)
+    return _extract_client
+
+
 class VisionService:
     """Phase 4: Blueprint analysis using vision LLMs."""
 
@@ -35,22 +54,21 @@ class VisionService:
         
         try:
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-            
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    self.endpoint,
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "format": "json",
-                        "images": [image_b64]
-                    }
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                result = json.loads(data.get("response", "{}"))
-                return result
+            client = _get_classify_client()
+            resp = await client.post(
+                self.endpoint,
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                    "images": [image_b64]
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            result = json.loads(data.get("response", "{}"))
+            return result
         except Exception as e:
             logger.error("vision.classify_error", error=str(e), model=self.model)
             return {"sheet_type": "unknown", "confidence": 0.0}
@@ -74,22 +92,21 @@ class VisionService:
         
         try:
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-            
-            async with httpx.AsyncClient(timeout=90.0) as client:
-                resp = await client.post(
-                    self.endpoint,
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "format": "json",
-                        "images": [image_b64]
-                    }
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                result = json.loads(data.get("response", "{}"))
-                return result.get("fixtures", [])
+            client = _get_extract_client()
+            resp = await client.post(
+                self.endpoint,
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                    "images": [image_b64]
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            result = json.loads(data.get("response", "{}"))
+            return result.get("fixtures", [])
         except Exception as e:
             logger.error("vision.detect_error", error=str(e), model=self.model)
             return []

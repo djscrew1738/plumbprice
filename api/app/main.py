@@ -251,12 +251,36 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def request_id_middleware(request: Request, call_next):
-    """Inject X-Request-ID header for cross-log tracing."""
+async def logging_middleware(request: Request, call_next):
+    """Inject X-Request-ID and emit a structured access log for every request."""
+    import time as _time
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.request_id = request_id
+
+    t0 = _time.monotonic()
     response = await call_next(request)
+    latency_ms = round((_time.monotonic() - t0) * 1000, 1)
+
     response.headers["X-Request-ID"] = request_id
+
+    # Skip noisy health-check probes from the access log
+    path = request.url.path
+    if path not in ("/health", "/health/live", "/health/ready"):
+        log = logger.bind(
+            request_id=request_id,
+            method=request.method,
+            path=path,
+            status=response.status_code,
+            latency_ms=latency_ms,
+            client=request.client.host if request.client else None,
+        )
+        if response.status_code >= 500:
+            log.error("request_error")
+        elif response.status_code >= 400:
+            log.warning("request_warning")
+        else:
+            log.info("request")
+
     return response
 
 app.add_exception_handler(PricingError, pricing_error_handler)

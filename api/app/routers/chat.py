@@ -21,7 +21,7 @@ logger = structlog.get_logger()
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
-STREAM_TIMEOUT_SECONDS = 90
+STREAM_TIMEOUT_SECONDS = 20
 
 
 async def _upsert_session(
@@ -292,7 +292,16 @@ async def chat_price_stream(
                     yield f"event: token\ndata: {json.dumps(result.get('answer', ''))}\n\n"
         except asyncio.TimeoutError:
             logger.warning("LLM stream timeout", timeout=STREAM_TIMEOUT_SECONDS)
-            yield f'event: error\ndata: {json.dumps({"error": "Response generation timed out. The estimate data above is still valid."})}\n\n'
+            if est:
+                gt = est["grand_total"] if isinstance(est, dict) else est.grand_total
+                lt = est["labor_total"] if isinstance(est, dict) else est.labor_total
+                mt = est["materials_total"] if isinstance(est, dict) else est.materials_total
+                fallback = llm_service.make_static_narrative(
+                    template_name, gt, lt, mt, body.county or "Dallas", quantity
+                )
+                yield f"event: token\ndata: {json.dumps(fallback)}\n\n"
+            else:
+                yield f'event: error\ndata: {json.dumps({"error": "Response generation timed out."})}\n\n'
         except Exception as e:
             logger.error("LLM stream error", error=str(e))
             yield f'event: error\ndata: {json.dumps({"error": "An error occurred generating the narrative response."})}\n\n'

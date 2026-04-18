@@ -62,7 +62,7 @@ export interface ChatPriceRequest {
 }
 
 export interface ChatPriceStreamEvent {
-  type: 'pricing' | 'token' | 'done'
+  type: 'pricing' | 'token' | 'done' | 'error'
   // pricing event payload
   estimate?: EstimateBreakdownPayload | null
   estimate_id?: number | null
@@ -77,6 +77,8 @@ export interface ChatPriceStreamEvent {
   classified_by?: 'keyword' | 'llm' | null
   // token event payload
   token?: string
+  // error event payload
+  error?: string
 }
 
 export interface ChatPriceResponse {
@@ -162,6 +164,8 @@ export const chatApi = {
             } else if (currentEvent === 'done') {
               yield { type: 'done' }
               return
+            } else if (currentEvent === 'error') {
+              yield { type: 'error', error: (payload as {error?: string}).error ?? 'Generation failed' }
             }
           } catch { /* skip malformed lines */ }
         }

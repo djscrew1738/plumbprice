@@ -31,8 +31,10 @@ vi.mock('@/lib/api', () => ({
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return ({ children }: { children: React.ReactNode }) =>
+  const TestQueryClientProvider = ({ children }: { children: React.ReactNode }) =>
     createElement(QueryClientProvider, { client: qc }, children)
+  TestQueryClientProvider.displayName = 'TestQueryClientProvider'
+  return TestQueryClientProvider
 }
 
 describe('LauncherHome', () => {

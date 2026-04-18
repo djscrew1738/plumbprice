@@ -37,7 +37,7 @@ def _build_estimate_html(estimate: Estimate, recipient_name: Optional[str], mess
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:640px;margin:0 auto;padding:24px">
-  <img src="https://pricing.ctlplumbingllc.com/logo.png" alt="CTL Plumbing" width="120" style="margin-bottom:24px">
+  <img src="https://app.ctlplumbingllc.com/logo.png" alt="CTL Plumbing" width="120" style="margin-bottom:24px">
   <h2 style="margin-top:0">Your Plumbing Estimate</h2>
   <p>{greeting}</p>
   {custom_msg}

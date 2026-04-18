@@ -73,7 +73,7 @@ export function PipelinePage() {
   }, [queryClient])
 
   const stageKeys = useMemo(() => STAGES.map(s => s.key), [])
-  const projects = data?.projects ?? []
+  const projects = useMemo(() => data?.projects ?? [], [data?.projects])
   const summary  = data?.summary  ?? {}
 
   // Apply client-side filters

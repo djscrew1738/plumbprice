@@ -11,11 +11,15 @@
 
 ## 1. Environment Variables
 
-Copy the example files and fill in values before running any `docker compose` command.
+Copy the example files and fill in values before running any deployment commands.
 
 ```bash
-cp api/.env.example api/.env
+cp .env.example .env
+cp deploy/runtime.env.example deploy/runtime.env
 ```
+
+Use `.env` for the Docker Compose stack. Use `deploy/runtime.env` only for the host-level helper
+scripts in `scripts/run-*.sh`.
 
 ### Required Variables
 
@@ -70,60 +74,49 @@ The development compose file mounts source directories as volumes for hot reload
 
 ## 3. Docker Compose — Production
 
-Create a `docker-compose.prod.yml` override file:
+Use the committed `docker-compose.prod.yml` override. In production, keep the web and API services
+on loopback ports and let host-level nginx (see `deploy/nginx-ctlplumbingllc.conf`) front
+`https://app.ctlplumbingllc.com` and proxy `/api/*` to the API service.
 
 ```yaml
 services:
   api:
-    image: plumbprice/api:latest
-    restart: always
+    restart: unless-stopped
+    volumes: []
     environment:
       - ENVIRONMENT=production
+      - CORS_ORIGINS=["https://app.ctlplumbingllc.com"]
       - LOG_LEVEL=WARNING
-    deploy:
-      replicas: 2
 
   worker:
-    image: plumbprice/api:latest
-    command: celery -A worker worker --loglevel=warning --concurrency=4
-    restart: always
-
-  beat:
-    image: plumbprice/api:latest
-    command: celery -A worker beat --loglevel=warning --scheduler celery.beat:PersistentScheduler
-    restart: always
+    restart: unless-stopped
+    volumes: []
+    command: celery -A worker.worker worker --loglevel=warning --concurrency=4
 
   web:
-    image: plumbprice/web:latest
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-
-  db:
-    restart: always
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - NEXT_PUBLIC_API_URL=https://app.ctlplumbingllc.com
+
+  postgres:
+    restart: unless-stopped
 
   redis:
-    restart: always
+    restart: unless-stopped
 
   minio:
-    restart: always
-    volumes:
-      - miniodata:/data
+    restart: unless-stopped
 ```
 
 Start production stack:
 
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
+
+Then install `deploy/nginx-ctlplumbingllc.conf` on the host, place the Cloudflare origin
+certificate/key at the configured paths, and reload nginx.
 
 ---
 
@@ -131,20 +124,23 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ```bash
 # Build API and worker image
-docker build -t plumbprice/api:latest ./api
+docker build -t plumbprice-backend:latest ./api
 
 # Build web image
-docker build -t plumbprice/web:latest ./web
+docker build -t plumbprice-web:latest ./web
 
 # Or use the compose build shortcut
-docker compose build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 ```
 
 Tag and push to a registry before deploying to a remote host:
 
 ```bash
-docker tag plumbprice/api:latest registry.example.com/plumbprice/api:1.0.0
-docker push registry.example.com/plumbprice/api:1.0.0
+docker tag plumbprice-backend:latest registry.example.com/plumbprice/backend:1.0.0
+docker push registry.example.com/plumbprice/backend:1.0.0
+
+docker tag plumbprice-web:latest registry.example.com/plumbprice/web:1.0.0
+docker push registry.example.com/plumbprice/web:1.0.0
 ```
 
 ---
@@ -343,8 +339,8 @@ Use this checklist for every production deployment:
 - [ ] Run database migrations: `docker compose run --rm api alembic upgrade head`
 - [ ] Verify migration status: `docker compose exec api alembic current`
 - [ ] Start services: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
-- [ ] Check API health: `curl https://api.plumbprice.com/health/ready`
-- [ ] Check Beat scheduler is running: `docker compose logs beat | tail -20`
+- [ ] Check API health on the origin host: `curl http://127.0.0.1:8201/health/ready`
+- [ ] Check the web origin: `curl -I https://app.ctlplumbingllc.com/`
 - [ ] Check worker is consuming tasks: `docker compose logs worker | tail -20`
 - [ ] Create admin user if first deploy: `docker compose exec api python scripts/create_admin.py ...`
 - [ ] Seed database if first deploy: `docker compose exec api python scripts/seed_db.py`
@@ -376,10 +372,10 @@ This automatically appends a row to `supplier_price_history` for audit purposes 
 
 ```bash
 # Dump to file
-docker compose exec db pg_dump -U pp pp > backup-$(date +%Y%m%d).sql
+docker compose exec postgres pg_dump -U pp pp > backup-$(date +%Y%m%d).sql
 
 # Restore
-docker compose exec -T db psql -U pp pp < backup-20250615.sql
+docker compose exec -T postgres psql -U pp pp < backup-20250615.sql
 ```
 
 ### MinIO Backup

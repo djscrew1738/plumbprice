@@ -26,7 +26,7 @@ const PAD = { top: 20, right: 16, bottom: 32, left: 52 }
 function PriceLineChart({ entries }: { entries: { price: number; date: string }[] }) {
   const id = useId()
 
-  const { points, xLabels, yTicks, plotW, plotH, minY, rangeY } = useMemo(() => {
+  const { points, xLabels, yTicks, plotH, minY, rangeY } = useMemo(() => {
     const prices = entries.map(e => e.price)
     const minY = Math.min(...prices) * 0.95
     const maxY = Math.max(...prices) * 1.05
@@ -43,8 +43,8 @@ function PriceLineChart({ entries }: { entries: { price: number; date: string }[
 
     const yTicks = Array.from({ length: 4 }, (_, i) => minY + (rangeY * i) / 3)
     const step = Math.max(1, Math.floor(entries.length / 5))
-    const xLabels = entries.filter((_, i) => i % step === 0 || i === entries.length - 1)
-      .map((e, _i, arr) => {
+      const xLabels = entries.filter((_, i) => i % step === 0 || i === entries.length - 1)
+      .map((e) => {
         const idx = entries.indexOf(e)
         return {
           x: PAD.left + (entries.length > 1 ? (idx / (entries.length - 1)) * plotW : plotW / 2),

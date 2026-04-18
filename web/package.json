@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "build:prod": "API_URL=https://pricing.ctlplumbingllc.com NEXT_PUBLIC_API_URL=https://pricing.ctlplumbingllc.com next build",
+    "build:prod": "API_URL=https://app.ctlplumbingllc.com NEXT_PUBLIC_API_URL=https://app.ctlplumbingllc.com next build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

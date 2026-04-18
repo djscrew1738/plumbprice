@@ -121,13 +121,12 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   const isEmpty = !loading && data.length === 0
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getCellValue = (row: T, col: Column<T>) => {
     if (col.render) return col.render(row)
     return String((row as Record<string, unknown>)[col.key] ?? '')
   }
 
-  const renderVirtualRow = useCallback((row: T, _index: number) => (
+  const renderVirtualRow = useCallback((row: T) => (
     <tr
       key={keyExtractor(row)}
       className={cn(

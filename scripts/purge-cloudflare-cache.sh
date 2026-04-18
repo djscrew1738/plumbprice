@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Purge Cloudflare edge cache for pricing.ctlplumbingllc.com
+# Purge Cloudflare edge cache for the ctlplumbingllc.com zone (including app.ctlplumbingllc.com)
 #
 # Usage:
 #   CF_API_TOKEN=your_token ./scripts/purge-cloudflare-cache.sh

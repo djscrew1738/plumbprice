@@ -13,6 +13,16 @@ from app.models.documents import UploadedDocument, DocumentChunk
 
 logger = structlog.get_logger()
 
+# Module-level singleton — reuses connection pool and avoids per-call SSL handshakes
+_http_client: httpx.AsyncClient | None = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=5.0)
+    return _http_client
+
 
 class RAGService:
     """Phase 3: RAG retrieval using pgvector embeddings via Ollama."""
@@ -24,17 +34,17 @@ class RAGService:
     async def embed(self, text: str) -> List[float]:
         """Generate embedding for text using Ollama's embeddings API."""
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    self.endpoint,
-                    json={
-                        "model": self.model,
-                        "prompt": text
-                    }
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                return data.get("embedding", [])
+            client = _get_http_client()
+            resp = await client.post(
+                self.endpoint,
+                json={
+                    "model": self.model,
+                    "prompt": text
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("embedding", [])
         except Exception as e:
             logger.error("rag.embed_error", error=str(e), model=self.model)
             return []

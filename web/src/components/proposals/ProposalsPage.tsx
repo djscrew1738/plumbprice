@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileOutput, RefreshCw, MapPin, Calendar, X,
   Copy, Check, Printer, FileText, ChevronRight,
-  Zap, Building2, Clock, Download, Send,
+  Zap, Download, Send,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { api, proposalsApi, type ProposalListItem } from '@/lib/api'

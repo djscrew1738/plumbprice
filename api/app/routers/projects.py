@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.models.estimates import Estimate
 from app.models.projects import Project
 from app.schemas.projects import ProjectCreateRequest, ProjectListItem, ProjectListResponse
 
@@ -71,9 +71,26 @@ async def list_projects(
     offset: int = Query(default=0),
     db: AsyncSession = Depends(get_db),
 ):
+    # Correlated subqueries avoid loading all estimates into memory
+    estimate_count_sq = (
+        select(func.count(Estimate.id))
+        .where(Estimate.project_id == Project.id)
+        .correlate(Project)
+        .scalar_subquery()
+        .label("estimate_count")
+    )
+    latest_total_sq = (
+        select(Estimate.grand_total)
+        .where(Estimate.project_id == Project.id)
+        .order_by(desc(Estimate.created_at))
+        .limit(1)
+        .correlate(Project)
+        .scalar_subquery()
+        .label("latest_estimate_total")
+    )
+
     query = (
-        select(Project)
-        .options(selectinload(Project.estimates))
+        select(Project, estimate_count_sq, latest_total_sq)
         .order_by(desc(Project.created_at))
         .limit(limit)
         .offset(offset)
@@ -82,7 +99,7 @@ async def list_projects(
         query = query.where(Project.status == status)
 
     result = await db.execute(query)
-    projects = result.scalars().all()
+    rows = result.all()
 
     # Count all projects by status (not just the current page)
     counts_result = await db.execute(
@@ -104,11 +121,11 @@ async def list_projects(
                 customer_name=project.customer_name,
                 county=project.county,
                 city=project.city,
-                estimate_count=len(project.estimates),
-                latest_estimate_total=project.estimates[-1].grand_total if project.estimates else None,
+                estimate_count=estimate_count or 0,
+                latest_estimate_total=latest_total,
                 created_at=project.created_at,
             )
-            for project in projects
+            for project, estimate_count, latest_total in rows
         ],
         summary=dict(summary),
     )
@@ -117,11 +134,18 @@ async def list_projects(
 @router.get("/{project_id}")
 async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Project).options(selectinload(Project.estimates)).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id)
     )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    estimates_result = await db.execute(
+        select(Estimate)
+        .where(Estimate.project_id == project_id)
+        .order_by(desc(Estimate.created_at))
+    )
+    estimates = estimates_result.scalars().all()
 
     return {
         "id": project.id,
@@ -139,7 +163,7 @@ async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
         "notes": project.notes,
         "created_at": project.created_at,
         "updated_at": project.updated_at,
-        "estimate_count": len(project.estimates),
+        "estimate_count": len(estimates),
         "estimates": [
             {
                 "id": e.id,
@@ -151,7 +175,7 @@ async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
                 "county": e.county or "Dallas",
                 "created_at": e.created_at,
             }
-            for e in project.estimates
+            for e in estimates
         ],
     }
 
@@ -163,7 +187,7 @@ async def update_project(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Project).options(selectinload(Project.estimates)).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id)
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -190,6 +214,20 @@ async def update_project(
     await db.commit()
     await db.refresh(project)
 
+    # Use SQL aggregation rather than loading all estimates
+    count_row = await db.execute(
+        select(func.count(Estimate.id)).where(Estimate.project_id == project.id)
+    )
+    estimate_count = count_row.scalar() or 0
+
+    latest_total_row = await db.execute(
+        select(Estimate.grand_total)
+        .where(Estimate.project_id == project.id)
+        .order_by(desc(Estimate.created_at))
+        .limit(1)
+    )
+    latest_total = latest_total_row.scalar()
+
     return ProjectListItem(
         id=project.id,
         name=project.name,
@@ -198,8 +236,8 @@ async def update_project(
         customer_name=project.customer_name,
         county=project.county,
         city=project.city,
-        estimate_count=len(project.estimates),
-        latest_estimate_total=project.estimates[-1].grand_total if project.estimates else None,
+        estimate_count=estimate_count or 0,
+        latest_estimate_total=latest_total,
         created_at=project.created_at,
     )
 

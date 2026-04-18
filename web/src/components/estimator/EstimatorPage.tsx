@@ -431,6 +431,11 @@ export function EstimatorPage() {
           setMessages(prev => prev.map(m =>
             m.id === streamId ? { ...m, content: narrative } : m
           ))
+        } else if (event.type === 'error') {
+          narrative += event.error ?? ''
+          setMessages(prev => prev.map(m =>
+            m.id === streamId ? { ...m, content: narrative } : m
+          ))
         } else if (event.type === 'done') {
           break
         }
@@ -439,11 +444,11 @@ export function EstimatorPage() {
       // Finalise the streamed message with pricing metadata
       setMessages(prev => prev.map(m => {
         if (m.id !== streamId) return m
+        const finalContent = narrative
+          || (pricingData.estimate ? 'Pricing complete — see the breakdown below.' : 'Could not reach the API. Please check that the backend is running.')
         return {
           ...m,
-          content: narrative || pricingData.estimate
-            ? narrative
-            : 'Could not reach the API. Please check that the backend is running.',
+          content: finalContent,
           estimate: pricingData.estimate,
           confidence: pricingData.confidence,
           confidence_label: pricingData.confidence_label
@@ -454,11 +459,14 @@ export function EstimatorPage() {
       }))
 
       if (pricingData.estimate) {
-        const finalMsg = messages.find(m => m.id === streamId)
-        if (finalMsg) {
-          setSelectedEstimate(finalMsg)
-          setSheetOpen(true)
-        }
+        setMessages(prev => {
+          const finalMsg = prev.find(m => m.id === streamId)
+          if (finalMsg) {
+            setSelectedEstimate(finalMsg)
+            setSheetOpen(true)
+          }
+          return prev
+        })
       }
     } catch {
       setMessages(prev => prev.map(m =>
@@ -469,7 +477,7 @@ export function EstimatorPage() {
     } finally {
       setLoading(false)
     }
-  }, [input, loading, county, uploadMode, uploadedFile, messages])
+  }, [input, loading, county, uploadMode, uploadedFile, messages, sessionId])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {

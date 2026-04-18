@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Save, RefreshCw } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import dynamic from 'next/dynamic'
 import { Input } from '@/components/ui/Input'

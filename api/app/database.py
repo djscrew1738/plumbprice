@@ -1,9 +1,13 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import event
 from app.config import settings
 import structlog
+import time
 
 logger = structlog.get_logger()
+
+SLOW_QUERY_THRESHOLD_MS = 200
 
 engine_kwargs = {
     "echo": settings.debug,
@@ -25,6 +29,18 @@ if not settings.database_url.startswith("sqlite"):
     )
 
 engine = create_async_engine(settings.database_url, **engine_kwargs)
+
+
+@event.listens_for(engine.sync_engine, "before_cursor_execute")
+def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    conn.info.setdefault("query_start_time", []).append(time.perf_counter())
+
+
+@event.listens_for(engine.sync_engine, "after_cursor_execute")
+def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    elapsed_ms = (time.perf_counter() - conn.info["query_start_time"].pop()) * 1000
+    if elapsed_ms >= SLOW_QUERY_THRESHOLD_MS:
+        logger.warning("slow_query", elapsed_ms=round(elapsed_ms, 1), statement=statement[:200])
 
 AsyncSessionLocal = async_sessionmaker(
     engine,

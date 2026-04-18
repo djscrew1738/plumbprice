@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, Search, X, Copy, Check, Database, Zap, AlertTriangle, Clock, History,
 } from 'lucide-react'
 import { cn, formatCurrencyDecimal } from '@/lib/utils'
-import { useSuppliers, usePriceCacheStats, useRefreshPrices, type CatalogItem } from '@/lib/hooks'
+import { useSuppliers, usePriceCacheStats, useRefreshPrices } from '@/lib/hooks'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
 import { Badge } from '@/components/ui/Badge'

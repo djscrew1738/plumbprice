@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -338,7 +338,7 @@ export function BlueprintsPage() {
   // Fetch blueprint list
   const { data: jobsData, isLoading, isError, refetch } = useBlueprints()
 
-  const jobs = jobsData ?? []
+  const jobs = useMemo(() => jobsData ?? [], [jobsData])
 
   // Poll active jobs
   useBlueprintPolling(jobs)

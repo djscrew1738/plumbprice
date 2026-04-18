@@ -96,6 +96,7 @@ async def update_product_price(
     # Log price history
     history = SupplierPriceHistory(product_id=product_id, cost=update.cost, source="manual_override")
     db.add(history)
+    await db.commit()
 
     return {"id": product_id, "old_cost": old_cost, "new_cost": update.cost}
 
@@ -112,36 +113,44 @@ async def bulk_upload_prices(
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
+    # Collect all canonical items from the payload
+    items_by_canonical = {
+        p["canonical_item"]: p
+        for p in payload.products
+        if p.get("canonical_item")
+    }
+    if not items_by_canonical:
+        return {"supplier_id": supplier_id, "updated": 0, "created": 0}
+
+    # Single batch query for all existing products — replaces N per-item queries
+    existing_result = await db.execute(
+        select(SupplierProduct).where(
+            SupplierProduct.supplier_id == supplier_id,
+            SupplierProduct.canonical_item.in_(items_by_canonical.keys()),
+        )
+    )
+    existing_by_canonical = {
+        p.canonical_item: p for p in existing_result.scalars().all()
+    }
+
     updated = 0
     created = 0
-
-    for p in payload.products:
-        canonical = p.get("canonical_item")
-        if not canonical:
-            continue
-
-        existing = await db.execute(
-            select(SupplierProduct).where(
-                SupplierProduct.supplier_id == supplier_id,
-                SupplierProduct.canonical_item == canonical,
-            )
-        )
-        product = existing.scalar_one_or_none()
-
-        if product:
+    for canonical, p in items_by_canonical.items():
+        if canonical in existing_by_canonical:
+            product = existing_by_canonical[canonical]
             product.cost = p["cost"]
             if p.get("sku"):
                 product.sku = p["sku"]
             updated += 1
         else:
-            new_product = SupplierProduct(
+            db.add(SupplierProduct(
                 supplier_id=supplier_id,
                 canonical_item=canonical,
                 sku=p.get("sku"),
                 name=p.get("name", canonical),
                 cost=p["cost"],
-            )
-            db.add(new_product)
+            ))
             created += 1
 
+    await db.commit()
     return {"supplier_id": supplier_id, "updated": updated, "created": created}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { RefreshCw, Wrench, DollarSign, BarChart3, Package } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { api, adminApi, type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
+import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
 import { PageIntro } from '@/components/layout/PageIntro'
@@ -13,13 +13,6 @@ import { LaborTemplatesTab } from './LaborTemplatesTab'
 import { MarkupRulesTab } from './MarkupRulesTab'
 import { ItemPricesTab } from './ItemPricesTab'
 import { StatsTab } from './StatsTab'
-
-interface LaborTemplate {
-  code: string; name: string; category: string; base_hours: number
-  lead_rate: number; helper_required: boolean; disposal_hours: number
-}
-interface MarkupRuleResponse { job_type: string; materials_markup_pct?: number; misc_flat?: number; misc_disposal_flat?: number }
-interface Stats { total_estimates: number; avg_estimate_value: number; labor_templates_count: number; canonical_items_count: number }
 
 const SUPPLIERS = ['ferguson', 'moore_supply', 'apex'] as const
 type SupplierSlug = typeof SUPPLIERS[number]

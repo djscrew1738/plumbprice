@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, type Variants } from 'framer-motion'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries } from '@tanstack/react-query'
 import Link from 'next/link'
 import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target, BarChart3 } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
@@ -67,19 +67,16 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
 }
 
 export function LauncherHome() {
-  const { data: estimatesData } = useQuery({
-    queryKey: ['estimates'],
-    queryFn: () => estimatesApi.list(),
+  const [estimatesQuery, sessionsQuery, outcomeStatsQuery] = useQueries({
+    queries: [
+      { queryKey: ['estimates'], queryFn: () => estimatesApi.list() },
+      { queryKey: ['sessions'], queryFn: () => sessionsApi.list(5) },
+      { queryKey: ['outcome-stats'], queryFn: () => outcomesApi.stats(), staleTime: 60_000 },
+    ],
   })
-  const { data: sessionsData } = useQuery({
-    queryKey: ['sessions'],
-    queryFn: () => sessionsApi.list(5),
-  })
-  const { data: outcomeStatsData } = useQuery({
-    queryKey: ['outcome-stats'],
-    queryFn: () => outcomesApi.stats(),
-    staleTime: 60_000,
-  })
+  const estimatesData = estimatesQuery.data
+  const sessionsData = sessionsQuery.data
+  const outcomeStatsData = outcomeStatsQuery.data
   const stats = estimatesData ? computeWeeklyStats(estimatesData.data) : null
   const dailyActivity = estimatesData ? computeDailyActivity(estimatesData.data) : null
   const sessions = sessionsData?.data ?? null
