@@ -10,6 +10,7 @@ from app.models.tax import TaxRate
 from app.models.pricing_template import PricingTemplate
 from app.models.sessions import ChatSession, ChatMessage
 from app.models.outcomes import EstimateOutcome
+from app.models.auth_tokens import PasswordResetToken
 
 __all__ = [
     "User", "Organization",
@@ -24,4 +25,5 @@ __all__ = [
     "PricingTemplate",
     "ChatSession", "ChatMessage",
     "EstimateOutcome",
+    "PasswordResetToken",
 ]
