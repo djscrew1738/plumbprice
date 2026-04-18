@@ -7,12 +7,15 @@ import {
   X, BriefcaseBusiness, UserRound, Phone, Mail, MapPin,
   FileText, StickyNote, RefreshCw, Save, ExternalLink,
   Calendar, ChevronRight,
+  ArrowRightLeft, Send, CheckCircle2, XCircle, MessageSquare, UserPlus,
+  Activity as ActivityIcon,
 } from 'lucide-react'
-import { format, isValid } from 'date-fns'
-import { projectsApi } from '@/lib/api'
+import { format, isValid, formatDistanceToNow } from 'date-fns'
+import { projectsApi, api } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 interface EstimateSummary {
   id: number
@@ -81,6 +84,7 @@ export function ProjectDrawer({
   const [loading,  setLoading]  = useState(false)
   const [saving,   setSaving]   = useState(false)
   const [editing,  setEditing]  = useState(false)
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [form,     setForm]     = useState({
     customer_name:  '',
@@ -98,6 +102,7 @@ export function ProjectDrawer({
     const load = async () => {
       setLoading(true)
       setEditing(false)
+      setActiveTab('details')
       try {
         const res = await projectsApi.get(projectId)
         const p = res.data as ProjectDetail
@@ -217,6 +222,39 @@ export function ProjectDrawer({
               )}
 
               {!loading && project && (
+                <>
+                  {/* Tab bar */}
+                  <div className="flex items-center gap-1 px-4 pt-3 border-b border-white/[0.07]">
+                    {([
+                      { id: 'details', label: 'Details', icon: BriefcaseBusiness },
+                      { id: 'activity', label: 'Activity', icon: ActivityIcon },
+                    ] as const).map(tab => {
+                      const Icon = tab.icon
+                      const isActive = activeTab === tab.id
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActiveTab(tab.id)}
+                          className={cn(
+                            'flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 -mb-px transition-colors',
+                            isActive
+                              ? 'text-white border-blue-400'
+                              : 'text-zinc-500 hover:text-zinc-300 border-transparent',
+                          )}
+                          aria-selected={isActive}
+                          role="tab"
+                        >
+                          <Icon size={12} />
+                          {tab.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+
+              {!loading && project && activeTab === 'details' && (
                 <div className="p-5 space-y-5">
 
                   {/* Project identity */}
@@ -398,6 +436,10 @@ export function ProjectDrawer({
 
                 </div>
               )}
+
+              {!loading && project && activeTab === 'activity' && (
+                <ActivityTab projectId={project.id} />
+              )}
             </div>
 
             {/* Footer action */}
@@ -416,5 +458,162 @@ export function ProjectDrawer({
         </>
       )}
     </AnimatePresence>
+  )
+}
+
+// ─── Activity tab ────────────────────────────────────────────────────────────
+
+interface ActivityEntry {
+  id: number
+  kind: string
+  payload: Record<string, unknown>
+  actor: { id: number; email: string | null; full_name: string | null } | null
+  created_at: string
+}
+
+const ACTIVITY_ICON: Record<string, { icon: typeof ArrowRightLeft; className: string }> = {
+  stage_changed:      { icon: ArrowRightLeft, className: 'text-blue-400' },
+  estimate_created:   { icon: FileText,       className: 'text-zinc-300' },
+  estimate_sent:      { icon: Send,           className: 'text-blue-300' },
+  proposal_accepted:  { icon: CheckCircle2,   className: 'text-emerald-400' },
+  proposal_declined:  { icon: XCircle,        className: 'text-red-400' },
+  note_added:         { icon: MessageSquare,  className: 'text-zinc-400' },
+  assigned:           { icon: UserPlus,       className: 'text-amber-300' },
+}
+
+function summarize(kind: string, payload: Record<string, unknown>): string {
+  switch (kind) {
+    case 'stage_changed':
+      return `Stage changed from ${String(payload.from ?? '—').replace('_', ' ')} to ${String(payload.to ?? '—').replace('_', ' ')}`
+    case 'estimate_created': {
+      const total = payload.total
+      return `Estimate #${payload.estimate_id} created${typeof total === 'number' ? ` — ${formatCurrency(total)}` : ''}`
+    }
+    case 'estimate_sent':
+      return `Estimate #${payload.estimate_id} sent to ${String(payload.recipient ?? '—')}`
+    case 'proposal_accepted':
+      return 'Proposal accepted'
+    case 'proposal_declined':
+      return 'Proposal declined'
+    case 'note_added':
+      return String(payload.note ?? '')
+    case 'assigned':
+      return `Assigned to user #${payload.assigned_to}`
+    default:
+      return kind.replace('_', ' ')
+  }
+}
+
+function ActivityTab({ projectId }: { projectId: number }) {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const [note, setNote] = useState('')
+  const [posting, setPosting] = useState(false)
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['project-activity', projectId],
+    queryFn: async () => {
+      const res = await api.get<ActivityEntry[]>(`/projects/${projectId}/activity`, {
+        params: { limit: 50 },
+      })
+      return res.data
+    },
+  })
+
+  const postNote = async () => {
+    const trimmed = note.trim()
+    if (!trimmed) return
+    setPosting(true)
+    try {
+      await api.post(`/projects/${projectId}/activity`, { note: trimmed })
+      setNote('')
+      await qc.invalidateQueries({ queryKey: ['project-activity', projectId] })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not add note'
+      toast.error('Failed to add note', msg)
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  return (
+    <div className="p-5 space-y-4">
+      {/* Note input */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
+        <label htmlFor="activity-note" className="block text-[10px] font-bold text-zinc-600 uppercase tracking-wider">
+          Add note
+        </label>
+        <textarea
+          id="activity-note"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          rows={3}
+          maxLength={2000}
+          placeholder="Leave a note for the team…"
+          className="input resize-none text-sm w-full"
+        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            disabled={posting || !note.trim()}
+            onClick={() => void postNote()}
+            className="btn-primary text-xs"
+          >
+            {posting ? <RefreshCw size={12} className="animate-spin" /> : <MessageSquare size={12} />}
+            {posting ? 'Saving…' : 'Add note'}
+          </button>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      {isLoading && (
+        <div className="space-y-2">
+          <Skeleton variant="card" className="h-12" />
+          <Skeleton variant="card" className="h-12" />
+          <Skeleton variant="card" className="h-12" />
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="text-xs text-red-400">Could not load activity.</div>
+      )}
+
+      {!isLoading && !error && data && data.length === 0 && (
+        <div className="bg-white/[0.02] border border-dashed border-white/[0.07] rounded-xl p-5 text-center">
+          <p className="text-xs text-zinc-600">No activity yet. Stage changes, notes, and proposals will appear here.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && data && data.length > 0 && (
+        <ol className="space-y-2">
+          {data.map(entry => {
+            const meta = ACTIVITY_ICON[entry.kind] ?? { icon: MessageSquare, className: 'text-zinc-400' }
+            const Icon = meta.icon
+            const actorName = entry.actor?.full_name || entry.actor?.email || 'Someone'
+            const when = isValid(new Date(entry.created_at))
+              ? formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })
+              : ''
+            return (
+              <li
+                key={entry.id}
+                className="flex gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-3"
+              >
+                <div className={cn('mt-0.5 shrink-0', meta.className)}>
+                  <Icon size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs text-zinc-200 leading-snug whitespace-pre-wrap break-words">
+                    {summarize(entry.kind, entry.payload)}
+                  </div>
+                  <div className="text-[10px] text-zinc-600 mt-0.5">
+                    {actorName} · {when}
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+    </div>
   )
 }

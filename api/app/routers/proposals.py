@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from sqlalchemy import select
@@ -7,9 +7,9 @@ import structlog
 
 from app.core.auth import get_current_user
 from app.database import get_db
-from app.models.estimates import Estimate
+from app.models.estimates import Estimate, Proposal
 from app.models.users import User
-from app.services.proposal_service import send_proposal_email
+from app.services.proposal_service import send_proposal_email, render_pdf, proposal_status
 from app.core.limiter import limiter
 
 logger = structlog.get_logger()
@@ -22,18 +22,10 @@ class SendProposalRequest(BaseModel):
     message: Optional[str] = None
 
 
-@router.post("/{estimate_id}/send")
-@limiter.limit("20/hour")
-async def send_proposal(
-    request: Request,
-    estimate_id: int,
-    body: SendProposalRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Email a proposal to a client. Records the send in proposals table."""
-    # Verify the estimate exists and belongs to the caller's org (or they created it).
-    # This prevents cross-org sends and information disclosure via 500 errors.
+async def _load_estimate_for_user(
+    db: AsyncSession, estimate_id: int, current_user: User
+) -> Estimate:
+    """Fetch an estimate if the caller owns it (org or creator); else 404."""
     existing = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = existing.scalar_one_or_none()
     if not estimate:
@@ -46,8 +38,22 @@ async def send_proposal(
         or getattr(current_user, "is_admin", False)
     )
     if not owns_estimate:
-        # Use 404 not 403 to avoid leaking estimate existence
         raise HTTPException(status_code=404, detail="Estimate not found")
+    return estimate
+
+
+@router.post("/{estimate_id}/send")
+@limiter.limit("20/hour")
+async def send_proposal(
+    request: Request,
+    estimate_id: int,
+    body: SendProposalRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Email a proposal to a client. Records the send in proposals table."""
+    await _load_estimate_for_user(db, estimate_id, current_user)
+    user_org = getattr(current_user, "organization_id", None)
 
     result = await send_proposal_email(
         db=db,
@@ -63,6 +69,28 @@ async def send_proposal(
     return result
 
 
+@router.get("/{estimate_id}/pdf")
+async def download_proposal_pdf(
+    estimate_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Render the current estimate as a PDF proposal. Same ownership check as send."""
+    estimate = await _load_estimate_for_user(db, estimate_id, current_user)
+    try:
+        pdf_bytes = render_pdf(estimate)
+    except Exception as e:
+        logger.error("proposal.pdf_failed", estimate_id=estimate_id, error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to render PDF")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="estimate-{estimate_id}.pdf"',
+        },
+    )
+
+
 @router.get("/{estimate_id}/sends")
 async def list_proposal_sends(
     estimate_id: int,
@@ -70,9 +98,6 @@ async def list_proposal_sends(
     db: AsyncSession = Depends(get_db),
 ):
     """List all send records for an estimate."""
-    from app.models.estimates import Proposal
-
-    # Scope to caller's org; admins see their own-org records via same filter.
     user_org = getattr(current_user, "organization_id", None)
 
     result = await db.execute(
@@ -91,6 +116,13 @@ async def list_proposal_sends(
             "recipient_name": p.recipient_name,
             "sent_at": p.sent_at,
             "created_at": p.created_at,
+            "public_token": p.public_token,
+            "token_expires_at": p.token_expires_at,
+            "opened_at": p.opened_at,
+            "accepted_at": p.accepted_at,
+            "declined_at": p.declined_at,
+            "client_signature": p.client_signature,
+            "status": proposal_status(p),
         }
         for p in proposals
     ]

@@ -133,5 +133,16 @@ async def persist_estimate(
         change_summary="Initial estimate version",
     ))
 
+    if project_id is not None:
+        from app.services import activity_service
+
+        await activity_service.log(
+            db,
+            project_id=project_id,
+            actor_user_id=created_by,
+            kind="estimate_created",
+            payload={"estimate_id": estimate.id, "total": result.grand_total},
+        )
+
     await db.refresh(estimate)
     return estimate

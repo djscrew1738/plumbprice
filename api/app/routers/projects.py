@@ -1,16 +1,18 @@
 from typing import Literal, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_current_user
 from app.database import get_db
 from app.models.estimates import Estimate
-from app.models.projects import Project
+from app.models.projects import Project, ProjectActivity
 from app.models.users import User
 from app.schemas.projects import ProjectCreateRequest, ProjectListItem, ProjectListResponse
+from app.services import activity_service
 
 router = APIRouter()
 PIPELINE_STATUSES = ["lead", "estimate_sent", "won", "lost", "in_progress", "complete"]
@@ -41,6 +43,25 @@ class ProjectUpdateRequest(BaseModel):
     notes: Optional[str] = None
     city: Optional[str] = None
     county: Optional[str] = None
+    assigned_to: Optional[int] = None
+
+
+class ActivityNoteRequest(BaseModel):
+    note: str = Field(..., min_length=1, max_length=2000)
+
+
+class ActivityActor(BaseModel):
+    id: int
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+
+
+class ActivityItem(BaseModel):
+    id: int
+    kind: str
+    payload: dict
+    actor: Optional[ActivityActor] = None
+    created_at: datetime
 
 
 @router.post("", response_model=ProjectListItem, status_code=status.HTTP_201_CREATED)
@@ -222,6 +243,9 @@ async def update_project(
 ):
     project = await _get_owned_project(project_id, db, current_user)
 
+    prev_status = project.status
+    prev_assigned = project.assigned_to
+
     if request.status is not None:
         if request.status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(PIPELINE_STATUSES)}")
@@ -239,6 +263,25 @@ async def update_project(
         project.city = request.city
     if request.county is not None:
         project.county = request.county
+    if request.assigned_to is not None:
+        project.assigned_to = request.assigned_to
+
+    if request.status is not None and prev_status != project.status:
+        await activity_service.log(
+            db,
+            project_id=project.id,
+            actor_user_id=current_user.id,
+            kind="stage_changed",
+            payload={"from": prev_status, "to": project.status},
+        )
+    if request.assigned_to is not None and prev_assigned != project.assigned_to:
+        await activity_service.log(
+            db,
+            project_id=project.id,
+            actor_user_id=current_user.id,
+            kind="assigned",
+            payload={"assigned_to": project.assigned_to},
+        )
 
     await db.commit()
     await db.refresh(project)
@@ -280,3 +323,80 @@ async def delete_project(
     project = await _get_owned_project(project_id, db, current_user)
     await db.delete(project)
     await db.commit()
+
+
+@router.get("/{project_id}/activity", response_model=list[ActivityItem])
+async def list_project_activity(
+    project_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    before: Optional[datetime] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await _get_owned_project(project_id, db, current_user)
+
+    query = (
+        select(ProjectActivity, User)
+        .join(User, User.id == ProjectActivity.actor_user_id, isouter=True)
+        .where(ProjectActivity.project_id == project.id)
+        .order_by(desc(ProjectActivity.created_at), desc(ProjectActivity.id))
+        .limit(limit)
+    )
+    if before is not None:
+        query = query.where(ProjectActivity.created_at < before)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    items: list[ActivityItem] = []
+    for activity, actor in rows:
+        items.append(
+            ActivityItem(
+                id=activity.id,
+                kind=activity.kind,
+                payload=activity.payload or {},
+                actor=ActivityActor(
+                    id=actor.id,
+                    email=actor.email,
+                    full_name=actor.full_name,
+                ) if actor is not None else None,
+                created_at=activity.created_at,
+            )
+        )
+    return items
+
+
+@router.post(
+    "/{project_id}/activity",
+    response_model=ActivityItem,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_project_activity_note(
+    project_id: int,
+    request: ActivityNoteRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await _get_owned_project(project_id, db, current_user)
+
+    activity = ProjectActivity(
+        project_id=project.id,
+        actor_user_id=current_user.id,
+        kind="note_added",
+        payload={"note": request.note},
+    )
+    db.add(activity)
+    await db.commit()
+    await db.refresh(activity)
+
+    return ActivityItem(
+        id=activity.id,
+        kind=activity.kind,
+        payload=activity.payload or {},
+        actor=ActivityActor(
+            id=current_user.id,
+            email=current_user.email,
+            full_name=current_user.full_name,
+        ),
+        created_at=activity.created_at,
+    )

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Enum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -44,3 +44,37 @@ class Project(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), index=True)
 
     estimates = relationship("Estimate", back_populates="project")
+    activities = relationship(
+        "ProjectActivity",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class ProjectActivity(Base):
+    __tablename__ = "project_activities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    actor_user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    kind = Column(String(40), nullable=False, index=True)
+    payload = Column(JSON, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+    )
+
+    project = relationship("Project", back_populates="activities")
+    actor = relationship("User", foreign_keys=[actor_user_id])
