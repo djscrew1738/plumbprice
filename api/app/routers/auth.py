@@ -4,42 +4,38 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import timedelta, datetime, timezone
-from collections import defaultdict
 import structlog
 
 from app.database import get_db
 from app.models.users import User
 from app.core.auth import verify_password, get_password_hash, create_access_token, get_current_user
+from app.core import rate_limit
 from app.config import settings
 
 logger = structlog.get_logger()
 router = APIRouter()
 
-# In-memory brute force protection
-_login_attempts: dict[str, list[datetime]] = defaultdict(list)
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_WINDOW_MINUTES = 15
+_LOCKOUT_WINDOW_SECONDS = LOCKOUT_WINDOW_MINUTES * 60
 
 
-def _check_brute_force(email: str) -> None:
+async def _check_brute_force(email: str) -> None:
     """Block login if too many recent failed attempts."""
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(minutes=LOCKOUT_WINDOW_MINUTES)
-    # Purge old attempts
-    _login_attempts[email] = [t for t in _login_attempts[email] if t > cutoff]
-    if len(_login_attempts[email]) >= MAX_LOGIN_ATTEMPTS:
+    count = await rate_limit.get_count(email.lower(), _LOCKOUT_WINDOW_SECONDS)
+    if count >= MAX_LOGIN_ATTEMPTS:
         raise HTTPException(
             status_code=429,
             detail=f"Too many failed login attempts. Try again in {LOCKOUT_WINDOW_MINUTES} minutes.",
         )
 
 
-def _record_failed_attempt(email: str) -> None:
-    _login_attempts[email].append(datetime.now(timezone.utc))
+async def _record_failed_attempt(email: str) -> None:
+    await rate_limit.record_failure(email.lower(), _LOCKOUT_WINDOW_SECONDS)
 
 
-def _clear_attempts(email: str) -> None:
-    _login_attempts.pop(email, None)
+async def _clear_attempts(email: str) -> None:
+    await rate_limit.clear(email.lower())
 
 
 class RegisterRequest(BaseModel):
@@ -54,20 +50,20 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """Login with username/password, returns JWT token."""
-    _check_brute_force(form_data.username)
+    await _check_brute_force(form_data.username)
 
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
-        _record_failed_attempt(form_data.username)
+        await _record_failed_attempt(form_data.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    _clear_attempts(form_data.username)
+    await _clear_attempts(form_data.username)
 
     # Track last successful login
     user.last_login = datetime.now(timezone.utc)

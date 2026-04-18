@@ -73,9 +73,13 @@ class VisionService:
             logger.error("vision.classify_error", error=str(e), model=self.model)
             return {"sheet_type": "unknown", "confidence": 0.0}
 
-    async def detect_fixtures(self, image_bytes: bytes) -> List[Dict]:
+    async def detect_fixtures(self, image_bytes: bytes) -> Dict:
         """
         Detect plumbing fixtures in a blueprint image.
+
+        Returns a dict: {"status": "ok"|"error", "fixtures": [...], "error": str|None}
+        Callers can distinguish "vision succeeded with zero fixtures" from
+        "vision call failed".
         """
         prompt = """
         Analyze this plumbing blueprint image. 
@@ -106,9 +110,9 @@ class VisionService:
             resp.raise_for_status()
             data = resp.json()
             result = json.loads(data.get("response", "{}"))
-            return result.get("fixtures", [])
+            return {"status": "ok", "fixtures": result.get("fixtures", []), "error": None}
         except Exception as e:
             logger.error("vision.detect_error", error=str(e), model=self.model)
-            return []
+            return {"status": "error", "fixtures": [], "error": str(e)}
 
 vision_service = VisionService()

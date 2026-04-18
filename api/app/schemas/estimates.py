@@ -71,6 +71,8 @@ class EstimateListItem(BaseModel):
     confidence_label: str
     county: str
     created_at: datetime
+    valid_until: Optional[datetime] = None
+    is_expired: bool = False
 
     class Config:
         from_attributes = True

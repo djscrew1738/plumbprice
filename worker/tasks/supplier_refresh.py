@@ -6,6 +6,7 @@ import httpx
 import random
 import os
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update, or_, func
 from app.database import AsyncSessionLocal
@@ -16,6 +17,44 @@ from app.services.supplier_service import CANONICAL_MAP
 logger = structlog.get_logger()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+_LOCK_TTL_SECONDS = 1800  # 30 min — long enough for full refresh, short enough to recover from crashed worker
+
+
+@asynccontextmanager
+async def _redis_lock(lock_key: str, ttl: int = _LOCK_TTL_SECONDS):
+    """Best-effort distributed lock via Redis SET NX EX.
+
+    Yields True if acquired, False if another worker already holds it.
+    Always releases the lock on exit (only if we acquired it).
+    """
+    try:
+        import redis.asyncio as aioredis
+
+        client = aioredis.from_url(
+            os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+    except Exception as exc:
+        logger.warning("supplier_refresh.redis_unavailable", error=str(exc))
+        # No Redis? proceed without locking — worse than ideal but never block work.
+        yield True
+        return
+
+    acquired = False
+    try:
+        acquired = bool(await client.set(f"lock:{lock_key}", "1", nx=True, ex=ttl))
+        yield acquired
+    finally:
+        if acquired:
+            try:
+                await client.delete(f"lock:{lock_key}")
+            except Exception as exc:
+                logger.warning("supplier_refresh.lock_release_failed", error=str(exc))
+        try:
+            await client.aclose()
+        except Exception:
+            pass
 
 
 async def _async_decrement_confidence_scores():
@@ -72,16 +111,20 @@ def decrement_confidence_scores():
 
 async def _async_refresh_all_suppliers():
     """Internal async implementation of global refresh."""
-    async with AsyncSessionLocal() as db:
-        # Get all canonical IDs from the map
-        canonical_ids = list(CANONICAL_MAP.keys())
-        
-        # Use simulation mode if not in production or if no API keys present
-        simulation = os.getenv("ENVIRONMENT") != "production" or not os.getenv("APIFY_TOKEN")
-        scraper_service = get_scraper_service(simulation_mode=simulation)
-        
-        stats = await scraper_service.refresh_all(db, canonical_ids)
-        return stats
+    async with _redis_lock("supplier_refresh:all") as acquired:
+        if not acquired:
+            logger.warning("supplier_refresh.skipped_already_running", scope="all")
+            return {"skipped": "another refresh in progress"}
+        async with AsyncSessionLocal() as db:
+            # Get all canonical IDs from the map
+            canonical_ids = list(CANONICAL_MAP.keys())
+
+            # Use simulation mode if not in production or if no API keys present
+            simulation = os.getenv("ENVIRONMENT") != "production" or not os.getenv("APIFY_TOKEN")
+            scraper_service = get_scraper_service(simulation_mode=simulation)
+
+            stats = await scraper_service.refresh_all(db, canonical_ids)
+            return stats
 
 
 @app.task(bind=True, max_retries=3)
@@ -109,13 +152,17 @@ def refresh_all_suppliers(self):
 
 async def _async_refresh_supplier(supplier_slug: str):
     """Internal async implementation of single supplier refresh."""
-    async with AsyncSessionLocal() as db:
-        canonical_ids = list(CANONICAL_MAP.keys())
-        simulation = os.getenv("ENVIRONMENT") != "production" or not os.getenv("APIFY_TOKEN")
-        scraper_service = get_scraper_service(simulation_mode=simulation)
-        
-        count = await scraper_service.refresh_supplier(db, supplier_slug, canonical_items=canonical_ids)
-        return count
+    async with _redis_lock(f"supplier_refresh:{supplier_slug}") as acquired:
+        if not acquired:
+            logger.warning("supplier_refresh.skipped_already_running", scope=supplier_slug)
+            return 0
+        async with AsyncSessionLocal() as db:
+            canonical_ids = list(CANONICAL_MAP.keys())
+            simulation = os.getenv("ENVIRONMENT") != "production" or not os.getenv("APIFY_TOKEN")
+            scraper_service = get_scraper_service(simulation_mode=simulation)
+
+            count = await scraper_service.refresh_supplier(db, supplier_slug, canonical_items=canonical_ids)
+            return count
 
 
 @app.task

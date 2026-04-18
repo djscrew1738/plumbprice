@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -38,6 +38,10 @@ class BlueprintPage(Base):
 
     job = relationship("BlueprintJob", back_populates="pages")
     detections = relationship("BlueprintDetection", back_populates="page")
+
+    __table_args__ = (
+        UniqueConstraint("job_id", "page_number", name="uq_blueprint_pages_job_page"),
+    )
 
 
 class BlueprintDetection(Base):

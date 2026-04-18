@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 import structlog
@@ -29,16 +30,24 @@ async def _get_owned_estimate(estimate_id: int, db: AsyncSession, current_user: 
     estimate = result.scalar_one_or_none()
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
-    # Admin can access any estimate; otherwise must be creator or same org
+    # Admin can access any estimate; otherwise must be creator OR same org (with non-null org)
     if not current_user.is_admin:
-        org_match = (
-            hasattr(current_user, "organization_id")
-            and current_user.organization_id
-            and estimate.organization_id == current_user.organization_id
-        )
-        if estimate.created_by != current_user.id and not org_match:
-            raise HTTPException(status_code=403, detail="Not authorized to access this estimate")
+        user_org = getattr(current_user, "organization_id", None)
+        org_match = user_org is not None and estimate.organization_id == user_org
+        is_creator = estimate.created_by is not None and estimate.created_by == current_user.id
+        if not (org_match or is_creator):
+            raise HTTPException(status_code=404, detail="Estimate not found")
     return estimate
+
+
+def _is_expired(estimate: Estimate) -> bool:
+    if not estimate.valid_until:
+        return False
+    # Naive datetimes (e.g. SQLite) are treated as UTC for comparison purposes.
+    valid_until = estimate.valid_until
+    if valid_until.tzinfo is None:
+        valid_until = valid_until.replace(tzinfo=timezone.utc)
+    return valid_until < datetime.now(timezone.utc)
 
 
 class EstimateStatusUpdate(BaseModel):
@@ -191,8 +200,9 @@ async def create_construction_estimate(
 
 @router.get("", response_model=list[EstimateListItem])
 async def list_estimates(
-    status: str = Query(None),
-    job_type: str = Query(None),
+    status: Optional[Literal["draft", "sent", "accepted", "rejected"]] = Query(None),
+    job_type: Optional[Literal["service", "construction", "rough_in", "remodel", "commercial"]] = Query(None),
+    exclude_expired: bool = Query(False, description="Hide estimates whose valid_until is in the past"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -200,14 +210,19 @@ async def list_estimates(
 ):
     """List estimates with optional filters (scoped to current user's organization)."""
     query = select(Estimate).order_by(desc(Estimate.created_at)).limit(limit).offset(offset)
-    if hasattr(current_user, "organization_id") and current_user.organization_id:
-        query = query.where(Estimate.organization_id == current_user.organization_id)
-    else:
-        query = query.where(Estimate.created_by == current_user.id)
+    user_org = getattr(current_user, "organization_id", None)
+    if not current_user.is_admin:
+        if user_org is not None:
+            query = query.where(Estimate.organization_id == user_org)
+        else:
+            query = query.where(Estimate.created_by == current_user.id)
     if status:
         query = query.where(Estimate.status == status)
     if job_type:
         query = query.where(Estimate.job_type == job_type)
+    if exclude_expired:
+        now = datetime.now(timezone.utc)
+        query = query.where((Estimate.valid_until.is_(None)) | (Estimate.valid_until >= now))
 
     result = await db.execute(query)
     estimates = result.scalars().all()
@@ -222,6 +237,8 @@ async def list_estimates(
             confidence_label=e.confidence_label or "HIGH",
             county=e.county or "Dallas",
             created_at=e.created_at,
+            valid_until=e.valid_until,
+            is_expired=_is_expired(e),
         )
         for e in estimates
     ]
@@ -258,6 +275,8 @@ async def get_estimate(
         "county": estimate.county,
         "tax_rate": estimate.tax_rate,
         "preferred_supplier": estimate.preferred_supplier,
+        "valid_until": estimate.valid_until,
+        "is_expired": _is_expired(estimate),
         "created_at": estimate.created_at,
         "line_items": [
             {

@@ -167,7 +167,16 @@ export const chatApi = {
             } else if (currentEvent === 'error') {
               yield { type: 'error', error: (payload as {error?: string}).error ?? 'Generation failed' }
             }
-          } catch { /* skip malformed lines */ }
+          } catch (parseErr) {
+            // Malformed SSE payload — log + surface to caller instead of silently dropping.
+            // Pricing stream is critical; consumers should be able to show an error toast.
+            // eslint-disable-next-line no-console
+            console.warn('[SSE] failed to parse event', { event: currentEvent, raw, error: parseErr })
+            if (currentEvent === 'pricing' || currentEvent === 'error') {
+              yield { type: 'error', error: 'Malformed server event' }
+            }
+            // For 'token'/'done' or unknown events, continue — they're not fatal.
+          }
         }
       }
     }
@@ -185,6 +194,8 @@ export interface EstimateListItem {
   confidence_label: string
   county: string
   created_at: string
+  valid_until?: string | null
+  is_expired?: boolean
 }
 
 export interface EstimateDetailResponse {

@@ -58,15 +58,28 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                     content_type="image/png"
                 )
 
-                # Create BlueprintPage record
-                bp_page = BlueprintPage(
-                    job_id=job_id,
-                    page_number=i+1,
-                    storage_path=page_filename,
-                    status="processing"
+                # Create or fetch BlueprintPage record (dedup on (job_id, page_number))
+                from sqlalchemy import select as _select
+                existing_page = await db.execute(
+                    _select(BlueprintPage).where(
+                        BlueprintPage.job_id == job_id,
+                        BlueprintPage.page_number == i + 1,
+                    )
                 )
-                db.add(bp_page)
-                await db.flush()
+                bp_page = existing_page.scalar_one_or_none()
+                if bp_page is None:
+                    bp_page = BlueprintPage(
+                        job_id=job_id,
+                        page_number=i+1,
+                        storage_path=page_filename,
+                        status="processing"
+                    )
+                    db.add(bp_page)
+                    await db.flush()
+                else:
+                    bp_page.storage_path = page_filename
+                    bp_page.status = "processing"
+                    await db.flush()
 
                 # 4. Classify sheet
                 classification = await vision_service.classify_sheet(img_data)
@@ -76,7 +89,17 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                 
                 # 5. Detect fixtures ONLY if it's a plumbing sheet
                 if bp_page.sheet_type == "plumbing":
-                    detections = await vision_service.detect_fixtures(img_data)
+                    detect_result = await vision_service.detect_fixtures(img_data)
+                    detections = detect_result.get("fixtures", [])
+                    if detect_result.get("status") == "error":
+                        # Surface vision failures rather than silently producing 0 fixtures.
+                        logger.warning(
+                            "vision.detect_failed_for_page",
+                            job_id=job_id,
+                            page=i + 1,
+                            error=detect_result.get("error"),
+                        )
+                        bp_page.status = "vision_error"
                     for det in detections:
                         db.add(BlueprintDetection(
                             page_id=bp_page.id,

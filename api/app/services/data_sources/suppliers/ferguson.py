@@ -12,6 +12,7 @@ Live API integration points are marked TODO(ferguson-api). The surrounding
 request/response plumbing, auth, and DB-update logic are fully implemented.
 """
 
+import asyncio
 import httpx
 import structlog
 from typing import List
@@ -67,6 +68,7 @@ class FergusonScraper(SupplierScraper):
             return []
 
         results: List[ScrapedProduct] = []
+        failed_canonical_items: list[str] = []
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Accept": "application/json",
@@ -76,46 +78,94 @@ class FergusonScraper(SupplierScraper):
             # Process in batches of _BATCH_SIZE
             for i in range(0, len(sku_list), _BATCH_SIZE):
                 batch = sku_list[i : i + _BATCH_SIZE]
-                try:
-                    # TODO(ferguson-api): Replace with verified Ferguson Trade API endpoint.
-                    # The path, query params, and response shape below are based on
-                    # Ferguson's published API overview. Verify against their actual
-                    # sandbox documentation before enabling in production.
-                    resp = await client.get(
-                        f"{self._api_base}{_FERGUSON_PRICING_PATH}",
-                        params={"skus": ",".join(batch)},
-                        headers=headers,
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
+                batch_succeeded = False
+                # Retry transient failures (connection / 5xx) up to 3 times w/ backoff.
+                last_exc: Exception | None = None
+                for attempt in range(3):
+                    try:
+                        # TODO(ferguson-api): Replace with verified Ferguson Trade API endpoint.
+                        # The path, query params, and response shape below are based on
+                        # Ferguson's published API overview. Verify against their actual
+                        # sandbox documentation before enabling in production.
+                        resp = await client.get(
+                            f"{self._api_base}{_FERGUSON_PRICING_PATH}",
+                            params={"skus": ",".join(batch)},
+                            headers=headers,
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
 
-                    for product in data.get("products", []):
-                        sku = product.get("sku", "")
+                        for product in data.get("products", []):
+                            sku = product.get("sku", "")
+                            canonical_id = sku_to_canonical.get(sku)
+                            if not canonical_id:
+                                continue
+
+                            # Prefer net (trade) price; fall back to list price
+                            cost = product.get("netPrice") or product.get("listPrice")
+                            if not cost:
+                                continue
+
+                            original_cost = CANONICAL_MAP.get(canonical_id, {}).get("ferguson", {}).get("cost", 0)
+                            self._check_price_alert(canonical_id, sku, original_cost, float(cost))
+
+                            results.append(ScrapedProduct(
+                                canonical_item=canonical_id,
+                                sku=sku,
+                                name=product.get("description", CANONICAL_MAP.get(canonical_id, {}).get("ferguson", {}).get("name", sku)),
+                                cost=round(float(cost), 2),
+                                scraped_at=datetime.now(timezone.utc),
+                                source_url=f"{self._api_base}{_FERGUSON_PRICING_PATH}?skus={sku}",
+                            ))
+                        batch_succeeded = True
+                        break  # batch done
+
+                    except httpx.HTTPStatusError as e:
+                        last_exc = e
+                        # Only retry on 5xx; client errors won't recover.
+                        if 500 <= e.response.status_code < 600 and attempt < 2:
+                            backoff = 0.5 * (2 ** attempt)
+                            logger.warning(
+                                "ferguson.api_5xx_retry",
+                                status=e.response.status_code,
+                                batch_start=i,
+                                attempt=attempt + 1,
+                                backoff=backoff,
+                            )
+                            await asyncio.sleep(backoff)
+                            continue
+                        logger.error("ferguson.api_error", status=e.response.status_code, batch_start=i)
+                        break
+                    except (httpx.TransportError, httpx.TimeoutException) as e:
+                        last_exc = e
+                        if attempt < 2:
+                            backoff = 0.5 * (2 ** attempt)
+                            logger.warning("ferguson.transport_retry", error=str(e), batch_start=i, attempt=attempt + 1)
+                            await asyncio.sleep(backoff)
+                            continue
+                        logger.error("ferguson.transport_failed", error=str(e), batch_start=i)
+                        break
+                    except Exception as e:
+                        last_exc = e
+                        logger.error("ferguson.fetch_error", error=str(e), batch_start=i)
+                        break
+
+                if not batch_succeeded:
+                    # Track which canonical items in this batch had no live data.
+                    for sku in batch:
                         canonical_id = sku_to_canonical.get(sku)
-                        if not canonical_id:
-                            continue
+                        if canonical_id:
+                            failed_canonical_items.append(canonical_id)
 
-                        # Prefer net (trade) price; fall back to list price
-                        cost = product.get("netPrice") or product.get("listPrice")
-                        if not cost:
-                            continue
-
-                        original_cost = CANONICAL_MAP.get(canonical_id, {}).get("ferguson", {}).get("cost", 0)
-                        self._check_price_alert(canonical_id, sku, original_cost, float(cost))
-
-                        results.append(ScrapedProduct(
-                            canonical_item=canonical_id,
-                            sku=sku,
-                            name=product.get("description", CANONICAL_MAP.get(canonical_id, {}).get("ferguson", {}).get("name", sku)),
-                            cost=round(float(cost), 2),
-                            scraped_at=datetime.now(timezone.utc),
-                            source_url=f"{self._api_base}{_FERGUSON_PRICING_PATH}?skus={sku}",
-                        ))
-
-                except httpx.HTTPStatusError as e:
-                    logger.error("ferguson.api_error", status=e.response.status_code, batch_start=i)
-                except Exception as e:
-                    logger.error("ferguson.fetch_error", error=str(e), batch_start=i)
+        # Fallback: simulate prices for canonical items the live API couldn't return.
+        if failed_canonical_items:
+            logger.warning(
+                "ferguson.fallback_to_simulation",
+                missing=len(failed_canonical_items),
+                fetched=len(results),
+            )
+            simulated = self._simulate_fetch(failed_canonical_items)
+            results.extend(simulated)
 
         logger.info("ferguson.live_fetch_complete", fetched=len(results), total_skus=len(sku_list))
         return results

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -25,13 +25,11 @@ async def _get_owned_project(project_id: int, db: AsyncSession, current_user: Us
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if not current_user.is_admin:
-        org_match = (
-            hasattr(current_user, "organization_id")
-            and current_user.organization_id
-            and project.organization_id == current_user.organization_id
-        )
-        if project.created_by != current_user.id and not org_match:
-            raise HTTPException(status_code=403, detail="Not authorized to access this project")
+        user_org = getattr(current_user, "organization_id", None)
+        org_match = user_org is not None and project.organization_id == user_org
+        is_creator = project.created_by is not None and project.created_by == current_user.id
+        if not (org_match or is_creator):
+            raise HTTPException(status_code=404, detail="Project not found")
     return project
 
 
@@ -65,7 +63,7 @@ async def create_project(
         zip_code=request.zip_code,
         notes=request.notes,
         created_by=current_user.id,
-        organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
+        organization_id=getattr(current_user, "organization_id", None),
     )
     db.add(project)
     await db.flush()
@@ -88,7 +86,7 @@ async def create_project(
 
 @router.get("", response_model=ProjectListResponse)
 async def list_projects(
-    status: str | None = Query(default=None),
+    status: Optional[Literal["lead", "estimate_sent", "won", "lost", "in_progress", "complete"]] = Query(default=None),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0),
     db: AsyncSession = Depends(get_db),
@@ -119,10 +117,11 @@ async def list_projects(
         .offset(offset)
     )
     # Scope to user's org (or own projects if no org assigned)
+    user_org = getattr(current_user, "organization_id", None)
     if current_user.is_admin:
         pass  # admin sees all
-    elif hasattr(current_user, "organization_id") and current_user.organization_id:
-        query = query.where(Project.organization_id == current_user.organization_id)
+    elif user_org is not None:
+        query = query.where(Project.organization_id == user_org)
     else:
         query = query.where(Project.created_by == current_user.id)
 
@@ -135,8 +134,8 @@ async def list_projects(
     # Count all projects by status scoped to same org/user
     counts_query = select(Project.status, func.count(Project.id)).group_by(Project.status)
     if not current_user.is_admin:
-        if hasattr(current_user, "organization_id") and current_user.organization_id:
-            counts_query = counts_query.where(Project.organization_id == current_user.organization_id)
+        if user_org is not None:
+            counts_query = counts_query.where(Project.organization_id == user_org)
         else:
             counts_query = counts_query.where(Project.created_by == current_user.id)
     counts_result = await db.execute(counts_query)
