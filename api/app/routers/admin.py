@@ -1,16 +1,20 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 import structlog
 
+from app.config import settings
 from app.database import get_db
 from app.models.labor import LaborTemplate, MarkupRule
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
+from app.models.blueprints import BlueprintJob
+from app.models.documents import UploadedDocument
 from app.services.labor_engine import LABOR_TEMPLATES, list_template_codes, get_template
 from app.core.auth import get_current_user, get_current_admin
 from app.core.cache import cache_get, cache_set, cache_invalidate
+from app.core.celery_inspect import get_task_state
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -422,3 +426,171 @@ async def deactivate_canonical_item_price(
     await db.commit()
     logger.info("canonical_item.deactivated", canonical_item=canonical_item, supplier=supplier_slug)
     return {"deactivated": True, "canonical_item": canonical_item, "supplier": supplier_slug}
+
+
+# ─── Worker task observability + manual retry ──────────────────────────────
+
+_RETRY_LOCK_TTL_SECONDS = 60
+
+
+def _retry_lock_key(kind: str, item_id: int) -> str:
+    return f"retry_lock:{kind}:{item_id}"
+
+
+async def _acquire_retry_lock(lock_key: str) -> bool:
+    """Atomic SET NX EX via Redis. Returns True if we acquired the lock.
+
+    Falls back to True (allow retry) if Redis is unreachable so local/dev
+    environments without Redis don't block manual retries.
+    """
+    try:
+        import redis.asyncio as aioredis
+
+        client = aioredis.from_url(
+            settings.celery_broker_url, socket_connect_timeout=1, socket_timeout=1
+        )
+        try:
+            acquired = await client.set(
+                lock_key, "1", nx=True, ex=_RETRY_LOCK_TTL_SECONDS
+            )
+            return bool(acquired)
+        finally:
+            await client.aclose()
+    except Exception as exc:
+        logger.warning("admin.retry_lock_unavailable", key=lock_key, error=str(exc))
+        return True
+
+
+@router.get("/tasks/{task_id}")
+async def get_admin_task_state(
+    task_id: str,
+    current_user=Depends(get_current_admin),
+):
+    """Return Celery task state for a given task id."""
+    return get_task_state(task_id)
+
+
+@router.get("/tasks")
+async def list_admin_failed_tasks(
+    status: str = Query("failed", description="Only 'failed' is supported today"),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """List failed blueprint jobs and document uploads."""
+    if status != "failed":
+        raise HTTPException(status_code=400, detail="Only status=failed is supported")
+
+    bp_result = await db.execute(
+        select(BlueprintJob)
+        .where(BlueprintJob.status == "error")
+        .order_by(desc(BlueprintJob.updated_at), desc(BlueprintJob.id))
+        .limit(limit)
+    )
+    blueprint_jobs = bp_result.scalars().all()
+
+    doc_result = await db.execute(
+        select(UploadedDocument)
+        .where(UploadedDocument.status == "error")
+        .order_by(desc(UploadedDocument.updated_at), desc(UploadedDocument.id))
+        .limit(limit)
+    )
+    document_uploads = doc_result.scalars().all()
+
+    items = []
+    for bp in blueprint_jobs:
+        items.append({
+            "type": "blueprint",
+            "id": bp.id,
+            "original_filename": bp.original_filename or bp.filename,
+            "error": bp.processing_error,
+            "updated_at": bp.updated_at.isoformat() if bp.updated_at else None,
+            "task_id": None,
+        })
+    for doc in document_uploads:
+        items.append({
+            "type": "document",
+            "id": doc.id,
+            "original_filename": doc.original_filename or doc.filename,
+            "error": doc.processing_error,
+            "updated_at": doc.updated_at.isoformat() if doc.updated_at else None,
+            "task_id": None,
+        })
+
+    items.sort(key=lambda x: x["updated_at"] or "", reverse=True)
+    return {"count": len(items), "items": items[:limit]}
+
+
+@router.post("/blueprints/{job_id}/retry")
+async def retry_blueprint_job(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """Reset a failed BlueprintJob and re-enqueue the analysis task."""
+    result = await db.execute(select(BlueprintJob).where(BlueprintJob.id == job_id))
+    job = result.scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Blueprint job not found")
+    if job.status != "error":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Blueprint job is not in error state (status={job.status})",
+        )
+
+    lock_key = _retry_lock_key("bp", job_id)
+    acquired = await _acquire_retry_lock(lock_key)
+    if not acquired:
+        raise HTTPException(status_code=409, detail="Retry already in progress")
+
+    job_id_local = job.id
+    storage_path_local = job.storage_path
+    job.status = "pending"
+    job.processing_error = None
+    await db.commit()
+
+    from worker.tasks.blueprint_analysis import analyze_blueprint
+
+    async_result = analyze_blueprint.delay(job_id_local, storage_path_local)
+    task_id = getattr(async_result, "id", None)
+    logger.info("admin.blueprint_retry", job_id=job_id_local, task_id=task_id)
+    return {"task_id": task_id, "job_id": job_id_local, "status": "pending"}
+
+
+@router.post("/documents/{document_id}/retry")
+async def retry_document_upload(
+    document_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_admin),
+):
+    """Reset a failed UploadedDocument and re-enqueue the processing task."""
+    result = await db.execute(
+        select(UploadedDocument).where(UploadedDocument.id == document_id)
+    )
+    doc = result.scalar_one_or_none()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.status != "error":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Document is not in error state (status={doc.status})",
+        )
+
+    lock_key = _retry_lock_key("doc", document_id)
+    acquired = await _acquire_retry_lock(lock_key)
+    if not acquired:
+        raise HTTPException(status_code=409, detail="Retry already in progress")
+
+    doc_id_local = doc.id
+    storage_path_local = doc.storage_path
+    doc_type_local = doc.doc_type
+    doc.status = "pending"
+    doc.processing_error = None
+    await db.commit()
+
+    from worker.tasks.document_processing import process_document
+
+    async_result = process_document.delay(doc_id_local, storage_path_local, doc_type_local)
+    task_id = getattr(async_result, "id", None)
+    logger.info("admin.document_retry", document_id=doc_id_local, task_id=task_id)
+    return {"task_id": task_id, "document_id": doc_id_local, "status": "pending"}
