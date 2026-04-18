@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -8,14 +9,19 @@ import {
   FileText, StickyNote, RefreshCw, Save, ExternalLink,
   Calendar, ChevronRight,
   ArrowRightLeft, Send, CheckCircle2, XCircle, MessageSquare, UserPlus,
-  Activity as ActivityIcon,
+  Activity as ActivityIcon, Trash2,
 } from 'lucide-react'
 import { format, isValid, formatDistanceToNow } from 'date-fns'
 import { projectsApi, api } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+const ConfirmDialog = dynamic(
+  () => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })),
+  { ssr: false },
+)
 
 interface EstimateSummary {
   id: number
@@ -79,13 +85,15 @@ export function ProjectDrawer({
 }) {
   const router = useRouter()
   const toast  = useToast()
+  const queryClient = useQueryClient()
 
-  const [project,  setProject]  = useState<ProjectDetail | null>(null)
-  const [loading,  setLoading]  = useState(false)
-  const [saving,   setSaving]   = useState(false)
-  const [editing,  setEditing]  = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [project,       setProject]       = useState<ProjectDetail | null>(null)
+  const [loading,       setLoading]       = useState(false)
+  const [saving,        setSaving]        = useState(false)
+  const [editing,       setEditing]       = useState(false)
+  const [activeTab,     setActiveTab]     = useState<'details' | 'activity'>('details')
+  const [saveError,     setSaveError]     = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [form,     setForm]     = useState({
     customer_name:  '',
     customer_phone: '',
@@ -95,6 +103,16 @@ export function ProjectDrawer({
     county:         '',
     zip_code:       '',
     notes:          '',
+  })
+
+  const deleteProject = useMutation({
+    mutationFn: () => projectsApi.delete(project!.id),
+    onSuccess: () => {
+      toast.success('Project deleted')
+      onClose()
+      void queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: () => toast.error('Failed to delete project', 'Please try again.'),
   })
 
   useEffect(() => {
@@ -444,7 +462,7 @@ export function ProjectDrawer({
 
             {/* Footer action */}
             {!loading && project && (
-              <div className="px-5 py-3 border-t border-white/[0.07] shrink-0">
+              <div className="px-5 py-3 border-t border-white/[0.07] shrink-0 space-y-2">
                 <button
                   onClick={() => router.push('/estimator')}
                   className="btn-secondary w-full justify-center text-xs"
@@ -452,8 +470,26 @@ export function ProjectDrawer({
                   <ExternalLink size={13} />
                   Create New Estimate
                 </button>
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 transition-colors"
+                >
+                  <Trash2 size={13} />
+                  Delete project
+                </button>
               </div>
             )}
+
+            <ConfirmDialog
+              open={deleteConfirm}
+              onClose={() => setDeleteConfirm(false)}
+              onConfirm={() => { deleteProject.mutate(); setDeleteConfirm(false) }}
+              title="Delete project?"
+              description="This project and all its estimates will be archived. You can restore it later from admin."
+              confirmLabel="Delete"
+              variant="danger"
+              isLoading={deleteProject.isPending}
+            />
           </motion.aside>
         </>
       )}

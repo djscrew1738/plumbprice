@@ -128,3 +128,39 @@ async def test_accept_flow_notifies_sender(test_client: AsyncClient, db_session)
     ).scalars().all()
     assert len(rows) >= 1
     assert str(est.id) in (rows[0].link or "")
+
+
+@pytest.mark.asyncio
+async def test_delete_notification(test_client: AsyncClient, db_session):
+    n = Notification(user_id=1, kind="system", title="To be deleted")
+    db_session.add(n)
+    await db_session.commit()
+    await db_session.refresh(n)
+    nid = n.id
+
+    res = await test_client.delete(f"/api/v1/notifications/{nid}")
+    assert res.status_code == 204
+
+    # Verify it no longer appears in the list
+    res = await test_client.get("/api/v1/notifications?limit=100")
+    assert res.status_code == 200
+    ids = [it["id"] for it in res.json()]
+    assert nid not in ids
+
+
+@pytest.mark.asyncio
+async def test_delete_notification_not_found(test_client: AsyncClient):
+    res = await test_client.delete("/api/v1/notifications/99999")
+    assert res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_notification_other_user_returns_404(test_client: AsyncClient, db_session):
+    # Notification for a different user — should not be visible/deletable
+    other = Notification(user_id=999, kind="system", title="Not yours")
+    db_session.add(other)
+    await db_session.commit()
+    await db_session.refresh(other)
+
+    res = await test_client.delete(f"/api/v1/notifications/{other.id}")
+    assert res.status_code == 404
