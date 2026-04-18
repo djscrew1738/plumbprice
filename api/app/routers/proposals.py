@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from sqlalchemy import select
@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.estimates import Estimate
 from app.models.users import User
 from app.services.proposal_service import send_proposal_email
+from app.core.limiter import limiter
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -22,7 +23,9 @@ class SendProposalRequest(BaseModel):
 
 
 @router.post("/{estimate_id}/send")
+@limiter.limit("20/hour")
 async def send_proposal(
+    request: Request,
     estimate_id: int,
     body: SendProposalRequest,
     current_user: User = Depends(get_current_user),

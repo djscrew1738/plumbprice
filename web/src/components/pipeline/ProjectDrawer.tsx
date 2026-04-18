@@ -81,6 +81,7 @@ export function ProjectDrawer({
   const [loading,  setLoading]  = useState(false)
   const [saving,   setSaving]   = useState(false)
   const [editing,  setEditing]  = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [form,     setForm]     = useState({
     customer_name:  '',
     customer_phone: '',
@@ -126,6 +127,7 @@ export function ProjectDrawer({
   const handleSave = async () => {
     if (!project) return
     setSaving(true)
+    setSaveError(null)
     try {
       await projectsApi.update(project.id, {
         customer_name:  form.customer_name  || undefined,
@@ -152,8 +154,11 @@ export function ProjectDrawer({
       })
       toast.success('Project updated')
       setEditing(false)
-    } catch {
-      toast.error('Failed to save changes')
+      setSaveError(null)
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Failed to save changes'
+      setSaveError(msg)
+      toast.error('Could not save project', msg)
     } finally {
       setSaving(false)
     }
@@ -327,6 +332,15 @@ export function ProjectDrawer({
                       {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                       {saving ? 'Saving…' : 'Save Changes'}
                     </motion.button>
+                  )}
+                  {editing && saveError && (
+                    <div
+                      role="alert"
+                      aria-live="polite"
+                      className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-400"
+                    >
+                      {saveError}
+                    </div>
                   )}
 
                   {/* Linked Estimates */}

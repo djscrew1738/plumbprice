@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 import uuid
@@ -14,6 +14,7 @@ from app.models.blueprints import BlueprintJob
 from app.models.users import User
 from app.core.storage import storage_client
 from app.config import settings
+from app.core.limiter import limiter
 
 try:
     from worker.tasks.blueprint_analysis import analyze_blueprint as _analyze_blueprint
@@ -29,7 +30,9 @@ _MAX_BLUEPRINT_BYTES = 100 * 1024 * 1024  # 100 MB
 
 
 @router.post("/upload", response_model=BlueprintJobResponse)
+@limiter.limit("10/minute")
 async def upload_blueprint(
+    request: Request,
     file: UploadFile = File(...),
     project_id: int = None,
     current_user: User = Depends(get_current_user),

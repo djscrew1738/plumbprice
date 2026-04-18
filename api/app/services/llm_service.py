@@ -92,16 +92,42 @@ class LLMService:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    @property
-    def _active_model(self) -> str:
-        if self._active_tier == "secondary":
-            return settings.llm_secondary_model
-        return settings.llm_primary_model
-
     def _make_client(self, timeout: float):
-        """Create a fresh AsyncOpenAI client with the given timeout."""
+        """Create a fresh AsyncOpenAI-compatible client for the active provider.
+
+        Provider selection (settings.default_llm_provider):
+          - "openai":   api.openai.com using OPENAI_API_KEY
+          - "anthropic": Anthropic API via the openai-compatible shim if
+                        ANTHROPIC_API_KEY is set; falls back to local Hermes.
+          - "hermes" / "ollama" / anything else: local Ollama at
+                        HERMES_ENDPOINT_URL using HERMES_API_KEY.
+
+        Returns None when the chosen provider has no usable credentials or
+        when the openai SDK is unavailable.
+        """
         try:
             from openai import AsyncOpenAI
+
+            provider = (settings.default_llm_provider or "hermes").lower()
+
+            if provider == "openai" and settings.openai_api_key:
+                return AsyncOpenAI(
+                    base_url="https://api.openai.com/v1",
+                    api_key=settings.openai_api_key,
+                    timeout=timeout,
+                )
+
+            if provider == "anthropic" and settings.anthropic_api_key:
+                base_url = (
+                    getattr(settings, "anthropic_base_url", None)
+                    or "https://api.anthropic.com/v1"
+                )
+                return AsyncOpenAI(
+                    base_url=base_url,
+                    api_key=settings.anthropic_api_key,
+                    timeout=timeout,
+                )
+
             return AsyncOpenAI(
                 base_url=settings.hermes_endpoint_url,
                 api_key=settings.hermes_api_key,
@@ -111,6 +137,18 @@ class LLMService:
             logger.warning("openai package not installed — LLM features disabled")
             self._available = False
             return None
+
+    @property
+    def _active_model(self) -> str:
+        """Pick the model string appropriate for the active provider."""
+        provider = (settings.default_llm_provider or "hermes").lower()
+        if provider == "openai" and settings.openai_api_key:
+            return settings.default_llm_model
+        if provider == "anthropic" and settings.anthropic_api_key:
+            return settings.default_llm_model
+        if self._active_tier == "secondary":
+            return settings.llm_secondary_model
+        return settings.llm_primary_model
 
     def _is_blocked(self) -> bool:
         if self._available is not False:

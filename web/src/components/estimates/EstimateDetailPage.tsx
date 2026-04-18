@@ -78,6 +78,7 @@ export function EstimateDetailPage() {
   const [proposalName,     setProposalName]     = useState('')
   const [proposalMsg,      setProposalMsg]      = useState('')
   const [proposalSending,  setProposalSending]  = useState(false)
+  const [proposalError,    setProposalError]    = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [diffOpen, setDiffOpen] = useState(false)
   const [diffV1, setDiffV1] = useState('')
@@ -146,6 +147,7 @@ export function EstimateDetailPage() {
   const handleSendProposal = useCallback(async () => {
     if (!estimate || !proposalEmail.trim()) return
     setProposalSending(true)
+    setProposalError(null)
     try {
       await proposalsApi.send(estimate.id, {
         recipient_email: proposalEmail.trim(),
@@ -157,9 +159,12 @@ export function EstimateDetailPage() {
       setProposalEmail('')
       setProposalName('')
       setProposalMsg('')
+      setProposalError(null)
       void queryClient.invalidateQueries({ queryKey: ['proposals', 'sends', id] })
-    } catch {
-      toast.error('Could not send proposal', 'Please try again.')
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Please try again.'
+      setProposalError(msg)
+      toast.error('Could not send proposal', msg)
     } finally {
       setProposalSending(false)
     }
@@ -323,7 +328,8 @@ export function EstimateDetailPage() {
         proposalName={proposalName}
         proposalMsg={proposalMsg}
         proposalSending={proposalSending}
-        onClose={() => setProposalOpen(false)}
+        proposalError={proposalError}
+        onClose={() => { setProposalOpen(false); setProposalError(null) }}
         onEmailChange={setProposalEmail}
         onNameChange={setProposalName}
         onMsgChange={setProposalMsg}

@@ -10,6 +10,7 @@ export interface ProposalSendModalProps {
   proposalName: string
   proposalMsg: string
   proposalSending: boolean
+  proposalError?: string | null
   onClose: () => void
   onEmailChange: (value: string) => void
   onNameChange: (value: string) => void
@@ -24,6 +25,7 @@ export function ProposalSendModal({
   proposalName,
   proposalMsg,
   proposalSending,
+  proposalError,
   onClose,
   onEmailChange,
   onNameChange,
@@ -103,6 +105,15 @@ export function ProposalSendModal({
             ) : 'Send'}
           </button>
         </div>
+        {proposalError && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-400"
+          >
+            {proposalError}
+          </div>
+        )}
       </form>
     </Modal>
   )

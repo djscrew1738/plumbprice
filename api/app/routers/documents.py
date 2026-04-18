@@ -3,7 +3,7 @@ import os
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -14,6 +14,7 @@ from app.models.documents import UploadedDocument
 from app.models.users import User
 from app.core.storage import storage_client
 from app.config import settings
+from app.core.limiter import limiter
 
 try:
     from worker.tasks.document_processing import process_document as _process_document
@@ -35,7 +36,9 @@ _MAX_FILE_BYTES = 50 * 1024 * 1024  # 50 MB
 
 
 @router.post("/upload")
+@limiter.limit("10/minute")
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     doc_type: str = Form(...),  # price_sheet, spec, code, manual
     supplier_id: Optional[int] = Form(None),

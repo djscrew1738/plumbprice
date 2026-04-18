@@ -3,8 +3,8 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from slowapi import Limiter  # noqa: F401
+from slowapi.util import get_remote_address  # noqa: F401  (kept for compat)
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -16,10 +16,10 @@ from app.schemas.chat import ChatPriceRequest, ChatPriceResponse
 from app.services.agent import process_chat_message
 from app.services.estimate_service import persist_estimate
 from app.services.llm_service import llm_service
+from app.core.limiter import limiter
 
 logger = structlog.get_logger()
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 STREAM_TIMEOUT_SECONDS = 20
 

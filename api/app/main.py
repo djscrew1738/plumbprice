@@ -7,13 +7,13 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 import structlog
 import uuid
 
 from app.config import settings
+from app.core.limiter import limiter
 
 if settings.sentry_dsn:
     sentry_sdk.init(
@@ -31,7 +31,6 @@ from app.core.auth import get_current_user
 from app.models.users import User
 
 logger = structlog.get_logger()
-limiter = Limiter(key_func=get_remote_address)
 
 
 # Dev-default secrets that must never be used in production. Fail fast if we
@@ -319,6 +318,30 @@ async def logging_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.request_id = request_id
 
+    # Best-effort decode of the auth token to enrich logs with user/org
+    # context. Failures here are silent — auth is enforced by route deps.
+    user_id: int | None = None
+    org_id: int | None = None
+    auth_header = request.headers.get("Authorization") or ""
+    if auth_header.startswith("Bearer "):
+        try:
+            from app.core.auth import decode_token
+            payload = decode_token(auth_header[7:])
+            sub = payload.get("sub")
+            if sub is not None:
+                try:
+                    user_id = int(sub)
+                except (TypeError, ValueError):
+                    user_id = None
+            org_raw = payload.get("org_id") or payload.get("organization_id")
+            if org_raw is not None:
+                try:
+                    org_id = int(org_raw)
+                except (TypeError, ValueError):
+                    org_id = None
+        except Exception:
+            pass
+
     t0 = _time.monotonic()
     response = await call_next(request)
     latency_ms = round((_time.monotonic() - t0) * 1000, 1)
@@ -335,6 +358,8 @@ async def logging_middleware(request: Request, call_next):
             status=response.status_code,
             latency_ms=latency_ms,
             client=request.client.host if request.client else None,
+            user_id=user_id,
+            org_id=org_id,
         )
         if response.status_code >= 500:
             log.error("request_error")
