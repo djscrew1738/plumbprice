@@ -79,6 +79,7 @@ export function EstimateDetailPage() {
   const [proposalMsg,      setProposalMsg]      = useState('')
   const [proposalSending,  setProposalSending]  = useState(false)
   const [proposalError,    setProposalError]    = useState<string | null>(null)
+  const [proposalShareUrl, setProposalShareUrl] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [diffOpen, setDiffOpen] = useState(false)
   const [diffV1, setDiffV1] = useState('')
@@ -149,16 +150,20 @@ export function EstimateDetailPage() {
     setProposalSending(true)
     setProposalError(null)
     try {
-      await proposalsApi.send(estimate.id, {
+      const res = await proposalsApi.send(estimate.id, {
         recipient_email: proposalEmail.trim(),
         recipient_name: proposalName.trim() || undefined,
         message: proposalMsg.trim() || undefined,
       })
       toast.success('Proposal sent')
-      setProposalOpen(false)
-      setProposalEmail('')
-      setProposalName('')
-      setProposalMsg('')
+      const token = res.data.public_token ?? null
+      let url = res.data.accept_url ?? null
+      if (token && !url && typeof window !== 'undefined') {
+        url = `${window.location.origin}/p/${token}`
+      }
+      setProposalShareUrl(url)
+      // Don't reset email/name/msg yet — the modal now shows the share link and
+      // the user dismisses it explicitly.
       setProposalError(null)
       void queryClient.invalidateQueries({ queryKey: ['proposals', 'sends', id] })
     } catch (err) {
@@ -329,7 +334,17 @@ export function EstimateDetailPage() {
         proposalMsg={proposalMsg}
         proposalSending={proposalSending}
         proposalError={proposalError}
-        onClose={() => { setProposalOpen(false); setProposalError(null) }}
+        shareUrl={proposalShareUrl}
+        onClose={() => {
+          setProposalOpen(false)
+          setProposalError(null)
+          if (proposalShareUrl) {
+            setProposalShareUrl(null)
+            setProposalEmail('')
+            setProposalName('')
+            setProposalMsg('')
+          }
+        }}
         onEmailChange={setProposalEmail}
         onNameChange={setProposalName}
         onMsgChange={setProposalMsg}

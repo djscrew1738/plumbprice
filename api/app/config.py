@@ -96,6 +96,9 @@ class Settings(BaseSettings):
     resend_api_key: Optional[str] = Field(default=None, env="RESEND_API_KEY")
     email_from: str = Field(default="estimates@ctlplumbingllc.com", env="EMAIL_FROM")
 
+    # Public URL for customer-facing proposal links
+    frontend_url: str = Field(default="http://localhost:3000", env="FRONTEND_URL")
+
     model_config = {
         "env_file": ".env" if os.getenv("ENVIRONMENT") != "test" else None,
         "env_file_encoding": "utf-8",

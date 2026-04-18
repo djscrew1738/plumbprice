@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Send, Download, RefreshCw, FileOutput } from 'lucide-react'
+import { Send, Download, RefreshCw, FileOutput, Copy, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { proposalsApi } from '@/lib/api'
@@ -16,6 +16,12 @@ export interface SentProposal {
   sent_at: string | null
   created_at: string
   status?: string
+  public_token?: string | null
+  token_expires_at?: string | null
+  opened_at?: string | null
+  accepted_at?: string | null
+  declined_at?: string | null
+  client_signature?: string | null
 }
 
 export interface OutcomeRecorderCardProps {
@@ -29,8 +35,20 @@ const STATUS_VARIANT: Record<string, 'neutral' | 'info' | 'warning' | 'success' 
   draft:    'neutral',
   sent:     'info',
   viewed:   'warning',
+  opened:   'warning',
   accepted: 'success',
   declined: 'danger',
+  expired:  'neutral',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  sent:     'Sent',
+  opened:   'Opened',
+  viewed:   'Opened',
+  accepted: 'Accepted',
+  declined: 'Declined',
+  expired:  'Expired',
+  draft:    'Draft',
 }
 
 export function OutcomeRecorderCard({
@@ -42,6 +60,20 @@ export function OutcomeRecorderCard({
   const toast = useToast()
   const [resendingId, setResendingId] = useState<number | null>(null)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  const handleCopyLink = useCallback(async (token: string | null | undefined, id: number) => {
+    if (!token) return
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      await navigator.clipboard.writeText(`${origin}/p/${token}`)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId((v) => (v === id ? null : v)), 2000)
+      toast.success('Link copied')
+    } catch {
+      toast.error('Could not copy link')
+    }
+  }, [toast])
 
   const handleResend = useCallback(async (proposalId: number) => {
     setResendingId(proposalId)
@@ -58,14 +90,15 @@ export function OutcomeRecorderCard({
   const handleDownloadPdf = useCallback(async (proposalId: number) => {
     setDownloadingId(proposalId)
     try {
-      const res = await proposalsApi.downloadPdf(proposalId)
+      const targetId = estimateId ?? proposalId
+      const res = await proposalsApi.downloadPdf(targetId)
       downloadBlob(res.data as Blob, `proposal-${proposalId}.pdf`)
     } catch {
       toast.error('Could not download PDF', 'Please try again.')
     } finally {
       setDownloadingId(null)
     }
-  }, [toast])
+  }, [toast, estimateId])
 
   return (
     <>
@@ -102,7 +135,7 @@ export function OutcomeRecorderCard({
           <ul className="space-y-3">
             {sentProposals.map(p => {
               const status = p.status ?? 'sent'
-              const statusLabel = status.charAt(0).toUpperCase() + status.slice(1)
+              const statusLabel = STATUS_LABEL[status] ?? (status.charAt(0).toUpperCase() + status.slice(1))
               const dateStr = p.sent_at
                 ? new Date(p.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -118,9 +151,25 @@ export function OutcomeRecorderCard({
                       <Badge variant={STATUS_VARIANT[status] ?? 'neutral'} size="sm" dot>
                         {statusLabel}
                       </Badge>
+                      {status === 'accepted' && p.client_signature && (
+                        <span className="text-[11px] text-emerald-400/80 truncate">
+                          · signed by {p.client_signature}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {p.public_token && (
+                      <Tooltip content={copiedId === p.id ? 'Copied!' : 'Copy public link'}>
+                        <button
+                          onClick={() => void handleCopyLink(p.public_token, p.id)}
+                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                          aria-label="Copy public proposal link"
+                        >
+                          {copiedId === p.id ? <Check size={12} /> : <Copy size={12} />}
+                        </button>
+                      </Tooltip>
+                    )}
                     <Tooltip content="Resend proposal">
                       <button
                         onClick={() => void handleResend(p.id)}

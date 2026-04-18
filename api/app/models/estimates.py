@@ -39,6 +39,12 @@ class Estimate(Base):
     # Metadata
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    blueprint_job_id = Column(
+        Integer,
+        ForeignKey("blueprint_jobs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     valid_until = Column(DateTime(timezone=True), nullable=True)
@@ -107,5 +113,16 @@ class Proposal(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Public acceptance loop
+    public_token = Column(String(64), unique=True, index=True, nullable=True)
+    token_expires_at = Column(DateTime(timezone=True), nullable=True)
+    opened_at = Column(DateTime(timezone=True), nullable=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    declined_at = Column(DateTime(timezone=True), nullable=True)
+    decline_reason = Column(Text, nullable=True)
+    client_signature = Column(String(200), nullable=True)
+    client_ip = Column(String(45), nullable=True)
+    client_user_agent = Column(String(500), nullable=True)
 
     estimate = relationship("Estimate")

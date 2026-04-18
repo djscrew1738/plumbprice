@@ -1,6 +1,7 @@
 'use client'
 
-import { RefreshCw } from 'lucide-react'
+import { useState } from 'react'
+import { RefreshCw, Copy, Check } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 
 export interface ProposalSendModalProps {
@@ -11,6 +12,8 @@ export interface ProposalSendModalProps {
   proposalMsg: string
   proposalSending: boolean
   proposalError?: string | null
+  /** Public URL shown after a successful send so the contractor can share it another way. */
+  shareUrl?: string | null
   onClose: () => void
   onEmailChange: (value: string) => void
   onNameChange: (value: string) => void
@@ -26,20 +29,67 @@ export function ProposalSendModal({
   proposalMsg,
   proposalSending,
   proposalError,
+  shareUrl,
   onClose,
   onEmailChange,
   onNameChange,
   onMsgChange,
   onSend,
 }: ProposalSendModalProps) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* ignore */ }
+  }
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Send Proposal"
-      description={`Email estimate #${estimateId} as a proposal to your customer.`}
+      title={shareUrl ? 'Proposal sent' : 'Send Proposal'}
+      description={
+        shareUrl
+          ? 'Your customer will receive an email. You can also share the link directly.'
+          : `Email estimate #${estimateId} as a proposal to your customer.`
+      }
       size="sm"
     >
+      {shareUrl ? (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-[color:var(--line)] bg-white/[0.02] p-3">
+            <div className="mb-1 text-xs font-medium text-[color:var(--muted-ink)]">Shareable link</div>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={shareUrl}
+                onFocus={(e) => e.currentTarget.select()}
+                className="input w-full text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => void handleCopy()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] px-3 py-2 text-xs font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)]"
+                aria-label="Copy link"
+              >
+                {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+              </button>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-primary rounded-xl px-4 py-2 text-sm"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      ) : (
       <form
         onSubmit={e => { e.preventDefault(); onSend() }}
         className="space-y-3"
@@ -115,6 +165,7 @@ export function ProposalSendModal({
           </div>
         )}
       </form>
+      )}
     </Modal>
   )
 }

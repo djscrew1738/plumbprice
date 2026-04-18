@@ -379,6 +379,8 @@ export interface SendProposalResponse {
   proposal_id: number
   sent: boolean
   recipient: string
+  public_token?: string | null
+  accept_url?: string | null
 }
 
 export interface ProposalListItem {
@@ -403,7 +405,20 @@ export const proposalsApi = {
   send: (estimateId: number, body: SendProposalRequest) =>
     api.post<SendProposalResponse>(`/proposals/${estimateId}/send`, body),
   listSends: (estimateId: number) =>
-    api.get<Array<{ id: number; recipient_email: string; recipient_name: string | null; sent_at: string | null; created_at: string; status?: string }>>(`/proposals/${estimateId}/sends`),
+    api.get<Array<{
+      id: number
+      recipient_email: string
+      recipient_name: string | null
+      sent_at: string | null
+      created_at: string
+      public_token?: string | null
+      token_expires_at?: string | null
+      opened_at?: string | null
+      accepted_at?: string | null
+      declined_at?: string | null
+      client_signature?: string | null
+      status?: string
+    }>>(`/proposals/${estimateId}/sends`),
   generate: (body: { estimate_id: number }) =>
     api.post<ProposalDetail>('/proposals/generate', body),
   list: (params?: { status?: string; search?: string }) =>

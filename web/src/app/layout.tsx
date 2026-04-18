@@ -51,6 +51,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     main?.focus()
   }
 
+  // Public, unauthenticated surfaces (customer proposal viewer) render without
+  // the app chrome — no sidebar, header, mobile nav, or auth provider.
+  const isPublicSurface = pathname?.startsWith('/p/') ?? false
+
   return (
     <html lang="en">
       <head>
@@ -112,6 +116,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }
         >
           <QueryClientProvider client={queryClient}>
+          {isPublicSurface ? (
+            <ToastProvider>
+              <main id="main-content" tabIndex={-1} className="min-h-dvh outline-none">
+                {children}
+              </main>
+            </ToastProvider>
+          ) : (
           <AuthProvider>
           <ToastProvider>
             <div className="flex min-h-dvh">
@@ -166,6 +177,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ShortcutsDialog />
           <RouteAnnouncer />
           </AuthProvider>
+          )}
           </QueryClientProvider>
         </ErrorBoundary>
       </body>
