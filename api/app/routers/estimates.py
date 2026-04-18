@@ -120,8 +120,8 @@ async def create_service_estimate(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        logger.error("Service estimate error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Service estimate error", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while generating the estimate")
 
 
 @router.post("/construction", response_model=EstimateResponse)
@@ -185,8 +185,8 @@ async def create_construction_estimate(
         )
 
     except Exception as e:
-        logger.error("Construction estimate error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Construction estimate error", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while generating the estimate")
 
 
 @router.get("", response_model=list[EstimateListItem])

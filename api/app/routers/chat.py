@@ -171,8 +171,8 @@ async def chat_price(
         )
 
     except Exception as e:
-        logger.error("Chat pricing error", error=str(e), message=body.message, user_id=current_user.id)
-        raise HTTPException(status_code=500, detail=f"Pricing error: {str(e)}")
+        logger.error("Chat pricing error", error=str(e), message=body.message, user_id=current_user.id, exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while processing your request")
 
 
 @router.post("/price/stream")
@@ -207,8 +207,8 @@ async def chat_price_stream(
             skip_llm_response=True,   # streaming endpoint generates LLM tokens below
         )
     except Exception as e:
-        logger.error("Chat stream pricing error", error=str(e), user_id=current_user.id)
-        raise HTTPException(status_code=500, detail=f"Pricing error: {str(e)}")
+        logger.error("Chat stream pricing error", error=str(e), user_id=current_user.id, exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while processing your request")
 
     estimate_result = result.pop("_estimate_result", None)
 

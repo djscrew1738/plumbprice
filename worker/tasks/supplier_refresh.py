@@ -3,6 +3,7 @@
 from worker.worker import app
 import structlog
 import httpx
+import random
 import os
 import asyncio
 from datetime import datetime, timedelta, timezone
@@ -101,8 +102,9 @@ def refresh_all_suppliers(self):
         return {"status": "complete", "suppliers": results}
 
     except Exception as exc:
-        logger.error("Supplier refresh failed", error=str(exc))
-        raise self.retry(exc=exc, countdown=300)
+        logger.error("Supplier refresh failed", error=str(exc), exc_info=True)
+        backoff = min(300 * (2 ** self.request.retries) + random.uniform(0, 60), 3600)
+        raise self.retry(exc=exc, countdown=backoff)
 
 
 async def _async_refresh_supplier(supplier_slug: str):

@@ -190,17 +190,10 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.post('/import-templates')
-async def import_pricing_templates(db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+async def import_pricing_templates(db: AsyncSession = Depends(get_db), current_user = Depends(get_current_admin)):
     """Import pricing templates from web/templates/pricing into the database as PricingTemplate rows.
     Requires admin user.
     """
-    # Authorization check (expect current_user has is_admin attribute)
-    try:
-        if not getattr(current_user, 'is_admin', False):
-            raise HTTPException(status_code=403, detail='Admin access required')
-    except Exception:
-        raise HTTPException(status_code=403, detail='Admin access required')
-
     from app.services.external_templates import list_pricing_templates, get_pricing_template
     from app.models.pricing_template import PricingTemplate
 

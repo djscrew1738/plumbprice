@@ -95,4 +95,4 @@ async def test_chat_price_server_error(mock_process_chat, test_client: AsyncClie
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     data = response.json()
-    assert "Pricing error: Pricing engine exploded" in data["detail"]
+    assert "An error occurred while processing your request" in data["detail"]

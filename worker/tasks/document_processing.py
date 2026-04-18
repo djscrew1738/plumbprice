@@ -2,6 +2,7 @@
 
 import asyncio
 import io
+import random
 import fitz  # PyMuPDF
 import structlog
 from worker.worker import app
@@ -90,8 +91,8 @@ async def _async_process_document(document_id: int, storage_path: str, doc_type:
                     doc.status = "error"
                     doc.processing_error = str(e)
                     await db.commit()
-            except:
-                pass
+            except Exception as rollback_exc:
+                logger.warning("Failed to update document status to error", document_id=document_id, error=str(rollback_exc))
             raise e
 
 
@@ -108,5 +109,6 @@ def process_document(self, document_id: int, storage_path: str, doc_type: str):
         return result
 
     except Exception as exc:
-        logger.error("Document processing failed", document_id=document_id, error=str(exc))
-        raise self.retry(exc=exc, countdown=60)
+        logger.error("Document processing failed", document_id=document_id, error=str(exc), exc_info=True)
+        backoff = min(60 * (2 ** self.request.retries) + random.uniform(0, 30), 600)
+        raise self.retry(exc=exc, countdown=backoff)

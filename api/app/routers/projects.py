@@ -5,15 +5,34 @@ from pydantic import BaseModel
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_user
 from app.database import get_db
 from app.models.estimates import Estimate
 from app.models.projects import Project
+from app.models.users import User
 from app.schemas.projects import ProjectCreateRequest, ProjectListItem, ProjectListResponse
 
 router = APIRouter()
 PIPELINE_STATUSES = ["lead", "estimate_sent", "won", "lost", "in_progress", "complete"]
 
 VALID_STATUSES = set(PIPELINE_STATUSES)
+
+
+async def _get_owned_project(project_id: int, db: AsyncSession, current_user: User) -> Project:
+    """Fetch a project and verify the current user has access to it."""
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not current_user.is_admin:
+        org_match = (
+            hasattr(current_user, "organization_id")
+            and current_user.organization_id
+            and project.organization_id == current_user.organization_id
+        )
+        if project.created_by != current_user.id and not org_match:
+            raise HTTPException(status_code=403, detail="Not authorized to access this project")
+    return project
 
 
 class ProjectUpdateRequest(BaseModel):
@@ -30,6 +49,7 @@ class ProjectUpdateRequest(BaseModel):
 async def create_project(
     request: ProjectCreateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     project = Project(
         name=request.name,
@@ -44,6 +64,8 @@ async def create_project(
         state=request.state,
         zip_code=request.zip_code,
         notes=request.notes,
+        created_by=current_user.id,
+        organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
     )
     db.add(project)
     await db.flush()
@@ -70,6 +92,7 @@ async def list_projects(
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     # Correlated subqueries avoid loading all estimates into memory
     estimate_count_sq = (
@@ -95,16 +118,28 @@ async def list_projects(
         .limit(limit)
         .offset(offset)
     )
+    # Scope to user's org (or own projects if no org assigned)
+    if current_user.is_admin:
+        pass  # admin sees all
+    elif hasattr(current_user, "organization_id") and current_user.organization_id:
+        query = query.where(Project.organization_id == current_user.organization_id)
+    else:
+        query = query.where(Project.created_by == current_user.id)
+
     if status:
         query = query.where(Project.status == status)
 
     result = await db.execute(query)
     rows = result.all()
 
-    # Count all projects by status (not just the current page)
-    counts_result = await db.execute(
-        select(Project.status, func.count(Project.id)).group_by(Project.status)
-    )
+    # Count all projects by status scoped to same org/user
+    counts_query = select(Project.status, func.count(Project.id)).group_by(Project.status)
+    if not current_user.is_admin:
+        if hasattr(current_user, "organization_id") and current_user.organization_id:
+            counts_query = counts_query.where(Project.organization_id == current_user.organization_id)
+        else:
+            counts_query = counts_query.where(Project.created_by == current_user.id)
+    counts_result = await db.execute(counts_query)
     summary = {pipeline_status: 0 for pipeline_status in PIPELINE_STATUSES}
     for row_status, count in counts_result.all():
         key = row_status or "lead"
@@ -132,13 +167,12 @@ async def list_projects(
 
 
 @router.get("/{project_id}")
-async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Project).where(Project.id == project_id)
-    )
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+async def get_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await _get_owned_project(project_id, db, current_user)
 
     estimates_result = await db.execute(
         select(Estimate)
@@ -185,13 +219,9 @@ async def update_project(
     project_id: int,
     request: ProjectUpdateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(Project).where(Project.id == project_id)
-    )
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project = await _get_owned_project(project_id, db, current_user)
 
     if request.status is not None:
         if request.status not in VALID_STATUSES:
@@ -243,10 +273,11 @@ async def update_project(
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Project).where(Project.id == project_id))
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+async def delete_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await _get_owned_project(project_id, db, current_user)
     await db.delete(project)
     await db.commit()
