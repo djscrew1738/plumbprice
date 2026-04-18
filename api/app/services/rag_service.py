@@ -49,27 +49,54 @@ class RAGService:
             logger.error("rag.embed_error", error=str(e), model=self.model)
             return []
 
-    async def ingest_document(self, db: AsyncSession, doc_id: int, chunks: List[str]) -> dict:
-        """Process and embed chunks for a document."""
-        logger.info("rag.ingest_start", document_id=doc_id, chunks=len(chunks))
-        
+    @staticmethod
+    def _count_tokens(text: str) -> int:
+        """Best-effort token count. Uses tiktoken (cl100k_base) if available,
+        otherwise falls back to a 4-char heuristic."""
         try:
+            import tiktoken  # type: ignore
+            enc = tiktoken.get_encoding("cl100k_base")
+            return len(enc.encode(text))
+        except Exception:
+            return max(1, len(text) // 4)
+
+    async def ingest_document(self, db: AsyncSession, doc_id: int, chunks: List[str]) -> dict:
+        """Process and embed chunks for a document.
+
+        Embeds all chunks first; aborts (and rolls back) if any chunk fails to
+        embed, so a document is never left with a partial / inconsistent set
+        of vectors. This keeps RAG retrieval honest.
+        """
+        logger.info("rag.ingest_start", document_id=doc_id, chunks=len(chunks))
+
+        try:
+            embeddings: list[list[float]] = []
             for i, chunk_text in enumerate(chunks):
-                embedding = await self.embed(chunk_text)
-                if not embedding:
-                    continue
-                
-                chunk = DocumentChunk(
+                emb = await self.embed(chunk_text)
+                if not emb:
+                    logger.error(
+                        "rag.ingest_embed_failed",
+                        document_id=doc_id,
+                        chunk_index=i,
+                    )
+                    return {
+                        "status": "error",
+                        "error": f"embedding failed for chunk {i}",
+                        "chunks_processed": 0,
+                    }
+                embeddings.append(emb)
+
+            for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
+                db.add(DocumentChunk(
                     document_id=doc_id,
                     chunk_index=i,
                     content=chunk_text,
                     embedding=embedding,
-                    token_count=len(chunk_text) // 4  # ~4 chars per token
-                )
-                db.add(chunk)
-            
+                    token_count=self._count_tokens(chunk_text),
+                ))
+
             await db.commit()
-            logger.info("rag.ingest_complete", document_id=doc_id)
+            logger.info("rag.ingest_complete", document_id=doc_id, chunks=len(chunks))
             return {"status": "success", "chunks_processed": len(chunks)}
         except Exception as e:
             await db.rollback()

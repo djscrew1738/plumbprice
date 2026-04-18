@@ -75,6 +75,10 @@ class EstimateLineItem(Base):
 
     estimate = relationship("Estimate", back_populates="line_items")
 
+    __table_args__ = (
+        Index("ix_line_items_estimate_sort_order", "estimate_id", "sort_order"),
+    )
+
 
 class EstimateVersion(Base):
     __tablename__ = "estimate_versions"

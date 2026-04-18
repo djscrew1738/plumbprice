@@ -278,6 +278,34 @@ export function EstimatorPage() {
     return () => clearInterval(id)
   }, [messages.length, uploadMode])
 
+  // Persist unsent draft to localStorage so users don't lose work when
+  // navigating away from the estimator.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const saved = window.localStorage.getItem('estimator_draft')
+      if (saved && !input) {
+        setInput(saved)
+      }
+    } catch {
+      // localStorage may be disabled (private mode); fail silently
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (input) {
+        window.localStorage.setItem('estimator_draft', input)
+      } else {
+        window.localStorage.removeItem('estimator_draft')
+      }
+    } catch {
+      // ignore
+    }
+  }, [input])
+
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value)
     event.target.style.height = 'auto'

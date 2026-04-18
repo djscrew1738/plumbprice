@@ -26,7 +26,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
+    // Reset boundary state so children re-render without losing app state.
+    // If the same error reoccurs immediately, the user can use Reload Page.
     this.setState({ hasError: false, error: null })
+  }
+
+  handleReload = () => {
     window.location.reload()
   }
 
@@ -47,10 +52,15 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="mb-4 max-w-md text-sm text-[color:var(--muted-ink)]">
             We encountered an error while loading this page. Don&apos;t worry, this happens sometimes.
           </p>
-          <Button onClick={this.handleRetry} variant="secondary">
-            <RefreshCw size={16} className="mr-2" />
-            Try Again
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={this.handleRetry} variant="secondary">
+              <RefreshCw size={16} className="mr-2" />
+              Try Again
+            </Button>
+            <Button onClick={this.handleReload} variant="ghost">
+              Reload Page
+            </Button>
+          </div>
         </div>
       )
     }
