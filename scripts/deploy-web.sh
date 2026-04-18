@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Deploy Next.js web app:
-#   build → copy static assets to standalone → restart service → purge Cloudflare cache
+#   build → merge static assets into standalone → restart service → purge Cloudflare cache
 #
 # Usage:
 #   ./scripts/deploy-web.sh
 #   CF_API_TOKEN=xxx ./scripts/deploy-web.sh   # also purges Cloudflare cache
 #
 # Requires: sudo access (for systemctl restart plumbprice-web)
+#
+# NOTE: Static assets are MERGED (not replaced) to preserve old chunk files.
+# Cloudflare edge may serve cached HTML referencing old chunk hashes;
+# keeping old chunks on disk prevents 404 errors until cache is purged.
 
 set -euo pipefail
 
@@ -18,15 +22,15 @@ cd "$REPO_ROOT"
 
 echo "==> Building Next.js (production)"
 cd "$WEB_DIR"
-npm run build:prod
+npm run build
 
 echo "==> Copying public/ to standalone"
 rm -rf "$STANDALONE_DIR/public"
 cp -r "$WEB_DIR/public" "$STANDALONE_DIR/public"
 
-echo "==> Copying .next/static to standalone"
-rm -rf "$STANDALONE_DIR/.next/static"
-cp -r "$WEB_DIR/.next/static" "$STANDALONE_DIR/.next/static"
+echo "==> Merging .next/static into standalone (preserving old chunks)"
+mkdir -p "$STANDALONE_DIR/.next/static"
+cp -r "$WEB_DIR/.next/static/"* "$STANDALONE_DIR/.next/static/"
 
 echo "==> Restarting plumbprice-web service"
 sudo systemctl restart plumbprice-web
