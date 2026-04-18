@@ -5,11 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter  # noqa: F401
 from slowapi.util import get_remote_address  # noqa: F401  (kept for compat)
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.core.auth import get_current_user
 from app.database import get_db
+from app.models.projects import Project
 from app.models.sessions import ChatSession, ChatMessage as ChatMessageModel
 from app.models.users import User
 from app.schemas.chat import ChatPriceRequest, ChatPriceResponse
@@ -93,10 +95,61 @@ def build_estimate_breakdown(estimate_result):
     }
 
 
+async def _resolve_customer_project(
+    db: AsyncSession,
+    customer,
+    project_id: int | None,
+    organization_id: int | None,
+    created_by: int,
+) -> int | None:
+    """Auto-create or link a Project based on customer email.
+
+    Returns a project_id (int) or None if no customer email provided.
+    If project_id is already supplied, returns it unchanged.
+    """
+    if project_id is not None:
+        return project_id
+    if customer is None or not customer.email:
+        return None
+
+    email_lower = customer.email.strip().lower()
+
+    # Look up existing lead project with this email in the same org
+    query = select(Project).where(
+        func.lower(Project.customer_email) == email_lower,
+        Project.deleted_at.is_(None),
+    )
+    if organization_id is not None:
+        query = query.where(Project.organization_id == organization_id)
+    else:
+        query = query.where(Project.created_by == created_by)
+
+    result = await db.execute(query.limit(1))
+    existing = result.scalar_one_or_none()
+    if existing:
+        return existing.id
+
+    project = Project(
+        name=customer.name or customer.email,
+        job_type="service",
+        status="lead",
+        customer_name=customer.name,
+        customer_email=customer.email.strip(),
+        customer_phone=customer.phone,
+        address=customer.address,
+        city="Dallas",
+        county="Dallas",
+        created_by=created_by,
+        organization_id=organization_id,
+    )
+    db.add(project)
+    await db.flush()
+    return project.id
+
+
 @router.post("/price", response_model=ChatPriceResponse)
 @limiter.limit("30/minute")
-async def chat_price(
-    request: Request,
+async def chat_price(    request: Request,
     body: ChatPriceRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -123,6 +176,14 @@ async def chat_price(
 
         estimate_id = None
         if estimate_result is not None:
+            org_id = current_user.organization_id if hasattr(current_user, "organization_id") else None
+            resolved_project_id = await _resolve_customer_project(
+                db=db,
+                customer=body.customer,
+                project_id=body.project_id,
+                organization_id=org_id,
+                created_by=current_user.id,
+            )
             estimate = await persist_estimate(
                 db=db,
                 result=estimate_result,
@@ -132,7 +193,8 @@ async def chat_price(
                 chat_context=body.message,
                 source="chat",
                 created_by=current_user.id,
-                organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
+                organization_id=org_id,
+                project_id=resolved_project_id,
             )
             estimate_id = estimate.id
 

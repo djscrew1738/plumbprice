@@ -14,6 +14,29 @@ class LineItemCreate(BaseModel):
     canonical_item: Optional[str] = None
 
 
+class LineItemInput(BaseModel):
+    """Line item for PATCH /estimates/{id} — total_cost is optional (computed if absent)."""
+    line_type: str
+    description: str
+    quantity: float = 1.0
+    unit: str = "ea"
+    unit_cost: float
+    total_cost: Optional[float] = None
+    supplier: Optional[str] = None
+    sku: Optional[str] = None
+    canonical_item: Optional[str] = None
+
+    def resolved_total_cost(self) -> float:
+        if self.total_cost is not None:
+            return self.total_cost
+        return round(self.quantity * self.unit_cost, 2)
+
+
+class EstimateUpdateRequest(BaseModel):
+    """Body for PATCH /estimates/{id}."""
+    line_items: list[LineItemInput] = Field(..., min_length=1)
+
+
 class ServiceEstimateRequest(BaseModel):
     task_code: str = Field(..., description="Labor template code, e.g. TOILET_REPLACE_STANDARD")
     assembly_code: Optional[str] = None

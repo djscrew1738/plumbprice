@@ -9,6 +9,13 @@ class ChatMessage(BaseModel):
     timestamp: Optional[datetime] = None
 
 
+class CustomerInfo(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+
 class ChatPriceRequest(BaseModel):
     message: str = Field(..., min_length=3, max_length=5000)
     job_type: Optional[str] = None  # service, construction, commercial
@@ -18,6 +25,8 @@ class ChatPriceRequest(BaseModel):
     conversation_id: Optional[str] = None
     session_id: Optional[int] = None  # persist to an existing session
     history: Optional[list[ChatMessage]] = []
+    project_id: Optional[int] = None
+    customer: Optional[CustomerInfo] = None
 
 
 class EstimateBreakdown(BaseModel):

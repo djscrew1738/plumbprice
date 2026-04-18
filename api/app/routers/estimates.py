@@ -12,11 +12,12 @@ from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion
 from app.models.users import User
 from app.schemas.estimates import (
     ServiceEstimateRequest, ConstructionEstimateRequest,
-    EstimateResponse, EstimateListItem, EstimateVersionItem, EstimateVersionListResponse
+    EstimateResponse, EstimateListItem, EstimateVersionItem, EstimateVersionListResponse,
+    EstimateUpdateRequest,
 )
 from app.services.pricing_engine import pricing_engine
 from app.services.supplier_service import supplier_service
-from app.services.estimate_service import persist_estimate
+from app.services.estimate_service import persist_estimate, update_draft_estimate
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -261,6 +262,7 @@ async def get_estimate(
         "title": estimate.title,
         "job_type": estimate.job_type,
         "status": estimate.status,
+        "project_id": estimate.project_id,
         "labor_total": estimate.labor_total,
         "materials_total": estimate.materials_total,
         "tax_total": estimate.tax_total,
@@ -374,9 +376,59 @@ async def get_cost_breakdown(
     }
 
 
-@router.patch("/{estimate_id}/status")
-async def update_estimate_status(
+@router.patch("/{estimate_id}")
+async def patch_estimate(
     estimate_id: int,
+    body: EstimateUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Edit a draft estimate's line items and recompute totals. Creates a version snapshot first."""
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
+    if estimate.status != "draft":
+        raise HTTPException(status_code=409, detail="Only draft estimates can be edited")
+    try:
+        estimate = await update_draft_estimate(db, estimate, body, current_user)
+    except ValueError:
+        raise HTTPException(status_code=409, detail="Only draft estimates can be edited")
+
+    line_items = sorted(estimate.line_items, key=lambda li: li.sort_order or 0)
+    return {
+        "id": estimate.id,
+        "title": estimate.title,
+        "job_type": estimate.job_type,
+        "status": estimate.status,
+        "labor_total": estimate.labor_total,
+        "materials_total": estimate.materials_total,
+        "tax_total": estimate.tax_total,
+        "markup_total": estimate.markup_total,
+        "misc_total": estimate.misc_total,
+        "subtotal": estimate.subtotal,
+        "grand_total": estimate.grand_total,
+        "confidence_score": estimate.confidence_score,
+        "confidence_label": estimate.confidence_label,
+        "assumptions": estimate.assumptions,
+        "county": estimate.county,
+        "tax_rate": estimate.tax_rate,
+        "line_items": [
+            {
+                "id": li.id,
+                "line_type": li.line_type,
+                "description": li.description,
+                "quantity": li.quantity,
+                "unit": li.unit,
+                "unit_cost": li.unit_cost,
+                "total_cost": li.total_cost,
+                "supplier": li.supplier,
+                "sku": li.sku,
+            }
+            for li in line_items
+        ],
+    }
+
+
+@router.patch("/{estimate_id}/status")
+async def update_estimate_status(    estimate_id: int,
     body: EstimateStatusUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

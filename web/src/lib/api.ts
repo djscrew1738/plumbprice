@@ -59,6 +59,13 @@ export interface ChatPriceRequest {
   conversation_id?: string
   session_id?: number | null
   history?: ChatHistoryMessage[]
+  project_id?: number | null
+  customer?: {
+    name?: string
+    email?: string
+    phone?: string
+    address?: string
+  } | null
 }
 
 export interface ChatPriceStreamEvent {
@@ -242,6 +249,8 @@ export const estimatesApi = {
     api.patch<{ id: number; status: string }>(`/estimates/${id}/status`, { status }),
   updateLineItems: (id: number, lineItems: LineItemPayload[]) =>
     api.put(`/estimates/${id}/line-items`, { line_items: lineItems }),
+  update: (id: number, body: { line_items: Array<Omit<LineItemPayload, 'trace_json' | 'canonical_item'> & { canonical_item?: string | null }> }) =>
+    api.patch(`/estimates/${id}`, body),
   delete: (id: number) =>
     api.delete(`/estimates/${id}`),
   duplicate: (id: number) =>
@@ -527,11 +536,29 @@ export const analyticsApi = {
 
 // ─── Notifications ──────────────────────────────────────────────────────
 
+export interface BackendNotification {
+  id: number
+  kind: string
+  title: string
+  body: string | null
+  link: string | null
+  read_at: string | null
+  created_at: string
+}
+
 export const notificationsApi = {
-  list: async () => (await api.get('/notifications/')).data,
-  markRead: async (id: string) => (await api.patch(`/notifications/${id}/read`)).data,
-  markAllRead: async () => (await api.post('/notifications/mark-all-read')).data,
-  dismiss: async (id: string) => (await api.delete(`/notifications/${id}`)).data,
+  list: async (params: { limit?: number; unread_only?: boolean } = {}) => {
+    const qs = new URLSearchParams()
+    qs.set('limit', String(params.limit ?? 20))
+    if (params.unread_only) qs.set('unread_only', 'true')
+    const res = await api.get<BackendNotification[]>(`/notifications?${qs.toString()}`)
+    return res.data
+  },
+  unreadCount: async () => (await api.get<{ count: number }>('/notifications/unread-count')).data.count,
+  markRead: async (ids: number[]) =>
+    (await api.post('/notifications/mark-read', { ids })).data,
+  markAllRead: async () =>
+    (await api.post('/notifications/mark-read', { all: true })).data,
 }
 
 // ─── Prices ─────────────────────────────────────────────────────────────────
@@ -597,16 +624,37 @@ export const userApi = {
 // ─── Organization ───────────────────────────────────────────────────────────
 
 export const orgApi = {
-  get: async () => (await api.get('/organization/')).data,
-  update: async (data: { name?: string; address?: string; phone?: string; logo_url?: string }) =>
-    (await api.patch('/organization/', data)).data,
-  listUsers: async () => (await api.get('/organization/users')).data,
-  inviteUser: async (data: { email: string; role: string }) =>
-    (await api.post('/organization/invite', data)).data,
+  get: async () => (await api.get('/admin/organizations/me')).data,
+  update: async (data: {
+    name?: string
+    address?: string
+    phone?: string
+    logo_url?: string
+    billing_email?: string
+    default_tax_rate?: number
+    default_markup_percent?: number
+  }) => (await api.patch('/admin/organizations/me', data)).data,
+  uploadLogo: async (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return (await api.post('/admin/organizations/me/logo', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data as { logo_url: string }
+  },
+  listUsers: async () => (await api.get('/admin/users')).data,
+  inviteUser: async (data: { email: string; role: string; full_name?: string }) =>
+    (await api.post('/admin/users/invite', data)).data,
   updateUserRole: async (userId: string, role: string) =>
-    (await api.patch(`/organization/users/${userId}/role`, { role })).data,
+    (await api.patch(`/admin/users/${userId}`, { role })).data,
+  updateUser: async (
+    userId: string,
+    data: { role?: string; is_active?: boolean; full_name?: string },
+  ) => (await api.patch(`/admin/users/${userId}`, data)).data,
   removeUser: async (userId: string) =>
-    (await api.delete(`/organization/users/${userId}`)).data,
+    (await api.delete(`/admin/users/${userId}`)).data,
+  listInvites: async () => (await api.get('/admin/invites')).data,
+  revokeInvite: async (inviteId: string) =>
+    (await api.delete(`/admin/invites/${inviteId}`)).data,
 }
 
 // ─── Documents ──────────────────────────────────────────────────────────────
