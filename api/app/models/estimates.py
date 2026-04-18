@@ -48,6 +48,7 @@ class Estimate(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     valid_until = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
     project = relationship("Project", back_populates="estimates")
     line_items = relationship("EstimateLineItem", back_populates="estimate",

@@ -42,6 +42,7 @@ class Project(Base):
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
     estimates = relationship("Estimate", back_populates="project")
     activities = relationship(

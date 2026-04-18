@@ -9,7 +9,7 @@ import secrets
 import structlog
 
 from app.database import get_db
-from app.models.users import User
+from app.models.users import User, UserInvite
 from app.models.auth_tokens import PasswordResetToken
 from app.core.auth import verify_password, get_password_hash, create_access_token, get_current_user
 from app.core import rate_limit
@@ -56,7 +56,9 @@ async def login(
     """Login with username/password, returns JWT token."""
     await _check_brute_force(form_data.username)
 
-    result = await db.execute(select(User).where(User.email == form_data.username))
+    result = await db.execute(
+        select(User).where(User.email == form_data.username, User.deleted_at.is_(None))
+    )
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -244,3 +246,77 @@ async def reset_password(
     logger.info("password_reset.completed", user_id=user_id)
 
     return {"message": "Password updated successfully."}
+
+
+# ─── Accept invite ────────────────────────────────────────────────────────────
+
+class AcceptInviteRequest(BaseModel):
+    token: str
+    password: str = Field(..., min_length=8, max_length=128)
+    full_name: str | None = None
+
+
+@router.post("/accept-invite")
+async def accept_invite(
+    payload: AcceptInviteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Accept a user invite token and create the account, returning a JWT."""
+    token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+
+    result = await db.execute(
+        select(UserInvite).where(UserInvite.token_hash == token_hash)
+    )
+    invite = result.scalar_one_or_none()
+
+    if invite is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired invite token")
+
+    now = datetime.now(timezone.utc)
+    expires_at = invite.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < now:
+        raise HTTPException(status_code=400, detail="Invite token has expired")
+
+    if invite.accepted_at is not None:
+        raise HTTPException(status_code=400, detail="Invite token has already been used")
+
+    is_admin_role = invite.role == "admin"
+    user = User(
+        email=invite.email,
+        hashed_password=get_password_hash(payload.password),
+        full_name=payload.full_name or invite.full_name,
+        role=invite.role,
+        is_active=True,
+        is_admin=is_admin_role,
+        organization_id=invite.organization_id,
+    )
+    db.add(user)
+    invite.accepted_at = now
+    await db.flush()
+    user_id = user.id
+    user_email = user.email
+    user_full_name = user.full_name
+    user_role = user.role
+    user_is_admin = user.is_admin
+    await db.commit()
+
+    access_token = create_access_token(
+        data={"sub": str(user_id)},
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
+    )
+    logger.info("invite.accepted", user_id=user_id, email=user_email)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user_id,
+            "email": user_email,
+            "full_name": user_full_name,
+            "role": user_role,
+            "is_admin": user_is_admin,
+        },
+    }

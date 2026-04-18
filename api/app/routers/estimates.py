@@ -27,7 +27,9 @@ VALID_ESTIMATE_STATUSES = {"draft", "sent", "accepted", "rejected"}
 
 async def _get_owned_estimate(estimate_id: int, db: AsyncSession, current_user: User) -> Estimate:
     """Fetch an estimate and verify the current user has access to it."""
-    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    result = await db.execute(
+        select(Estimate).where(Estimate.id == estimate_id, Estimate.deleted_at.is_(None))
+    )
     estimate = result.scalar_one_or_none()
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
@@ -210,7 +212,7 @@ async def list_estimates(
     current_user: User = Depends(get_current_user),
 ):
     """List estimates with optional filters (scoped to current user's organization)."""
-    query = select(Estimate).order_by(desc(Estimate.created_at)).limit(limit).offset(offset)
+    query = select(Estimate).where(Estimate.deleted_at.is_(None)).order_by(desc(Estimate.created_at)).limit(limit).offset(offset)
     user_org = getattr(current_user, "organization_id", None)
     if not current_user.is_admin:
         if user_org is not None:

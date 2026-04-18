@@ -1,10 +1,11 @@
 from typing import Literal, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.core.auth import get_current_user
 from app.database import get_db
@@ -13,8 +14,10 @@ from app.models.projects import Project, ProjectActivity
 from app.models.users import User
 from app.schemas.projects import ProjectCreateRequest, ProjectListItem, ProjectListResponse
 from app.services import activity_service
+from app.services.notifications_service import notify
 
 router = APIRouter()
+logger = structlog.get_logger()
 PIPELINE_STATUSES = ["lead", "estimate_sent", "won", "lost", "in_progress", "complete"]
 
 VALID_STATUSES = set(PIPELINE_STATUSES)
@@ -22,7 +25,9 @@ VALID_STATUSES = set(PIPELINE_STATUSES)
 
 async def _get_owned_project(project_id: int, db: AsyncSession, current_user: User) -> Project:
     """Fetch a project and verify the current user has access to it."""
-    result = await db.execute(select(Project).where(Project.id == project_id))
+    result = await db.execute(
+        select(Project).where(Project.id == project_id, Project.deleted_at.is_(None))
+    )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -133,6 +138,7 @@ async def list_projects(
 
     query = (
         select(Project, estimate_count_sq, latest_total_sq)
+        .where(Project.deleted_at.is_(None))
         .order_by(desc(Project.created_at))
         .limit(limit)
         .offset(offset)
@@ -153,7 +159,7 @@ async def list_projects(
     rows = result.all()
 
     # Count all projects by status scoped to same org/user
-    counts_query = select(Project.status, func.count(Project.id)).group_by(Project.status)
+    counts_query = select(Project.status, func.count(Project.id)).where(Project.deleted_at.is_(None)).group_by(Project.status)
     if not current_user.is_admin:
         if user_org is not None:
             counts_query = counts_query.where(Project.organization_id == user_org)
@@ -282,6 +288,15 @@ async def update_project(
             kind="assigned",
             payload={"assigned_to": project.assigned_to},
         )
+        if project.assigned_to is not None and project.assigned_to != current_user.id:
+            await notify(
+                db=db,
+                user_id=project.assigned_to,
+                kind="project_assigned",
+                title=f"You were assigned: {project.name}",
+                body=f"{current_user.full_name or current_user.email} assigned you to this project.",
+                link=f"/projects/{project.id}",
+            )
 
     await db.commit()
     await db.refresh(project)
@@ -321,8 +336,10 @@ async def delete_project(
     current_user: User = Depends(get_current_user),
 ):
     project = await _get_owned_project(project_id, db, current_user)
-    await db.delete(project)
+    proj_id = project.id
+    project.deleted_at = datetime.now(timezone.utc)
     await db.commit()
+    logger.info("soft_delete", model="project", id=proj_id, actor=current_user.id)
 
 
 @router.get("/{project_id}/activity", response_model=list[ActivityItem])

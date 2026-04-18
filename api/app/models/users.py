@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+import uuid
+
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
+from app.models.auth_tokens import GUID
 
 
 class Organization(Base):
@@ -17,6 +20,10 @@ class Organization(Base):
     state = Column(String(10), default="TX")
     zip_code = Column(String(10))
     default_county = Column(String(100), default="Dallas")
+    billing_email = Column(String(255), nullable=True)
+    logo_url = Column(String(512), nullable=True)
+    default_tax_rate = Column(Float, nullable=True)
+    default_markup_percent = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -37,5 +44,26 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
     organization = relationship("Organization", back_populates="users")
+
+
+class UserInvite(Base):
+    __tablename__ = "user_invites"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), nullable=False, index=True)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    role = Column(String(50), nullable=False, default="estimator")
+    full_name = Column(String(255), nullable=True)
+    token_hash = Column(String(128), nullable=False, unique=True, index=True)
+    invited_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    organization = relationship("Organization")
+    inviter = relationship("User", foreign_keys=[invited_by])
