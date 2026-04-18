@@ -529,9 +529,36 @@ export interface OutcomeListItem {
   county: string | null
 }
 
+// ─── Analytics extended types ────────────────────────────────────────────────
+
+export interface RevenueData {
+  period: string
+  total_revenue: number
+  monthly_breakdown: { month: string; revenue: number; estimate_count: number }[]
+  by_job_type: { job_type: string; revenue: number; count: number }[]
+}
+
+export interface PipelineAnalytics {
+  stages: { name: string; count: number; avg_days: number }[]
+  active_pipeline_value: number
+  conversion_rate: number
+}
+
+export interface RepPerformance {
+  user_id: number
+  full_name: string
+  quotes_created: number
+  won_count: number
+  won_amount: number
+  avg_deal_size: number
+}
+
 export const analyticsApi = {
   getEstimateStats: async () => (await api.get<OutcomeStats>('/estimates/stats')).data,
   getOutcomes: async () => (await api.get<OutcomeListItem[]>('/outcomes/')).data,
+  getRevenue: async (period = 'all') => (await api.get<RevenueData>(`/analytics/revenue?period=${period}`)).data,
+  getPipelineAnalytics: async () => (await api.get<PipelineAnalytics>('/analytics/pipeline')).data,
+  getRepPerformance: async (period = 'all') => (await api.get<{ period: string; reps: RepPerformance[] }>(`/analytics/rep-performance?period=${period}`)).data,
 }
 
 // ─── Notifications ──────────────────────────────────────────────────────
@@ -559,6 +586,7 @@ export const notificationsApi = {
     (await api.post('/notifications/mark-read', { ids })).data,
   markAllRead: async () =>
     (await api.post('/notifications/mark-read', { all: true })).data,
+  delete: async (id: number) => (await api.delete(`/notifications/${id}`)).data,
 }
 
 // ─── Prices ─────────────────────────────────────────────────────────────────

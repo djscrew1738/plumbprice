@@ -71,7 +71,13 @@ export {
 export {
   useEstimateStats,
   useOutcomes,
+  useRevenue,
+  usePipelineAnalytics,
+  useRepPerformance,
   analyticsKeys,
+  type RevenueData,
+  type PipelineAnalytics,
+  type RepPerformance,
 } from './useAnalytics'
 
 export {

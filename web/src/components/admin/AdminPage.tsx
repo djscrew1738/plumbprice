@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { RefreshCw, Wrench, DollarSign, BarChart3, Package } from 'lucide-react'
+import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'
@@ -13,6 +13,9 @@ import { LaborTemplatesTab } from './LaborTemplatesTab'
 import { MarkupRulesTab } from './MarkupRulesTab'
 import { ItemPricesTab } from './ItemPricesTab'
 import { StatsTab } from './StatsTab'
+import { JobsPage } from './JobsPage'
+import { AdminUsersPage } from './UsersPage'
+import { AnalyticsTab } from './AnalyticsTab'
 
 const SUPPLIERS = ['ferguson', 'moore_supply', 'apex'] as const
 type SupplierSlug = typeof SUPPLIERS[number]
@@ -122,6 +125,9 @@ export function AdminPage() {
     if (tab === 'labor') { void queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] }); return }
     if (tab === 'markup') { setMarkupRules([]); void queryClient.invalidateQueries({ queryKey: ['admin', 'markups'] }); return }
     if (tab === 'prices') { void queryClient.invalidateQueries({ queryKey: ['admin', 'items'] }); return }
+    if (tab === 'jobs') { void queryClient.invalidateQueries({ queryKey: ['admin', 'tasks'] }); return }
+    if (tab === 'users') { void queryClient.invalidateQueries({ queryKey: ['admin'] }); return }
+    if (tab === 'analytics') { void queryClient.invalidateQueries({ queryKey: ['analytics'] }); return }
     void queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] })
   }
 
@@ -155,6 +161,9 @@ export function AdminPage() {
             <TabsTrigger value="markup" icon={DollarSign}>Markup Rules</TabsTrigger>
             <TabsTrigger value="prices" icon={Package}>Item Prices</TabsTrigger>
             <TabsTrigger value="stats" icon={BarChart3}>Stats</TabsTrigger>
+            <TabsTrigger value="jobs" icon={Briefcase}>Jobs</TabsTrigger>
+            <TabsTrigger value="users" icon={Users}>Users</TabsTrigger>
+            <TabsTrigger value="analytics" icon={TrendingUp}>Analytics</TabsTrigger>
           </TabsList>
 
           <div className="mt-4">
@@ -201,6 +210,18 @@ export function AdminPage() {
 
             <TabsContent value="stats">
               <StatsTab stats={stats} loading={loading} onRetry={() => void queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] })} />
+            </TabsContent>
+
+            <TabsContent value="jobs">
+              <JobsPage />
+            </TabsContent>
+
+            <TabsContent value="users">
+              <AdminUsersPage />
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <AnalyticsTab />
             </TabsContent>
           </div>
         </TabsRoot>
