@@ -301,7 +301,25 @@ async def accept_invite(
     user_full_name = user.full_name
     user_role = user.role
     user_is_admin = user.is_admin
+    invited_by = invite.invited_by  # capture before commit (expires session objects)
     await db.commit()
+
+    # Notify the invite sender
+    if invited_by is not None:
+        try:
+            from app.services.notifications_service import notify
+            name_display = user_full_name or user_email
+            await notify(
+                db,
+                user_id=invited_by,
+                kind="invite_accepted",
+                title=f"{name_display} accepted your invitation",
+                body=f"{user_email} joined as {user_role}",
+                link="/admin?tab=users",
+            )
+            await db.commit()
+        except Exception:
+            logger.warning("invite.notify_failed", invitee=user_email)
 
     access_token = create_access_token(
         data={"sub": str(user_id)},

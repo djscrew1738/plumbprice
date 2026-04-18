@@ -295,6 +295,7 @@ async def get_estimate(
                 "supplier": li.supplier,
                 "sku": li.sku,
                 "canonical_item": li.canonical_item,
+                "trace_json": li.trace_json,
             }
             for li in line_items
         ],
@@ -423,6 +424,7 @@ async def patch_estimate(
                 "total_cost": li.total_cost,
                 "supplier": li.supplier,
                 "sku": li.sku,
+                "trace_json": li.trace_json,
             }
             for li in line_items
         ],

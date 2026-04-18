@@ -105,7 +105,8 @@ class RAGService:
 
     _SQL_ALL = text("""
         SELECT dc.content, dc.metadata_json, ud.original_filename, ud.doc_type,
-               (dc.embedding <=> CAST(:vector AS vector)) AS distance
+               (dc.embedding <=> CAST(:vector AS vector)) AS distance,
+               dc.document_id, dc.chunk_index
         FROM document_chunks dc
         JOIN uploaded_documents ud ON dc.document_id = ud.id
         WHERE ud.status = 'complete'
@@ -115,7 +116,8 @@ class RAGService:
 
     _SQL_BY_SUPPLIER = text("""
         SELECT dc.content, dc.metadata_json, ud.original_filename, ud.doc_type,
-               (dc.embedding <=> CAST(:vector AS vector)) AS distance
+               (dc.embedding <=> CAST(:vector AS vector)) AS distance,
+               dc.document_id, dc.chunk_index
         FROM document_chunks dc
         JOIN uploaded_documents ud ON dc.document_id = ud.id
         WHERE ud.status = 'complete'
@@ -163,6 +165,9 @@ class RAGService:
                 "source": row[2],
                 "doc_type": row[3],
                 "score": round(score, 4),
+                "document_id": row[5],
+                "document_name": row[2],  # original_filename
+                "chunk_index": row[6],
             })
 
         return results

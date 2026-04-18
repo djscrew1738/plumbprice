@@ -60,6 +60,10 @@ export function OrganizationPage() {
   const [orgName, setOrgName] = useState('')
   const [orgAddress, setOrgAddress] = useState('')
   const [orgPhone, setOrgPhone] = useState('')
+  const [billingEmail, setBillingEmail] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
+  const [defaultTaxRate, setDefaultTaxRate] = useState('')
+  const [defaultMarkupPercent, setDefaultMarkupPercent] = useState('')
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -72,12 +76,24 @@ export function OrganizationPage() {
       setOrgName(org.name ?? '')
       setOrgAddress(org.address ?? '')
       setOrgPhone(org.phone ?? '')
+      setBillingEmail(org.billing_email ?? '')
+      setLogoUrl(org.logo_url ?? '')
+      setDefaultTaxRate(org.default_tax_rate != null ? String(org.default_tax_rate * 100) : '')
+      setDefaultMarkupPercent(org.default_markup_percent != null ? String(org.default_markup_percent * 100) : '')
     }
   }, [org])
 
   const handleSaveOrg = (e: React.FormEvent) => {
     e.preventDefault()
-    updateOrg.mutate({ name: orgName, address: orgAddress, phone: orgPhone })
+    updateOrg.mutate({
+      name: orgName,
+      address: orgAddress,
+      phone: orgPhone,
+      billing_email: billingEmail || undefined,
+      logo_url: logoUrl || undefined,
+      default_tax_rate: defaultTaxRate !== '' ? parseFloat(defaultTaxRate) / 100 : undefined,
+      default_markup_percent: defaultMarkupPercent !== '' ? parseFloat(defaultMarkupPercent) / 100 : undefined,
+    })
   }
 
   const handleInvite = (e: React.FormEvent) => {
@@ -235,6 +251,44 @@ export function OrganizationPage() {
                 disabled={!isAdmin}
               />
             </div>
+            <Input
+              label="Billing Email"
+              type="email"
+              value={billingEmail}
+              onChange={(e) => setBillingEmail(e.target.value)}
+              placeholder="billing@company.com"
+              disabled={!isAdmin}
+            />
+            <Input
+              label="Logo URL"
+              type="url"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="https://example.com/logo.png"
+              disabled={!isAdmin}
+            />
+            <Input
+              label="Default Tax Rate (%)"
+              type="number"
+              min={0}
+              max={100}
+              step={0.01}
+              value={defaultTaxRate}
+              onChange={(e) => setDefaultTaxRate(e.target.value)}
+              placeholder="8.25"
+              disabled={!isAdmin}
+            />
+            <Input
+              label="Default Markup (%)"
+              type="number"
+              min={0}
+              max={200}
+              step={0.1}
+              value={defaultMarkupPercent}
+              onChange={(e) => setDefaultMarkupPercent(e.target.value)}
+              placeholder="20"
+              disabled={!isAdmin}
+            />
           </div>
 
           {isAdmin && (

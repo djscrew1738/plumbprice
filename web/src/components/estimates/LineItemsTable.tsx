@@ -2,8 +2,10 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { FileText } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { formatCurrencyDecimal } from '@/lib/utils'
 
 export interface LineItem {
@@ -16,6 +18,15 @@ export interface LineItem {
   supplier?: string | null
   sku?: string | null
   canonical_item?: string | null
+  trace_json?: {
+    rag_sources?: Array<{
+      doc_id: number
+      doc_name: string
+      score: number
+      chunk_idx: number
+    }>
+    [key: string]: unknown
+  } | null
 }
 
 const LINE_TYPE_LABEL: Record<string, string> = {
@@ -99,6 +110,23 @@ export function LineItemsTable({
             <Badge variant={LINE_TYPE_VARIANT[item.line_type] ?? 'neutral'} size="sm">
               {LINE_TYPE_LABEL[item.line_type] ?? item.line_type}
             </Badge>
+            {(item.trace_json?.rag_sources?.length ?? 0) > 0 && (
+              <Tooltip
+                content={
+                  `Source: ${item.trace_json!.rag_sources![0].doc_name}` +
+                  (item.trace_json!.rag_sources!.length > 1
+                    ? ` +${item.trace_json!.rag_sources!.length - 1} more`
+                    : '')
+                }
+              >
+                <span className="inline-flex items-center gap-1 text-xs text-[color:var(--muted-ink)] cursor-help">
+                  <FileText size={10} />
+                  {item.trace_json!.rag_sources![0].doc_name.length > 20
+                    ? `${item.trace_json!.rag_sources![0].doc_name.slice(0, 20)}…`
+                    : item.trace_json!.rag_sources![0].doc_name}
+                </span>
+              </Tooltip>
+            )}
           </div>
         </div>
       ),

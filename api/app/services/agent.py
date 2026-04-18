@@ -1275,11 +1275,24 @@ async def process_chat_message(
 
     # Retrieve RAG context if DB session is available
     rag_context = ""
+    rag_sources: list[dict] = []
     if db:
         try:
             chunks = await rag_service.retrieve(db, message, top_k=3)
             if chunks:
                 rag_context = "\n".join([f"Source: {c['source']}\n{c['content']}" for c in chunks])
+                rag_sources = [
+                    {
+                        "doc_id": c["document_id"],
+                        "doc_name": c.get("document_name", "Unknown"),
+                        "score": c["score"],
+                        "chunk_idx": c["chunk_index"],
+                    }
+                    for c in chunks[:3]
+                ]
+                # Attach source attribution to every line item's trace_json
+                for li in result.line_items:
+                    li.trace_json = {**(li.trace_json or {}), "rag_sources": rag_sources}
                 logger.info("rag.context_retrieved", chunks=len(chunks))
         except Exception as e:
             logger.warning("rag.retrieve_failed", error=str(e))
