@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, Upload, Trash2 } from 'lucide-react'
+import { FileText, Upload, Trash2, Download } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   suppliersApi,
+  downloadDocument,
   type DocumentItem,
 } from '@/lib/api'
 import { useDocuments, useUploadDocument, useDeleteDocument } from '@/lib/hooks'
@@ -62,6 +63,7 @@ export function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   // Upload form state
   const [uploadFile, setUploadFile] = useState<File | null>(null)
@@ -98,6 +100,16 @@ export function DocumentsPage() {
   const deleteMutation = useDeleteDocument()
 
   // ── Handlers ──
+  const handleDownload = useCallback(async (doc: DocumentItem) => {
+    setDownloadingId(doc.id)
+    try {
+      await downloadDocument(doc.id, doc.name)
+    } catch {
+      toast.error('Download failed', 'Could not download the document. Please try again.')
+    } finally {
+      setDownloadingId(null)
+    }
+  }, [toast])
   const resetUploadForm = useCallback(() => {
     setUploadFile(null)
     setUploadDocType('')
@@ -200,25 +212,40 @@ export function DocumentsPage() {
       {
         key: 'actions',
         header: '',
-        width: '60px',
+        width: '88px',
         align: 'right',
         render: (row) => (
-          <Tooltip content="Delete document">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setDeleteTarget(row)
-              }}
-              className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center rounded-lg p-1.5 text-[color:var(--muted-ink)] hover:bg-[hsl(var(--danger)/0.1)] hover:text-[hsl(var(--danger))] transition-colors"
-              aria-label={`Delete ${row.name}`}
-            >
-              <Trash2 size={14} />
-            </button>
-          </Tooltip>
+          <div className="flex items-center justify-end gap-1">
+            <Tooltip content="Download document">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleDownload(row)
+                }}
+                disabled={downloadingId === row.id}
+                className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center rounded-lg p-1.5 text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-50"
+                aria-label={`Download ${row.name}`}
+              >
+                <Download size={14} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Delete document">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDeleteTarget(row)
+                }}
+                className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center rounded-lg p-1.5 text-[color:var(--muted-ink)] hover:bg-[hsl(var(--danger)/0.1)] hover:text-[hsl(var(--danger))] transition-colors"
+                aria-label={`Delete ${row.name}`}
+              >
+                <Trash2 size={14} />
+              </button>
+            </Tooltip>
+          </div>
         ),
       },
     ],
-    [],
+    [downloadingId, handleDownload],
   )
 
   // ── Render ──

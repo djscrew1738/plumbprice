@@ -75,6 +75,7 @@ def _is_expired(proposal: Proposal) -> bool:
 
 async def _serialize(proposal: Proposal, estimate_id: int, db: AsyncSession) -> dict:
     from app.models.estimates import EstimateLineItem
+    from app.models.users import Organization
     est_res = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = est_res.scalar_one()
     li_res = await db.execute(
@@ -93,6 +94,25 @@ async def _serialize(proposal: Proposal, estimate_id: int, db: AsyncSession) -> 
         }
         for li in items
     ]
+
+    company: dict = {}
+    if estimate.organization_id:
+        org_res = await db.execute(
+            select(Organization).where(Organization.id == estimate.organization_id)
+        )
+        org = org_res.scalar_one_or_none()
+        if org:
+            company = {
+                "name": org.name,
+                "phone": org.phone,
+                "address": org.address,
+                "city": org.city,
+                "state": org.state or "TX",
+                "zip_code": org.zip_code,
+                "license_number": org.license_number,
+                "logo_url": org.logo_url,
+            }
+
     return {
         "token": proposal.public_token,
         "status": proposal_status(proposal),
@@ -103,6 +123,7 @@ async def _serialize(proposal: Proposal, estimate_id: int, db: AsyncSession) -> 
         "accepted_at": proposal.accepted_at,
         "declined_at": proposal.declined_at,
         "client_signature": proposal.client_signature,
+        "company": company,
         "estimate": {
             "id": estimate.id,
             "title": estimate.title,

@@ -25,6 +25,17 @@ interface PublicEstimate {
   line_items: PublicLineItem[]
 }
 
+interface PublicCompany {
+  name: string
+  phone?: string | null
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  zip_code?: string | null
+  license_number?: string | null
+  logo_url?: string | null
+}
+
 interface PublicProposal {
   token: string
   status: 'sent' | 'opened' | 'accepted' | 'declined' | 'expired'
@@ -35,6 +46,7 @@ interface PublicProposal {
   accepted_at: string | null
   declined_at: string | null
   client_signature: string | null
+  company: PublicCompany
   estimate: PublicEstimate
 }
 
@@ -167,6 +179,7 @@ export default function PublicProposalPage() {
 
   const { estimate, status } = proposal
   const canAct = status === 'sent' || status === 'opened'
+  const company = proposal.company
 
   return (
     <div className="min-h-dvh bg-[hsl(var(--background))] text-[color:var(--ink)] print:bg-white print:text-black">
@@ -180,24 +193,53 @@ export default function PublicProposalPage() {
       `}</style>
 
       <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-        <header className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--accent-strong)]">
-              Plumbing Estimate
-            </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{estimate.title}</h1>
-            <p className="mt-1 text-sm text-zinc-400">
-              {proposal.recipient_name ? `Prepared for ${proposal.recipient_name}` : 'Prepared for you'}
-              {estimate.county ? ` · ${estimate.county} County, TX` : ''}
-            </p>
+        {/* Company header */}
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            {company.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={company.logo_url}
+                alt={company.name}
+                className="h-10 w-auto rounded object-contain"
+              />
+            )}
+            <div>
+              {company.name && (
+                <p className="text-sm font-bold text-[color:var(--ink)]">{company.name}</p>
+              )}
+              {company.license_number && (
+                <p className="text-xs text-zinc-400">License #{company.license_number}</p>
+              )}
+              {(company.address || company.city) && (
+                <p className="text-xs text-zinc-400">
+                  {[company.address, company.city, company.state, company.zip_code]
+                    .filter(Boolean).join(', ')}
+                </p>
+              )}
+              {company.phone && (
+                <p className="text-xs text-zinc-400">{company.phone}</p>
+              )}
+            </div>
           </div>
           <button
             type="button"
             onClick={() => window.print()}
-            className="no-print rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
+            className="no-print shrink-0 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
           >
             Print
           </button>
+        </div>
+
+        <header className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--accent-strong)]">
+            Plumbing Estimate
+          </p>
+          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{estimate.title}</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            {proposal.recipient_name ? `Prepared for ${proposal.recipient_name}` : 'Prepared for you'}
+            {estimate.county ? ` · ${estimate.county} County, TX` : ''}
+          </p>
         </header>
 
         {status === 'accepted' && (

@@ -4,6 +4,8 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
+from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -101,6 +103,38 @@ async def upload_document(
     }
 
 
+@router.get("/{doc_id}/download")
+async def download_document(
+    doc_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Stream a document from storage. Organisation-scoped."""
+    result = await db.execute(
+        select(UploadedDocument).where(
+            UploadedDocument.id == doc_id,
+            UploadedDocument.organization_id == current_user.organization_id,
+        )
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not doc.storage_path:
+        raise HTTPException(status_code=404, detail="File not available")
+
+    data = storage_client.download_file(settings.minio_bucket_documents, doc.storage_path)
+    if data is None:
+        raise HTTPException(status_code=404, detail="File not found in storage")
+
+    filename = doc.original_filename or doc.filename
+    safe_name = filename.replace('"', "'")
+    return StreamingResponse(
+        data,
+        media_type=doc.mime_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+
+
 @router.get("/")
 async def list_documents(
     limit: int = Query(50, ge=1, le=200),
@@ -109,8 +143,6 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
 ):
     """List documents belonging to the current user's organization."""
-    from sqlalchemy import select
-
     q = (
         select(UploadedDocument)
         .where(UploadedDocument.organization_id == current_user.organization_id)
@@ -140,8 +172,6 @@ async def delete_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Remove a document (organization-scoped)."""
-    from sqlalchemy import select
-
     result = await db.execute(
         select(UploadedDocument).where(
             UploadedDocument.id == doc_id,

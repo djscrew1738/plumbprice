@@ -722,3 +722,15 @@ export async function getDocument(id: string) {
 export async function deleteDocument(id: string) {
   return (await api.delete(`/documents/${id}`)).data
 }
+
+export async function downloadDocument(id: number | string, filename: string) {
+  const res = await api.get(`/documents/${id}/download`, { responseType: 'blob' })
+  const url = URL.createObjectURL(res.data as Blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
