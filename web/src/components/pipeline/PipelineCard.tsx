@@ -156,6 +156,7 @@ export const PipelineCard = memo(function PipelineCard({ project, delay, stageKe
             {/* Quick actions dropdown */}
             <DropdownMenu>
               <DropdownTrigger
+                aria-label="Project actions"
                 className="p-1.5 rounded-lg text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
               >
                 <MoreHorizontal size={14} />

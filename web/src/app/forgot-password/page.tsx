@@ -63,11 +63,11 @@ export default function ForgotPasswordPage() {
               animate={{ opacity: 1 }}
               className="space-y-3"
             >
-              <p className="text-sm text-zinc-300">
-                If an account exists for that email, a reset link has been sent. Check your inbox.
-              </p>
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 text-sm text-emerald-800 dark:text-emerald-300">
+                ✓ Check your email for a reset link. It expires in 1 hour.
+              </div>
               <p className="text-xs text-zinc-600">
-                The link expires in one hour. Didn&apos;t get it? Check your spam folder or try again in an hour.
+                Didn&apos;t get it? Check your spam folder or try again in an hour.
               </p>
             </motion.div>
           ) : (

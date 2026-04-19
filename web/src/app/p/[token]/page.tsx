@@ -170,6 +170,7 @@ export default function PublicProposalPage() {
 
   return (
     <div className="min-h-dvh bg-[hsl(var(--background))] text-[color:var(--ink)] print:bg-white print:text-black">
+      <title>{`Proposal – ${estimate.title}`}</title>
       <style jsx global>{`
         @media print {
           .no-print { display: none !important; }

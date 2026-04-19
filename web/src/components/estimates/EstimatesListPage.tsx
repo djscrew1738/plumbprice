@@ -266,9 +266,11 @@ export function EstimatesListPage() {
               <button onClick={() => void fetchEstimates()} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Refresh estimates">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
-              <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2" aria-label="New estimate">
-                <Plus size={15} /><span className="hidden sm:inline">New</span>
-              </button>
+              <Tooltip content="New estimate (N)">
+                <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2" aria-label="New estimate">
+                  <Plus size={15} /><span className="hidden sm:inline">New</span>
+                </button>
+              </Tooltip>
             </div>
           </div>
 

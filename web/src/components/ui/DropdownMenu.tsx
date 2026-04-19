@@ -66,9 +66,10 @@ export function DropdownMenu({ children, className }: DropdownMenuProps) {
 export interface DropdownTriggerProps {
   children: ReactNode
   className?: string
+  'aria-label'?: string
 }
 
-export function DropdownTrigger({ children, className }: DropdownTriggerProps) {
+export function DropdownTrigger({ children, className, 'aria-label': ariaLabel }: DropdownTriggerProps) {
   const { open, setOpen, triggerId, menuId, triggerRef } = useDropdown()
 
   return (
@@ -79,6 +80,7 @@ export function DropdownTrigger({ children, className }: DropdownTriggerProps) {
       aria-haspopup="true"
       aria-expanded={open}
       aria-controls={open ? menuId : undefined}
+      aria-label={ariaLabel}
       onClick={() => setOpen(!open)}
       className={className}
     >

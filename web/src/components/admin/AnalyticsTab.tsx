@@ -255,7 +255,13 @@ function RepPerformanceSection() {
         </div>
       )}
 
-      {data && !isLoading && (
+      {data && !isLoading && data.reps.length === 0 && (
+        <div className="py-10 text-center text-sm text-[color:var(--muted-ink)]">
+          <p>No rep performance data yet.</p>
+        </div>
+      )}
+
+      {data && !isLoading && data.reps.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-[color:var(--line)]">
           <table className="w-full text-sm">
             <thead className="bg-[color:var(--panel)] text-left text-xs text-[color:var(--muted-ink)]">
@@ -269,33 +275,25 @@ function RepPerformanceSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[color:var(--line)]">
-              {data.reps.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[color:var(--muted-ink)]">
-                    No rep performance data available.
-                  </td>
-                </tr>
-              ) : (
-                data.reps.map((rep) => {
-                  const winRate = rep.quotes_created > 0
-                    ? (rep.won_count / rep.quotes_created) * 100
-                    : 0
-                  return (
-                    <tr key={rep.user_id} className="hover:bg-[color:var(--panel-hover)]">
-                      <td className="px-4 py-3 font-medium text-[color:var(--ink)]">
-                        {rep.full_name}
-                      </td>
-                      <td className="px-4 py-3 text-right">{rep.quotes_created}</td>
-                      <td className="px-4 py-3 text-right">{rep.won_count}</td>
-                      <td className="px-4 py-3 text-right hidden md:table-cell">{winRate.toFixed(1)}%</td>
-                      <td className="px-4 py-3 text-right font-medium">{fmt(rep.won_amount)}</td>
-                      <td className="px-4 py-3 text-right text-[color:var(--muted-ink)] hidden lg:table-cell">
-                        {fmt(rep.avg_deal_size)}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
+              {data.reps.map((rep) => {
+                const winRate = rep.quotes_created > 0
+                  ? (rep.won_count / rep.quotes_created) * 100
+                  : 0
+                return (
+                  <tr key={rep.user_id} className="hover:bg-[color:var(--panel-hover)]">
+                    <td className="px-4 py-3 font-medium text-[color:var(--ink)]">
+                      {rep.full_name}
+                    </td>
+                    <td className="px-4 py-3 text-right">{rep.quotes_created}</td>
+                    <td className="px-4 py-3 text-right">{rep.won_count}</td>
+                    <td className="px-4 py-3 text-right hidden md:table-cell">{winRate.toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-right font-medium">{fmt(rep.won_amount)}</td>
+                    <td className="px-4 py-3 text-right text-[color:var(--muted-ink)] hidden lg:table-cell">
+                      {fmt(rep.avg_deal_size)}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

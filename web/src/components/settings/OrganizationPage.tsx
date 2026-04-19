@@ -276,6 +276,7 @@ export function OrganizationPage() {
               value={defaultTaxRate}
               onChange={(e) => setDefaultTaxRate(e.target.value)}
               placeholder="8.25"
+              helperText="Default tax rate applied to new estimates (e.g. 8.5 for 8.5%)"
               disabled={!isAdmin}
             />
             <Input
@@ -287,6 +288,7 @@ export function OrganizationPage() {
               value={defaultMarkupPercent}
               onChange={(e) => setDefaultMarkupPercent(e.target.value)}
               placeholder="20"
+              helperText="Default markup applied to new estimates (e.g. 20 for 20%)"
               disabled={!isAdmin}
             />
           </div>

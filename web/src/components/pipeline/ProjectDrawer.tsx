@@ -472,10 +472,11 @@ export function ProjectDrawer({
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(true)}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 transition-colors"
+                  disabled={deleteProject.isPending}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 transition-colors disabled:opacity-50"
                 >
                   <Trash2 size={13} />
-                  Delete project
+                  {deleteProject.isPending ? 'Deleting…' : 'Delete project'}
                 </button>
               </div>
             )}
