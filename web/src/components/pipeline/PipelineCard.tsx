@@ -137,7 +137,12 @@ export const PipelineCard = memo(function PipelineCard({ project, delay, stageKe
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[color:var(--ink)] truncate leading-snug">{project.name}</h3>
+            <button
+              onClick={() => router.push(`/projects/${project.id}`)}
+              className="text-sm font-semibold text-[color:var(--ink)] truncate leading-snug hover:text-[color:var(--accent-strong)] transition-colors text-left block w-full"
+            >
+              {project.name}
+            </button>
             <div className="flex items-center gap-1 mt-1">
               <BriefcaseBusiness size={11} className="text-[color:var(--muted-ink)] shrink-0" />
               <span className="text-[11px] text-[color:var(--muted-ink)] capitalize">{project.job_type}</span>

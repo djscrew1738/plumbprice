@@ -15,9 +15,11 @@ import {
   Plus,
   Search,
   Settings,
+  Sun,
   type LucideIcon,
 } from 'lucide-react'
 import { estimatesApi, type EstimateListItem } from '@/lib/api'
+import { useTheme } from '@/lib/useTheme'
 
 interface CommandItem {
   id: string
@@ -34,6 +36,7 @@ interface CommandSection {
 
 export function CommandPalette() {
   const router = useRouter()
+  const { theme, toggle: toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -93,11 +96,26 @@ export function CommandPalette() {
       title: 'Actions',
       items: [
         { id: 'act-new-estimate', label: 'New Estimate', icon: Plus, shortcut: 'N', action: () => router.push('/estimator') },
-        { id: 'act-export-csv', label: 'Export Estimates (CSV)', icon: Download, action: () => router.push('/estimates?export=csv') },
-        { id: 'act-dark-mode', label: 'Toggle Dark Mode', icon: Moon, action: () => { /* placeholder */ } },
+        {
+          id: 'act-export-csv',
+          label: 'Export Estimates (CSV)',
+          icon: Download,
+          action: () => {
+            close()
+            // Navigate to estimates page and trigger export via custom event
+            router.push('/estimates')
+            setTimeout(() => window.dispatchEvent(new CustomEvent('trigger-csv-export')), 300)
+          },
+        },
+        {
+          id: 'act-dark-mode',
+          label: theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode',
+          icon: theme === 'light' ? Moon : Sun,
+          action: () => { toggleTheme(); close() },
+        },
       ],
     },
-  ], [router])
+  ], [router, theme, toggleTheme, close])
 
   const sections: CommandSection[] = useMemo(() => {
     const lowerQuery = query.toLowerCase()

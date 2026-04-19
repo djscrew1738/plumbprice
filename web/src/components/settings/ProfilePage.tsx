@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { User, Lock, Camera } from 'lucide-react'
+import { User, Lock, Camera, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
@@ -123,7 +123,10 @@ export function ProfilePage() {
                 className="absolute -bottom-1 -right-1 rounded-full bg-[color:var(--accent)] p-1.5 text-white shadow-md hover:bg-[color:var(--accent-strong)] transition-colors disabled:opacity-60"
                 aria-label="Change avatar"
               >
-                <Camera size={12} />
+                {uploadAvatar.isPending
+                  ? <RefreshCw size={12} className="animate-spin" />
+                  : <Camera size={12} />
+                }
               </button>
               <input
                 ref={avatarInputRef}

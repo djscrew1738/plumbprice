@@ -213,6 +213,30 @@ export function EstimatesListPage() {
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Sort'
 
+  const handleExportCsv = useCallback(() => {
+    const rows = [
+      ['ID', 'Title', 'Job Type', 'Status', 'County', 'Grand Total', 'Confidence', 'Created'],
+      ...visible.map(e => [
+        String(e.id), e.title, e.job_type, e.status, e.county,
+        String(e.grand_total), e.confidence_label,
+        new Date(e.created_at).toLocaleDateString(),
+      ]),
+    ]
+    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+      download: 'estimates.csv',
+    })
+    a.click()
+  }, [visible])
+
+  // Listen for command-palette-triggered CSV export
+  useEffect(() => {
+    const handler = () => handleExportCsv()
+    window.addEventListener('trigger-csv-export', handler)
+    return () => window.removeEventListener('trigger-csv-export', handler)
+  }, [handleExportCsv])
+
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
 
@@ -241,22 +265,7 @@ export function EstimatesListPage() {
             <div className="flex items-center gap-2 shrink-0">
               <Tooltip content="Export visible estimates as CSV">
                 <button
-                  onClick={() => {
-                    const rows = [
-                      ['ID', 'Title', 'Job Type', 'Status', 'County', 'Grand Total', 'Confidence', 'Created'],
-                      ...visible.map(e => [
-                        String(e.id), e.title, e.job_type, e.status, e.county,
-                        String(e.grand_total), e.confidence_label,
-                        new Date(e.created_at).toLocaleDateString(),
-                      ]),
-                    ]
-                    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
-                    const a = Object.assign(document.createElement('a'), {
-                      href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
-                      download: 'estimates.csv',
-                    })
-                    a.click()
-                  }}
+                  onClick={handleExportCsv}
                   className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
                   aria-label="Export CSV"
                 >
