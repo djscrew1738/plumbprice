@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRevenue, usePipelineAnalytics, useRepPerformance } from '@/lib/hooks'
+import { useRevenue, usePipelineAnalytics, useRepPerformance, analyticsKeys } from '@/lib/hooks'
+import { TrendingUp } from 'lucide-react'
 import { Select } from '@/components/ui/Select'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 const PERIOD_OPTIONS = [
   { value: '30d', label: 'Last 30 days' },
@@ -28,6 +31,7 @@ function fmtPct(value: number): string {
 
 function RevenueSection() {
   const [period, setPeriod] = useState('all')
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useRevenue(period)
 
   const maxRevenue = data?.monthly_breakdown.reduce((m, r) => Math.max(m, r.revenue), 1) ?? 1
@@ -42,17 +46,33 @@ function RevenueSection() {
       </div>
 
       {isLoading && (
-        <div className="animate-pulse space-y-3">
-          <div className="h-24 rounded-xl bg-[color:var(--panel-strong)]" />
-          <div className="h-40 rounded-xl bg-[color:var(--panel-strong)]" />
+        <div className="space-y-3">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
         </div>
       )}
 
       {error && !isLoading && (
-        <p className="text-sm text-red-500">Failed to load revenue data.</p>
+        <div className="rounded-xl border border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] p-4 text-sm text-[hsl(var(--danger))]">
+          Failed to load revenue data.{' '}
+          <button
+            onClick={() => void queryClient.invalidateQueries({ queryKey: [...analyticsKeys.all, 'revenue', period] })}
+            className="underline"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
-      {data && !isLoading && (
+      {!isLoading && !error && data && data.total_revenue === 0 && (
+        <div className="py-10 text-center text-sm text-[color:var(--muted-ink)]">
+          <TrendingUp size={32} className="mx-auto mb-2 opacity-30" />
+          <p>No revenue recorded yet.</p>
+          <p className="text-xs mt-1">Won estimates will appear here.</p>
+        </div>
+      )}
+
+      {data && !isLoading && data.total_revenue > 0 && (
         <>
           {/* KPI card */}
           <div className="rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
@@ -127,6 +147,7 @@ function RevenueSection() {
 // ─── Pipeline Section ─────────────────────────────────────────────────────────
 
 function PipelineSection() {
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = usePipelineAnalytics()
 
   return (
@@ -134,14 +155,22 @@ function PipelineSection() {
       <h2 className="text-base font-semibold text-[color:var(--ink)]">Pipeline</h2>
 
       {isLoading && (
-        <div className="animate-pulse space-y-3">
-          <div className="h-24 rounded-xl bg-[color:var(--panel-strong)]" />
-          <div className="h-32 rounded-xl bg-[color:var(--panel-strong)]" />
+        <div className="space-y-3">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
         </div>
       )}
 
       {error && !isLoading && (
-        <p className="text-sm text-red-500">Failed to load pipeline data.</p>
+        <div className="rounded-xl border border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] p-4 text-sm text-[hsl(var(--danger))]">
+          Failed to load pipeline data.{' '}
+          <button
+            onClick={() => void queryClient.invalidateQueries({ queryKey: [...analyticsKeys.all, 'pipeline-analytics'] })}
+            className="underline"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
       {data && !isLoading && (
@@ -198,6 +227,7 @@ function PipelineSection() {
 
 function RepPerformanceSection() {
   const [period, setPeriod] = useState('all')
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useRepPerformance(period)
 
   return (
@@ -210,11 +240,19 @@ function RepPerformanceSection() {
       </div>
 
       {isLoading && (
-        <div className="animate-pulse h-40 rounded-xl bg-[color:var(--panel-strong)]" />
+        <Skeleton className="h-40 rounded-xl" />
       )}
 
       {error && !isLoading && (
-        <p className="text-sm text-red-500">Failed to load rep performance data.</p>
+        <div className="rounded-xl border border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] p-4 text-sm text-[hsl(var(--danger))]">
+          Failed to load rep performance data.{' '}
+          <button
+            onClick={() => void queryClient.invalidateQueries({ queryKey: [...analyticsKeys.all, 'rep-performance', period] })}
+            className="underline"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
       {data && !isLoading && (
@@ -225,9 +263,9 @@ function RepPerformanceSection() {
                 <th className="px-4 py-3 font-medium">Rep Name</th>
                 <th className="px-4 py-3 font-medium text-right">Quotes</th>
                 <th className="px-4 py-3 font-medium text-right">Won</th>
-                <th className="px-4 py-3 font-medium text-right">Win Rate</th>
+                <th className="px-4 py-3 font-medium text-right hidden md:table-cell">Win Rate</th>
                 <th className="px-4 py-3 font-medium text-right">Revenue Won</th>
-                <th className="px-4 py-3 font-medium text-right">Avg Deal</th>
+                <th className="px-4 py-3 font-medium text-right hidden lg:table-cell">Avg Deal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[color:var(--line)]">
@@ -249,9 +287,9 @@ function RepPerformanceSection() {
                       </td>
                       <td className="px-4 py-3 text-right">{rep.quotes_created}</td>
                       <td className="px-4 py-3 text-right">{rep.won_count}</td>
-                      <td className="px-4 py-3 text-right">{winRate.toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-right hidden md:table-cell">{winRate.toFixed(1)}%</td>
                       <td className="px-4 py-3 text-right font-medium">{fmt(rep.won_amount)}</td>
-                      <td className="px-4 py-3 text-right text-[color:var(--muted-ink)]">
+                      <td className="px-4 py-3 text-right text-[color:var(--muted-ink)] hidden lg:table-cell">
                         {fmt(rep.avg_deal_size)}
                       </td>
                     </tr>

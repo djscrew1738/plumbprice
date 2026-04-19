@@ -118,7 +118,6 @@ export function AdminUsersPage() {
     {
       key: 'role',
       header: 'Role',
-      width: '160px',
       render: (row) =>
         row.id !== String(user?.id) ? (
           <Select
@@ -136,7 +135,6 @@ export function AdminUsersPage() {
     {
       key: 'is_active',
       header: 'Status',
-      width: '120px',
       render: (row) => (
         <Badge variant={row.is_active ? 'info' : 'neutral'} size="sm">
           {row.is_active ? 'Active' : 'Disabled'}
@@ -146,7 +144,7 @@ export function AdminUsersPage() {
     {
       key: 'last_login_at',
       header: 'Last Login',
-      width: '140px',
+      className: 'hidden sm:table-cell',
       render: (row) => (
         <span className="text-xs text-[color:var(--muted-ink)]">
           {formatDate(row.last_login_at)}
@@ -156,7 +154,6 @@ export function AdminUsersPage() {
     {
       key: 'actions',
       header: '',
-      width: '100px',
       align: 'right',
       render: (row) =>
         row.id !== String(user?.id) && row.is_active ? (
@@ -220,6 +217,7 @@ export function AdminUsersPage() {
                   size="sm"
                   onClick={() => revokeInvite.mutate(inv.id)}
                   isLoading={revokeInvite.isPending}
+                  disabled={revokeInvite.isPending}
                 >
                   Revoke
                 </Button>

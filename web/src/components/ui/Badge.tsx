@@ -37,11 +37,11 @@ export interface BadgeProps
   dot?: boolean
 }
 
-export const Badge = memo(function Badge({ className, variant, size, dot, children, ...props }: BadgeProps) {
+export const Badge = memo(function Badge({ className, variant, size, dot, role = 'status', children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(badgeVariants({ variant, size, className }))}
-      {...(dot ? { role: 'status' } : {})}
+      role={role}
       {...props}
     >
       {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />}

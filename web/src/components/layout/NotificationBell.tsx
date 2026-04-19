@@ -70,7 +70,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  const { data: notifications = [] } = useNotifications()
+  const { data: notifications = [], error: notifError } = useNotifications()
   const unreadCount = useUnreadCount()
   const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllRead()
@@ -167,7 +167,12 @@ export function NotificationBell() {
 
             {/* List */}
             <div className="max-h-[400px] overflow-y-auto overscroll-contain">
-              {recent.length === 0 ? (
+              {notifError && recent.length === 0 && (
+                <div className="px-4 py-8 text-center text-xs text-[hsl(var(--danger))]">
+                  Failed to load notifications
+                </div>
+              )}
+              {recent.length === 0 && !notifError ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-[color:var(--muted-ink)]">
                   <Bell size={28} strokeWidth={1.5} aria-hidden="true" />
                   <p className="text-sm font-medium">No notifications</p>
