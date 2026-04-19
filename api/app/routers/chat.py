@@ -237,6 +237,23 @@ async def chat_price(    request: Request,
         raise HTTPException(status_code=500, detail="An error occurred while processing your request")
 
 
+from collections import defaultdict
+import time
+
+_user_request_times: dict[int, list[float]] = defaultdict(list)
+USER_RATE_LIMIT = 20  # per minute
+
+def _check_user_rate_limit(user_id: int) -> bool:
+    """Returns True if allowed, False if rate limited."""
+    now = time.time()
+    window = 60.0
+    times = [t for t in _user_request_times[user_id] if now - t < window]
+    _user_request_times[user_id] = times
+    if len(times) >= USER_RATE_LIMIT:
+        return False
+    _user_request_times[user_id].append(now)
+    return True
+
 @router.post("/price/stream")
 @limiter.limit("20/minute")
 async def chat_price_stream(
@@ -245,6 +262,8 @@ async def chat_price_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not _check_user_rate_limit(current_user.id):
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait a minute.")
     """
     SSE streaming variant of /price.
 

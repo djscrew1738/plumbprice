@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 import structlog
 
 from app.core.auth import get_current_user
@@ -23,6 +24,7 @@ async def list_sessions(
     """List recent chat sessions for the current user, newest first."""
     result = await db.execute(
         select(ChatSession)
+        .options(selectinload(ChatSession.messages))
         .where(ChatSession.user_id == current_user.id)
         .order_by(ChatSession.updated_at.desc())
         .limit(limit)
@@ -35,6 +37,7 @@ async def list_sessions(
             "county": s.county,
             "created_at": s.created_at,
             "updated_at": s.updated_at,
+            "message_count": len(s.messages),
         }
         for s in sessions
     ]
@@ -48,7 +51,9 @@ async def get_session(
 ):
     """Return a session with its full message history."""
     result = await db.execute(
-        select(ChatSession).where(
+        select(ChatSession)
+        .options(selectinload(ChatSession.messages))
+        .where(
             ChatSession.id == session_id,
             ChatSession.user_id == current_user.id,
         )
@@ -75,6 +80,37 @@ async def get_session(
         ],
     }
 
+
+@router.post("/{session_id}/clone", status_code=201)
+async def clone_session(session_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Clone a chat session (no messages)."""
+    result = await db.execute(
+        select(ChatSession).where(
+            ChatSession.id == session_id,
+            ChatSession.user_id == current_user.id,
+        )
+    )
+    original = result.scalar_one_or_none()
+    if not original:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    new_session = ChatSession(
+        title=f"Copy of {original.title}",
+        county=original.county,
+        user_id=current_user.id,
+        organization_id=getattr(current_user, "organization_id", None),
+    )
+    db.add(new_session)
+    await db.flush()
+    await db.commit()
+    return {
+        "id": new_session.id,
+        "title": new_session.title,
+        "county": new_session.county,
+        "created_at": new_session.created_at,
+        "updated_at": new_session.updated_at,
+        "message_count": 0,
+    }
 
 @router.delete("/{session_id}", status_code=204)
 async def delete_session(
