@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FileUp, X } from 'lucide-react'
-import { chatApi, estimatesApi, sessionsApi, templatesApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
+import { chatApi, estimatesApi, sessionsApi, templatesApi, blueprintsApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import type { ChatMessage, EstimateBreakdown as EstimateBreakdownType, LineItem } from '@/types'
 import { WorkspaceEntryBar, type WorkspaceEntryMode } from '@/components/workspace/WorkspaceEntryBar'
@@ -83,6 +83,8 @@ function toEstimateBreakdown(payload: EstimateDetailResponse): EstimateBreakdown
     line_items: normalizeLineItems(payload.line_items),
   }
 }
+
+import { useQuery } from '@tanstack/react-query'
 
 export function EstimatorPage() {
   const { success, error } = useToast()

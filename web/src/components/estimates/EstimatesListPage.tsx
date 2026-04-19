@@ -415,12 +415,28 @@ export function EstimatesListPage() {
                   >
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-[color:var(--ink)] text-sm truncate mb-1.5">{est.title || `Estimate #${est.id}`}</h3>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span>
-                          <StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} />
-                          <span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span>
-                        </div>
+                        <h3 className="font-semibold text-[color:var(--ink)] text-sm truncate mb-1.5 flex items-center gap-1.5">
+  {est.title || `Estimate #${est.id}`}
+  {est.outcome && (
+    <span
+      className={cn(
+        'ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold border',
+        est.outcome === 'won' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        est.outcome === 'lost' && 'bg-red-50 text-red-700 border-red-200',
+        est.outcome === 'no_bid' && 'bg-zinc-50 text-zinc-600 border-zinc-200',
+        est.outcome === 'pending' && 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      )}
+      role="status"
+    >
+      {est.outcome === 'won' ? 'Won' : est.outcome === 'lost' ? 'Lost' : est.outcome === 'no_bid' ? 'No Bid' : 'Pending'}
+    </span>
+  )}
+</h3>
+<div className="flex items-center gap-1.5 flex-wrap">
+  <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span>
+  <StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} />
+  <span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span>
+</div>
                       </div>
                       <div className="text-xl font-extrabold text-[color:var(--ink)] shrink-0 tabular-nums">{formatCurrency(est.grand_total)}</div>
                     </div>
@@ -497,7 +513,23 @@ export function EstimatesListPage() {
                         role="row"
                         onClick={() => router.push(`/estimates/${est.id}`)}
                       >
-                        <td className="px-4 py-3 font-medium text-[color:var(--ink)] max-w-[180px] truncate">{est.title || `Estimate #${est.id}`}</td>
+                        <td className="px-4 py-3 font-medium text-[color:var(--ink)] max-w-[180px] truncate flex items-center gap-1.5">
+  {est.title || `Estimate #${est.id}`}
+  {est.outcome && (
+    <span
+      className={cn(
+        'ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold border',
+        est.outcome === 'won' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        est.outcome === 'lost' && 'bg-red-50 text-red-700 border-red-200',
+        est.outcome === 'no_bid' && 'bg-zinc-50 text-zinc-600 border-zinc-200',
+        est.outcome === 'pending' && 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      )}
+      role="status"
+    >
+      {est.outcome === 'won' ? 'Won' : est.outcome === 'lost' ? 'Lost' : est.outcome === 'no_bid' ? 'No Bid' : 'Pending'}
+    </span>
+  )}
+</td>
                         <td className="px-4 py-3"><span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span></td>
                         <td className="px-4 py-3"><StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} /></td>
                         <td className="px-4 py-3"><span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span></td>

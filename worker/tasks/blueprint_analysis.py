@@ -42,6 +42,7 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
             job.page_count = len(pdf)
             await db.commit()
 
+            total_fixture_count = 0
             for i in range(len(pdf)):
                 page = pdf[i]
                 # High resolution render for vision
@@ -101,6 +102,7 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                         )
                         bp_page.status = "vision_error"
                     for det in detections:
+                        total_fixture_count += det.get("count", 1)
                         db.add(BlueprintDetection(
                             page_id=bp_page.id,
                             fixture_type=det.get("type"),
@@ -114,6 +116,18 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
             job.status = "complete"
             await db.commit()
             pdf.close()
+
+            # Push WS notification so the frontend can stop polling immediately
+            try:
+                from app.routers.ws import pipeline_hub
+                await pipeline_hub.broadcast({
+                    "type": "blueprint_status",
+                    "job_id": str(job_id),
+                    "status": "completed",
+                    "fixture_count": total_fixture_count,
+                })
+            except Exception as ws_exc:
+                logger.warning("vision.ws_broadcast_failed", job_id=job_id, error=str(ws_exc))
             
             logger.info("vision.analysis_complete", job_id=job_id, pages=job.page_count)
             return {"job_id": job_id, "status": "complete", "pages": job.page_count}
@@ -133,6 +147,17 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                     job_id=job_id,
                     error=str(status_update_exc),
                 )
+            # Push WS error notification (best-effort)
+            try:
+                from app.routers.ws import pipeline_hub
+                await pipeline_hub.broadcast({
+                    "type": "blueprint_status",
+                    "job_id": str(job_id),
+                    "status": "error",
+                    "error": str(e),
+                })
+            except Exception as ws_exc:
+                logger.warning("vision.ws_broadcast_failed", job_id=job_id, error=str(ws_exc))
             raise e
 
 

@@ -17,6 +17,7 @@ import { AlertCircle, FileUp, Loader2, CheckCircle2, RotateCw, X } from 'lucide-
 
 import { blueprintsApi } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
+import { useWebSocket } from '@/lib/hooks/useWebSocket'
 
 type Stage = 'uploading' | 'processing' | 'completed' | 'failed'
 
@@ -67,6 +68,8 @@ export function BlueprintUploadFlow({ projectId }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({})
   const hasCreatedRef = useRef<Set<string>>(new Set())
+  // Maps numeric jobId (as string) to the local file entry id
+  const jobIdToLocalRef = useRef<Map<string, string>>(new Map())
 
   const updateJob = useCallback((id: string, patch: Partial<JobState>) => {
     setJobs(prev => prev.map(j => (j.id === id ? { ...j, ...patch } : j)))
@@ -94,7 +97,7 @@ export function BlueprintUploadFlow({ projectId }: Props) {
     try {
       const { data } = await blueprintsApi.toEstimate(jobId, projectId ? { project_id: projectId } : undefined)
       updateJob(id, { estimateId: data.estimate_id })
-      success('Draft estimate created from blueprint')
+      success('Estimate created from blueprint — opening now…')
       router.push(`/estimates/${data.estimate_id}`)
     } catch (err) {
       hasCreatedRef.current.delete(id)
@@ -139,6 +142,38 @@ export function BlueprintUploadFlow({ projectId }: Props) {
     }, POLL_MS)
   }, [createEstimate, stopPolling, updateJob])
 
+  // Handle WS push — short-circuits polling when server broadcasts status
+  const handleWsMessage = useCallback((msg: Record<string, unknown>) => {
+    if (msg.type !== 'blueprint_status') return
+    const remoteJobId = String(msg.job_id ?? '')
+    const localId = jobIdToLocalRef.current.get(remoteJobId)
+    if (!localId) return
+
+    if (msg.status === 'completed') {
+      stopPolling(localId)
+      const numericJobId = Number(remoteJobId)
+      blueprintsApi.getTakeoff(remoteJobId)
+        .then(takeoff => {
+          updateJob(localId, { stage: 'completed', statusLabel: 'Ready', fixtures: takeoff.data?.fixtures ?? [] })
+        })
+        .catch(() => {
+          updateJob(localId, { stage: 'completed', statusLabel: 'Ready' })
+        })
+        .finally(() => {
+          void createEstimate(localId, numericJobId)
+        })
+    } else if (msg.status === 'error') {
+      stopPolling(localId)
+      updateJob(localId, {
+        stage: 'failed',
+        statusLabel: 'Failed',
+        errorMessage: String(msg.error ?? 'Blueprint analysis failed'),
+      })
+    }
+  }, [stopPolling, updateJob, createEstimate])
+
+  useWebSocket(handleWsMessage)
+
   const uploadFile = useCallback(async (file: File) => {
     const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     setJobs(prev => [
@@ -153,6 +188,7 @@ export function BlueprintUploadFlow({ projectId }: Props) {
         throw new Error('Upload response missing job id')
       }
       updateJob(id, { jobId, stage: 'processing', statusLabel: 'Processing…' })
+      jobIdToLocalRef.current.set(String(jobId), id)
       pollJob(id, jobId)
     } catch (err) {
       const msg =

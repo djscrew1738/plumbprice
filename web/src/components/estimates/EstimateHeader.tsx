@@ -176,41 +176,38 @@ function OutcomeButtons({
   outcomeSubmitting: boolean
   onRecordOutcome: (value: OutcomeValue) => void
 }) {
-  if (outcome) {
-    return (
-      <span className={cn(
-        'px-2 py-1 rounded-lg text-[11px] font-semibold border',
-        outcome === 'won'
-          ? 'bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]'
-          : 'bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.3)]',
-      )}>
-        {outcome === 'won' ? 'Won' : 'Lost'}
-      </span>
-    )
-  }
-
+  const OUTCOMES: { value: OutcomeValue, label: string, color: string }[] = [
+    { value: 'won', label: 'Won', color: 'emerald-600' },
+    { value: 'lost', label: 'Lost', color: 'red-600' },
+    { value: 'no_bid', label: 'No Bid', color: 'zinc-500' },
+    { value: 'pending', label: 'Pending', color: 'yellow-600' },
+  ]
   return (
     <div className="flex items-center gap-1">
-      <Tooltip content="Mark as won">
+      {OUTCOMES.map(({ value, label, color }) => (
         <button
-          onClick={() => onRecordOutcome('won')}
-          disabled={outcomeSubmitting}
-          aria-label="Mark estimate as won"
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.18)] transition-colors disabled:opacity-40"
+          key={value}
+          onClick={() => onRecordOutcome(value)}
+          disabled={outcomeSubmitting || outcome === value}
+          aria-label={`Mark estimate as ${label.toLowerCase()}`}
+          className={cn(
+            'px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1 transition-colors',
+            value === 'won' && 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+            value === 'lost' && 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
+            value === 'no_bid' && 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100',
+            value === 'pending' && 'border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
+            outcome === value && 'ring-2 ring-inset ring-'+color+' font-bold',
+            outcomeSubmitting && outcome === value && 'opacity-60',
+            outcome === value ? '' : 'opacity-80',
+          )}
         >
-          Won
+          {outcomeSubmitting && outcome === value ? (
+            <span className="animate-spin mr-1 w-3 h-3 border-2 border-t-transparent border-current rounded-full" />
+          ) : null}
+          {label}
         </button>
-      </Tooltip>
-      <Tooltip content="Mark as lost">
-        <button
-          onClick={() => onRecordOutcome('lost')}
-          disabled={outcomeSubmitting}
-          aria-label="Mark estimate as lost"
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.18)] transition-colors disabled:opacity-40"
-        >
-          Lost
-        </button>
-      </Tooltip>
+      ))}
     </div>
   )
 }
+

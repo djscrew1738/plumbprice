@@ -105,8 +105,8 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
       {!loading && !error && jobs.length === 0 && (
         <EmptyState
           icon={<Inbox size={22} />}
-          title="No recent jobs"
-          description="Your completed estimates will appear here once you start pricing work."
+          title="No estimates yet"
+          description="No estimates yet — start with a pricing question or upload a blueprint."
           className={compact ? 'py-4' : 'py-6'}
         />
       )}
