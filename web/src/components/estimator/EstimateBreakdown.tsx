@@ -13,6 +13,7 @@ interface Props {
   assumptions: string[]
   county: string
   compact?: boolean
+  savedEstimateId?: number | null
 }
 
 export function EstimateBreakdown({
@@ -22,6 +23,7 @@ export function EstimateBreakdown({
   assumptions,
   county,
   compact = false,
+  savedEstimateId,
 }: Props) {
   const total = estimate.grand_total || 1
   const costRows = [
@@ -120,6 +122,12 @@ export function EstimateBreakdown({
               <CheckCheck size={14} className="text-emerald-600" />
               <span>Saved to Estimates</span>
             </div>
+            {savedEstimateId ? (
+              <Link href={`/estimates/${savedEstimateId}`} className="btn-primary w-full gap-2 text-xs">
+                <ExternalLink size={13} />
+                View This Estimate
+              </Link>
+            ) : null}
             <Link href="/estimates" className="btn-ghost w-full gap-2 border border-[color:var(--line)] text-xs">
               <ExternalLink size={13} />
               View All Estimates

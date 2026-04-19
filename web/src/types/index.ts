@@ -3,6 +3,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   estimate?: EstimateBreakdown
+  estimate_id?: number | null
   confidence?: number
   confidence_label?: string
   assumptions?: string[]

@@ -236,9 +236,9 @@ export function LauncherHome() {
             <span className="font-semibold">{stats.expired} estimate{stats.expired === 1 ? '' : 's'} expired</span>
             {' '}and still open — consider following up or refreshing the quote.
           </p>
-          <a href="/estimates?status=expired" className="ml-auto shrink-0 text-xs font-semibold text-[hsl(var(--warning))] hover:underline">
+          <Link href="/estimates?status=expired" className="ml-auto shrink-0 text-xs font-semibold text-[hsl(var(--warning))] hover:underline">
             View →
-          </a>
+          </Link>
         </motion.div>
       )}
 

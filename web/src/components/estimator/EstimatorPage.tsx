@@ -433,7 +433,7 @@ export function EstimatorPage() {
     }])
 
     try {
-      let pricingData: { estimate?: ChatMessage['estimate']; confidence?: number; confidence_label?: string; assumptions?: string[] } = {}
+      let pricingData: { estimate?: ChatMessage['estimate']; estimate_id?: number | null; confidence?: number; confidence_label?: string; assumptions?: string[] } = {}
       let narrative = ''
 
       for await (const event of chatApi.priceStream({
@@ -462,6 +462,7 @@ export function EstimatorPage() {
                 sku: item.sku ?? undefined,
               })),
             } : undefined,
+            estimate_id: event.estimate_id ?? null,
             confidence: event.confidence,
             confidence_label: event.confidence_label,
             assumptions: event.assumptions,
@@ -490,6 +491,7 @@ export function EstimatorPage() {
           ...m,
           content: finalContent,
           estimate: pricingData.estimate,
+          estimate_id: pricingData.estimate_id,
           confidence: pricingData.confidence,
           confidence_label: pricingData.confidence_label
             ? normalizeConfidenceLabel(pricingData.confidence_label)

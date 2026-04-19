@@ -76,6 +76,12 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
         <h2 className={cn('font-bold tracking-tight text-[color:var(--ink)]', compact ? 'text-xs' : 'text-lg')}>
           {heading}
         </h2>
+        <Link
+          href="/estimates"
+          className={cn('shrink-0 text-[color:var(--accent)] hover:underline transition-colors', compact ? 'text-[10px]' : 'text-xs')}
+        >
+          View all →
+        </Link>
       </div>
 
       {loading && (
@@ -116,7 +122,7 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
           {jobs.map(job => (
             <li key={job.id} className="rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)]">
               <Link
-                href={`/estimator?estimateId=${job.id}`}
+                href={`/estimates/${job.id}`}
                 className={cn(
                   'group block rounded-xl transition-colors hover:bg-[color:var(--panel-strong)]',
                   compact ? 'px-2.5 py-2' : 'px-3 py-2.5'

@@ -32,6 +32,7 @@ export function WorkspaceSummaryRail({
               confidenceScore={selectedEstimate.confidence || 0}
               assumptions={selectedEstimate.assumptions || []}
               county={county}
+              savedEstimateId={selectedEstimate.estimate_id}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-7 text-center">
@@ -113,6 +114,7 @@ export function WorkspaceSummaryRail({
                     confidenceScore={selectedEstimate.confidence || 0}
                     assumptions={selectedEstimate.assumptions || []}
                     county={county}
+                    savedEstimateId={selectedEstimate.estimate_id}
                     compact
                   />
                 </div>
