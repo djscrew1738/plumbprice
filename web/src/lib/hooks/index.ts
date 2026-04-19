@@ -65,6 +65,7 @@ export {
   useSessions,
   useSession,
   useDeleteSession,
+  useCloneSession,
   sessionKeys,
 } from './useSessions'
 

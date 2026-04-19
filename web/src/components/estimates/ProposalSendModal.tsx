@@ -1,8 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, Copy, Check } from 'lucide-react'
+import { RefreshCw, Copy, Check, FileText, ChevronDown, ChevronUp } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+
+function formatCurrency(n: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+}
 
 export interface ProposalSendModalProps {
   open: boolean
@@ -14,6 +18,9 @@ export interface ProposalSendModalProps {
   proposalError?: string | null
   /** Public URL shown after a successful send so the contractor can share it another way. */
   shareUrl?: string | null
+  /** Optional estimate summary for the preview section */
+  grandTotal?: number
+  lineItemCount?: number
   onClose: () => void
   onEmailChange: (value: string) => void
   onNameChange: (value: string) => void
@@ -30,6 +37,8 @@ export function ProposalSendModal({
   proposalSending,
   proposalError,
   shareUrl,
+  grandTotal,
+  lineItemCount,
   onClose,
   onEmailChange,
   onNameChange,
@@ -37,6 +46,7 @@ export function ProposalSendModal({
   onSend,
 }: ProposalSendModalProps) {
   const [copied, setCopied] = useState(false)
+  const [previewExpanded, setPreviewExpanded] = useState(false)
   const handleCopy = async () => {
     if (!shareUrl) return
     try {
@@ -94,6 +104,39 @@ export function ProposalSendModal({
         onSubmit={e => { e.preventDefault(); onSend() }}
         className="space-y-3"
       >
+        {/* Estimate summary preview */}
+        {(grandTotal != null || lineItemCount != null) && (
+          <div className="rounded-xl border border-[color:var(--line)] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setPreviewExpanded(v => !v)}
+              className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-[color:var(--panel-strong)] transition-colors"
+              aria-expanded={previewExpanded}
+            >
+              <span className="flex items-center gap-2 text-xs font-medium text-[color:var(--muted-ink)]">
+                <FileText size={13} />
+                Estimate #{estimateId} preview
+              </span>
+              {previewExpanded ? <ChevronUp size={14} className="text-[color:var(--muted-ink)]" /> : <ChevronDown size={14} className="text-[color:var(--muted-ink)]" />}
+            </button>
+            {previewExpanded && (
+              <div className="border-t border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-2.5 flex items-center gap-4 text-xs">
+                {lineItemCount != null && (
+                  <span className="text-[color:var(--muted-ink)]">
+                    <span className="font-semibold text-[color:var(--ink)]">{lineItemCount}</span> line item{lineItemCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {grandTotal != null && (
+                  <span className="text-[color:var(--muted-ink)]">
+                    Total: <span className="font-semibold text-[color:var(--ink)]">{formatCurrency(grandTotal)}</span>
+                  </span>
+                )}
+                <span className="ml-auto text-[color:var(--muted-ink)] italic">Sent as a PDF proposal</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div>
           <label htmlFor="proposal-email" className="mb-1 block text-xs font-medium text-[color:var(--muted-ink)]">
             Recipient email *

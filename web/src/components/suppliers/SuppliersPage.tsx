@@ -249,6 +249,7 @@ export function SuppliersPage() {
                     className={cn(
                       'btn-secondary min-h-0 px-3 py-2 text-xs font-semibold flex items-center gap-1.5',
                     )}
+                    aria-label="Refresh all supplier prices"
                   >
                     <RefreshCw size={13} className={refreshMutation.isPending ? 'animate-spin' : ''} />
                     Refresh All Prices
@@ -260,12 +261,23 @@ export function SuppliersPage() {
                       onClick={() => handleRefreshSupplier(sup)}
                       disabled={refreshMutation.isPending}
                       className="btn-secondary min-h-0 px-2.5 py-1.5 text-[11px] font-semibold flex items-center gap-1"
+                      aria-label={`Refresh ${SUPPLIER_LABELS[sup] ?? sup} prices`}
                     >
                       <RefreshCw size={11} className={refreshMutation.isPending ? 'animate-spin' : ''} />
                       {SUPPLIER_LABELS[sup]}
                     </button>
                   ))}
                 </div>
+
+                {refreshMutation.isPending && (
+                  <div className="flex items-center gap-2 text-xs text-[color:var(--muted-ink)]" role="status" aria-live="polite">
+                    <RefreshCw size={12} className="animate-spin text-emerald-500 shrink-0" />
+                    <span>Refreshing prices for {items.length > 0 ? `${items.length} items` : 'all items'}…</span>
+                    <div className="flex-1 h-1 bg-emerald-100 rounded-full overflow-hidden min-w-[60px]">
+                      <div className="h-full w-2/5 bg-emerald-400 rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -321,6 +333,8 @@ export function SuppliersPage() {
                   <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
                     <button
                       onClick={() => setActiveCategory('all')}
+                      aria-label="Show all categories"
+                      aria-pressed={activeCategory === 'all'}
                       className={cn(
                         'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border',
                         activeCategory === 'all'
@@ -334,6 +348,8 @@ export function SuppliersPage() {
                       <button
                         key={cat}
                         onClick={() => setActiveCategory(cat)}
+                        aria-label={`Filter by ${prettyCat(cat)}`}
+                        aria-pressed={activeCategory === cat}
                         className={cn(
                           'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all border',
                           activeCategory === cat

@@ -360,6 +360,8 @@ export function EstimateDetailPage() {
         proposalSending={proposalSending}
         proposalError={proposalError}
         shareUrl={proposalShareUrl}
+        grandTotal={estimate.grand_total}
+        lineItemCount={estimate.line_items?.length}
         onClose={() => {
           setProposalOpen(false)
           setProposalError(null)

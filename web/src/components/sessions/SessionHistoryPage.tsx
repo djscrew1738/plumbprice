@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageSquare, Trash2, ArrowUpDown, Clock, Hash } from 'lucide-react'
-import { useSessions, useDeleteSession } from '@/lib/hooks'
+import { MessageSquare, Trash2, ArrowUpDown, Clock, Hash, Copy } from 'lucide-react'
+import { useSessions, useDeleteSession, useCloneSession } from '@/lib/hooks'
+import { useToast } from '@/components/ui/Toast'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Badge } from '@/components/ui/Badge'
 import dynamic from 'next/dynamic'
@@ -34,8 +35,10 @@ function formatRelativeTime(dateStr: string): string {
 
 export function SessionHistoryPage() {
   const router = useRouter()
+  const toast = useToast()
   const { data: sessions, isLoading } = useSessions()
   const deleteSession = useDeleteSession()
+  const cloneSession = useCloneSession()
 
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
@@ -77,6 +80,20 @@ export function SessionHistoryPage() {
     deleteSession.mutate(deleteTarget)
     setDeleteTarget(null)
   }, [deleteTarget, deleteSession])
+
+  const handleClone = useCallback(
+    (e: React.MouseEvent, id: number) => {
+      e.stopPropagation()
+      cloneSession.mutate(id, {
+        onSuccess: (res) => {
+          toast.success('Session cloned', 'Opening cloned session…')
+          router.push(`/estimator?session=${res.data.id}`)
+        },
+        onError: () => toast.error('Could not clone session', 'Please try again.'),
+      })
+    },
+    [cloneSession, router, toast],
+  )
 
   const cycleSortKey = useCallback(() => {
     setSortKey((prev) => {
@@ -210,6 +227,28 @@ export function SessionHistoryPage() {
                     {session.county && <> · {session.county} County</>}
                   </p>
                 </div>
+
+                <Tooltip content="Clone session" side="left">
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => handleClone(e, session.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleClone(e as unknown as React.MouseEvent, session.id)
+                      }
+                    }}
+                    className={cn(
+                      'flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-1.5 transition-colors',
+                      'text-[color:var(--muted-ink)] opacity-0 group-hover:opacity-100',
+                      'hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]',
+                    )}
+                    aria-label="Clone session"
+                  >
+                    <Copy size={15} />
+                  </span>
+                </Tooltip>
 
                 <Tooltip content="Delete session" side="left">
                   <span

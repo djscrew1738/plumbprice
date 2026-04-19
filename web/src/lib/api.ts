@@ -475,6 +475,8 @@ export const sessionsApi = {
     api.delete(`/sessions/${id}`),
   getMessages: (id: number) =>
     api.get<ChatSessionDetail['messages']>(`/sessions/${id}/messages`),
+  clone: (id: number) =>
+    api.post<ChatSessionSummary>(`/sessions/${id}/clone`, {}),
 }
 
 // ─── Outcomes ────────────────────────────────────────────────────────────────
