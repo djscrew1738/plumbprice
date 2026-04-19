@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { ProjectPipelineResponse, ProjectPipelineItem } from '@/types'
+export type OutcomeValue = 'won' | 'lost' | 'pending' | 'no_bid'
 
 export type { ProjectPipelineItem, ProjectPipelineResponse }
 
@@ -203,6 +204,7 @@ export interface EstimateListItem {
   created_at: string
   valid_until?: string | null
   is_expired?: boolean
+  outcome?: OutcomeValue | null
 }
 
 export interface EstimateDetailResponse {
@@ -476,8 +478,6 @@ export const sessionsApi = {
 }
 
 // ─── Outcomes ────────────────────────────────────────────────────────────────
-
-export type OutcomeValue = 'won' | 'lost' | 'pending' | 'no_bid'
 
 export interface RecordOutcomeRequest {
   outcome: OutcomeValue
