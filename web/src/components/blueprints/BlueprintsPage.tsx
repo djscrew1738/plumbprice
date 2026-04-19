@@ -150,7 +150,7 @@ function DropZone({ onFiles, isUploading }: { onFiles: (files: File[]) => void; 
 
 // ─── Takeoff display ──────────────────────────────────────────────────────────
 
-function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEstimate: (fixtures: TakeoffFixture[]) => void }) {
+function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEstimate: (jobId: string, fixtures: TakeoffFixture[]) => void }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['blueprint-takeoff', jobId],
     queryFn: async () => {
@@ -190,7 +190,7 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
       ...f,
       quantity: quantities[`${f.name}-${i}`] ?? f.quantity,
     }))
-    onCreateEstimate(modified)
+    onCreateEstimate(jobId, modified)
   }
 
   return (
@@ -253,7 +253,7 @@ function JobCard({
   job: BlueprintJob
   onRemove: (id: string) => void
   onRetry: (id: string) => void
-  onCreateEstimate: (fixtures: TakeoffFixture[]) => void
+  onCreateEstimate: (jobId: string, fixtures: TakeoffFixture[]) => void
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const cfg = STATUS[job.status] ?? STATUS.queued
@@ -408,10 +408,17 @@ export function BlueprintsPage() {
     toast.info('Retrying…', `Rechecking status for job ${id.slice(0, 8)}…`)
   }, [queryClient, toast])
 
-  const handleCreateEstimate = useCallback((fixtures: TakeoffFixture[]) => {
-    const items = fixtures.map(f => `${f.quantity}x ${f.name}`).join(',')
-    router.push(`/estimator?entry=blueprint&items=${encodeURIComponent(items)}`)
-  }, [router])
+  const handleCreateEstimate = useCallback(async (jobId: string, _fixtures: TakeoffFixture[]) => {
+    try {
+      const res = await blueprintsApi.toEstimate(jobId)
+      const { estimate_id } = res.data as { estimate_id: number }
+      toast.success('Estimate created', 'Navigating to your new estimate…')
+      router.push(`/estimates/${estimate_id}`)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error('Could not create estimate', msg ?? 'Please try again.')
+    }
+  }, [router, toast])
 
   const handleClearAll = useCallback(async () => {
     await Promise.allSettled(jobs.map(j => blueprintsApi.delete(j.id)))

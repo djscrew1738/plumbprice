@@ -332,7 +332,7 @@ function ProposalModal({
             <div className="mt-4 flex items-start gap-2.5 px-4 py-3 rounded-xl bg-blue-500/5 border border-blue-500/15">
               <Zap size={13} className="text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-zinc-500 leading-relaxed">
-                <span className="text-blue-400 font-semibold">Phase 2</span> will generate branded PDF proposals with your logo, signature fields, and automatic email delivery.
+                Customers can <span className="text-blue-400 font-semibold">accept or decline</span> proposals online via the public link. Use the Send button above to deliver this via email.
               </p>
             </div>
           </div>
