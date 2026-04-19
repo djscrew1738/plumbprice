@@ -10,94 +10,82 @@ class Settings(BaseSettings):
     # App
     app_name: str = "PlumbPrice AI"
     version: str = "0.1.0"
-    environment: str = Field(default="development", env="ENVIRONMENT")
-    log_level: str = Field(default="INFO", env="LOG_LEVEL")
-    debug: bool = Field(default=False, env="DEBUG")
+    environment: str = "development"
+    log_level: str = "INFO"
+    debug: bool = False
 
     # Database
-    database_url: str = Field(
-        default="postgresql+asyncpg://plumbprice:plumbprice_dev@localhost:5432/plumbprice",
-        env="DATABASE_URL"
-    )
+    database_url: str = "postgresql+asyncpg://plumbprice:plumbprice_dev@localhost:5432/plumbprice"
 
     # Redis
-    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    redis_url: str = "redis://localhost:6379/0"
 
     # MinIO
-    minio_endpoint: str = Field(default="localhost:9000", env="MINIO_ENDPOINT")
-    minio_access_key: str = Field(default="minioadmin", env="MINIO_ACCESS_KEY")
-    minio_secret_key: str = Field(default="minioadmin123", env="MINIO_SECRET_KEY")
-    minio_secure: bool = Field(default=False, env="MINIO_SECURE")
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin123"
+    minio_secure: bool = False
     minio_bucket_blueprints: str = "blueprints"
     minio_bucket_documents: str = "documents"
     minio_bucket_proposals: str = "proposals"
 
     # Auth
-    secret_key: str = Field(..., env="SECRET_KEY")
+    secret_key: str = Field(...)
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = Field(default=60, env="ACCESS_TOKEN_EXPIRE_MINUTES")
-    refresh_token_expire_days: int = Field(default=30, env="REFRESH_TOKEN_EXPIRE_DAYS")
+    access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
 
     # AI — cloud providers
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
-    default_llm_provider: str = Field(default="openai", env="DEFAULT_LLM_PROVIDER")
-    default_llm_model: str = Field(default="gpt-4o-mini", env="DEFAULT_LLM_MODEL")
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    default_llm_provider: str = "openai"
+    default_llm_model: str = "gpt-4o-mini"
 
     # AI — Hermes / Ollama (OpenAI-compatible local inference)
-    hermes_endpoint_url: str = Field(
-        default="http://localhost:11434/v1",
-        env="HERMES_ENDPOINT_URL",
-    )
+    hermes_endpoint_url: str = "http://localhost:11434/v1"
     # Primary model: best quality (used first)
-    llm_primary_model: str = Field(default="qwen2.5:7b-instruct", env="LLM_PRIMARY_MODEL")
+    llm_primary_model: str = "qwen2.5:7b-instruct"
     # Secondary model: fast fallback (used when primary circuit-breaks)
-    llm_secondary_model: str = Field(default="hermes3:3b", env="LLM_SECONDARY_MODEL")
+    llm_secondary_model: str = "hermes3:3b"
     # Legacy alias — kept for backward-compat; overridden by llm_primary_model when set
-    hermes_model: str = Field(default="qwen2.5:7b-instruct", env="HERMES_MODEL")
-    hermes_api_key: str = Field(default="ollama", env="HERMES_API_KEY")
-    llm_timeout: float = Field(default=30.0, env="LLM_TIMEOUT")
-    llm_classify_timeout: float = Field(default=20.0, env="LLM_CLASSIFY_TIMEOUT")
-    llm_classify_threshold: float = Field(default=0.75, env="LLM_CLASSIFY_THRESHOLD")
-    llm_embedding_model: str = Field(default="nomic-embed-text", env="LLM_EMBEDDING_MODEL")
-    llm_vision_model: str = Field(default="llama3.2-vision", env="LLM_VISION_MODEL")
+    hermes_model: str = "qwen2.5:7b-instruct"
+    hermes_api_key: str = "ollama"
+    llm_timeout: float = 30.0
+    llm_classify_timeout: float = 20.0
+    llm_classify_threshold: float = 0.75
+    llm_embedding_model: str = "nomic-embed-text"
+    llm_vision_model: str = "llama3.2-vision"
 
     # CORS
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:3200", "https://app.ctlplumbingllc.com"],
-        env="CORS_ORIGINS"
-    )
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3200", "https://app.ctlplumbingllc.com"]
 
     # External price data sources
-    apify_token: Optional[str] = Field(default=None, env="APIFY_TOKEN")
-    apify_actor_id: str = Field(default="apify/website-content-crawler", env="APIFY_ACTOR_ID")
-    construct_api_url: Optional[str] = Field(default=None, env="CONSTRUCT_API_URL")
-    price_cache_ttl_hours: int = Field(default=24, env="PRICE_CACHE_TTL_HOURS")
+    apify_token: Optional[str] = None
+    apify_actor_id: str = "apify/website-content-crawler"
+    construct_api_url: Optional[str] = None
+    price_cache_ttl_hours: int = 24
 
     # Ferguson Trade API (Phase 2 live pricing)
     # Obtain via Ferguson Trade Partner Program: https://www.ferguson.com/content/website-info/api-overview
-    ferguson_api_key: Optional[str] = Field(default=None, env="FERGUSON_API_KEY")
-    ferguson_api_base_url: str = Field(
-        default="https://api.ferguson.com/v1",
-        env="FERGUSON_API_BASE_URL",
-    )
+    ferguson_api_key: Optional[str] = None
+    ferguson_api_base_url: str = "https://api.ferguson.com/v1"
     # Alert when live price deviates more than this fraction from stored cost
-    price_change_alert_threshold: float = Field(default=0.10, env="PRICE_CHANGE_ALERT_THRESHOLD")
+    price_change_alert_threshold: float = 0.10
 
     # Celery
-    celery_broker_url: str = Field(default="redis://localhost:6379/0", env="CELERY_BROKER_URL")
-    celery_result_backend: str = Field(default="redis://localhost:6379/1", env="CELERY_RESULT_BACKEND")
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = "redis://localhost:6379/1"
 
     # Observability
-    sentry_dsn: Optional[str] = Field(default=None, env="SENTRY_DSN")
-    sentry_traces_sample_rate: float = Field(default=0.1, env="SENTRY_TRACES_SAMPLE_RATE")
+    sentry_dsn: Optional[str] = None
+    sentry_traces_sample_rate: float = 0.1
 
     # Email (proposal delivery)
-    resend_api_key: Optional[str] = Field(default=None, env="RESEND_API_KEY")
-    email_from: str = Field(default="estimates@ctlplumbingllc.com", env="EMAIL_FROM")
+    resend_api_key: Optional[str] = None
+    email_from: str = "estimates@ctlplumbingllc.com"
 
     # Public URL for customer-facing proposal links
-    frontend_url: str = Field(default="http://localhost:3000", env="FRONTEND_URL")
+    frontend_url: str = "http://localhost:3000"
 
     model_config = {
         "env_file": ".env" if os.getenv("ENVIRONMENT") != "test" else None,
