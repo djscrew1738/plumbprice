@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from sqlalchemy import select
@@ -94,6 +94,8 @@ async def download_proposal_pdf(
 @router.get("/{estimate_id}/sends")
 async def list_proposal_sends(
     estimate_id: int,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -107,6 +109,8 @@ async def list_proposal_sends(
             Proposal.organization_id == user_org,
         )
         .order_by(Proposal.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     proposals = result.scalars().all()
     return [

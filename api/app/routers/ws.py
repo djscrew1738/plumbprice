@@ -30,7 +30,8 @@ class PipelineHub:
         for ws in self.connections:
             try:
                 await ws.send_json(event)
-            except Exception:
+            except Exception as e:
+                logger.warning("ws.send_failed", error=str(e))
                 dead.append(ws)
         for ws in dead:
             self.connections.remove(ws)
@@ -51,7 +52,8 @@ async def pipeline_ws(
         if user_id is None:
             await websocket.close(code=4001)
             return
-    except Exception:
+    except Exception as e:
+        logger.warning("ws.auth_failed", error=str(e))
         await websocket.close(code=4001)
         return
 

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,8 +24,7 @@ class NotificationResponse(BaseModel):
     read_at: Optional[datetime] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MarkReadRequest(BaseModel):
@@ -36,6 +35,7 @@ class MarkReadRequest(BaseModel):
 @router.get("", response_model=List[NotificationResponse])
 async def list_notifications(
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     unread_only: bool = Query(False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -43,7 +43,7 @@ async def list_notifications(
     stmt = select(Notification).where(Notification.user_id == current_user.id)
     if unread_only:
         stmt = stmt.where(Notification.read_at.is_(None))
-    stmt = stmt.order_by(Notification.created_at.desc()).limit(limit)
+    stmt = stmt.order_by(Notification.created_at.desc()).limit(limit).offset(offset)
     rows = (await db.execute(stmt)).scalars().all()
     return rows
 

@@ -24,6 +24,25 @@ LOCKOUT_WINDOW_MINUTES = 15
 _LOCKOUT_WINDOW_SECONDS = LOCKOUT_WINDOW_MINUTES * 60
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    email: str
+    full_name: str
+    role: str
+    is_admin: bool
+    organization_id: int | None = None
+
+
 async def _check_brute_force(email: str) -> None:
     """Block login if too many recent failed attempts."""
     count = await rate_limit.get_count(email.lower(), _LOCKOUT_WINDOW_SECONDS)
@@ -48,7 +67,7 @@ class RegisterRequest(BaseModel):
     full_name: str = ""
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
@@ -99,7 +118,7 @@ async def login(
     }
 
 
-@router.post("/register")
+@router.post("/register", response_model=TokenResponse)
 async def register(
     request: RegisterRequest,
     db: AsyncSession = Depends(get_db),
@@ -130,7 +149,7 @@ async def register(
     }
 
 
-@router.get("/me")
+@router.get("/me", response_model=UserProfileResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user profile."""
     return {
@@ -168,7 +187,7 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", response_model=MessageResponse)
 async def forgot_password(
     payload: ForgotPasswordRequest,
     db: AsyncSession = Depends(get_db),
@@ -210,7 +229,7 @@ async def forgot_password(
     return GENERIC_FORGOT_RESPONSE
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
     payload: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
@@ -256,7 +275,7 @@ class AcceptInviteRequest(BaseModel):
     full_name: str | None = None
 
 
-@router.post("/accept-invite")
+@router.post("/accept-invite", response_model=TokenResponse)
 async def accept_invite(
     payload: AcceptInviteRequest,
     db: AsyncSession = Depends(get_db),

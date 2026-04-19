@@ -15,7 +15,7 @@ router = APIRouter()
 Period = Literal["30d", "90d", "365d", "all"]
 
 
-@router.get("/revenue")
+@router.get("/revenue", response_model=dict)
 async def revenue(
     period: Period = Query("all"),
     current_user: User = Depends(get_current_user),
@@ -29,7 +29,7 @@ async def revenue(
     )
 
 
-@router.get("/pipeline")
+@router.get("/pipeline", response_model=dict)
 async def pipeline(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -48,7 +48,7 @@ async def pipeline(
     return base
 
 
-@router.get("/rep-performance")
+@router.get("/rep-performance", response_model=dict)
 async def rep_performance(
     period: Period = Query("all"),
     current_user: User = Depends(get_current_admin),

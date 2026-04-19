@@ -21,6 +21,7 @@ async def _ping_redis() -> str:
         await r.aclose()
         return "ok"
     except Exception as exc:
+        logger.warning("health.check_failed", check="redis", error=str(exc))
         return f"error: {exc}"
 
 
@@ -41,7 +42,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
         await db.execute(text("SELECT 1"))
         return {"status": "ready", "database": "ok"}
     except Exception as e:
-        logger.error("readiness_check_failed", error=str(e))
+        logger.warning("health.check_failed", check="database", error=str(e))
         return {"status": "not_ready", "database": "error", "error": str(e)}
 
 
@@ -68,6 +69,7 @@ async def dependencies_check(db: AsyncSession = Depends(get_db)):
     try:
         await db.execute(text("SELECT 1"))
     except Exception as e:
+        logger.warning("health.check_failed", check="database", error=str(e))
         db_status = f"error: {e}"
 
     return {

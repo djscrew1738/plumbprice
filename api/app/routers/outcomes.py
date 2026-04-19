@@ -25,7 +25,7 @@ class RecordOutcomeRequest(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)
 
 
-@router.post("/{estimate_id}/outcome")
+@router.post("/{estimate_id}/outcome", response_model=dict)
 async def record_outcome(
     estimate_id: int,
     body: RecordOutcomeRequest,
@@ -86,7 +86,7 @@ async def record_outcome(
     }
 
 
-@router.get("/stats")
+@router.get("/stats", response_model=dict)
 async def outcome_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
