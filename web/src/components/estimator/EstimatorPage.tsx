@@ -537,7 +537,7 @@ export function EstimatorPage() {
   }, [])
 
   return (
-    <div className="flex flex-col" style={{ height: `calc(100dvh - 54px - ${keyboardOffset}px)` }}>
+    <div className="flex flex-col" style={{ height: `calc(100dvh - var(--header-height) - ${keyboardOffset}px)` }}>
       <WorkspaceEntryBar
         county={county}
         counties={COUNTIES}
