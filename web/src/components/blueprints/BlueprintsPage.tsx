@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -160,6 +160,19 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
     staleTime: Infinity,
   })
 
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
+
+  // Seed quantities from fetched data (only when data first arrives)
+  useEffect(() => {
+    if (data?.fixtures) {
+      const initial: Record<string, number> = {}
+      data.fixtures.forEach((f, i) => {
+        initial[`${f.name}-${i}`] = f.quantity
+      })
+      setQuantities(initial)
+    }
+  }, [data])
+
   if (isLoading) {
     return <Skeleton variant="table-row" count={3} className="mt-2" />
   }
@@ -172,27 +185,53 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
     )
   }
 
+  const handleCreateEstimate = () => {
+    const modified = data.fixtures.map((f, i) => ({
+      ...f,
+      quantity: quantities[`${f.name}-${i}`] ?? f.quantity,
+    }))
+    onCreateEstimate(modified)
+  }
+
   return (
     <div className="mt-3 space-y-2">
       <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
         Detected fixtures ({data.fixtures.length})
       </p>
       <div className="space-y-1">
-        {data.fixtures.map((f, i) => (
-          <div key={`${f.name}-${i}`} className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-            <span className="text-xs text-zinc-300 font-medium flex-1 truncate">{f.name}</span>
-            <span className="text-[11px] text-zinc-500">×{f.quantity}{f.unit ? ` ${f.unit}` : ''}</span>
-            <Badge
-              variant={f.confidence >= 0.8 ? 'success' : f.confidence >= 0.5 ? 'warning' : 'danger'}
-              size="sm"
-            >
-              {Math.round(f.confidence * 100)}%
-            </Badge>
-          </div>
-        ))}
+        {data.fixtures.map((f, i) => {
+          const key = `${f.name}-${i}`
+          return (
+            <div key={key} className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+              <span className="text-xs text-zinc-300 font-medium flex-1 truncate">{f.name}</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-zinc-500">×</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={quantities[key] ?? f.quantity}
+                  onChange={(e) => {
+                    const v = Math.max(0, Number(e.target.value) || 0)
+                    setQuantities((prev) => ({ ...prev, [key]: v }))
+                  }}
+                  className="w-14 rounded-md bg-white/[0.06] border border-white/[0.1] px-1.5 py-0.5 text-[11px] text-zinc-300 text-right focus:outline-none focus:ring-1 focus:ring-blue-500/60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  aria-label={`Quantity for ${f.name}`}
+                />
+                {f.unit && <span className="text-[11px] text-zinc-500">{f.unit}</span>}
+              </div>
+              <Badge
+                variant={f.confidence >= 0.8 ? 'success' : f.confidence >= 0.5 ? 'warning' : 'danger'}
+                size="sm"
+              >
+                {Math.round(f.confidence * 100)}%
+              </Badge>
+            </div>
+          )
+        })}
       </div>
       <button
-        onClick={() => onCreateEstimate(data.fixtures)}
+        onClick={handleCreateEstimate}
         className="mt-2 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:shadow-lg transition-all active:scale-[0.98]"
       >
         <Zap size={13} />
