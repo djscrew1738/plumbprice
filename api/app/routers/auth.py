@@ -41,6 +41,8 @@ class UserProfileResponse(BaseModel):
     role: str
     is_admin: bool
     organization_id: int | None = None
+    phone: str | None = None
+    avatar_url: str | None = None
 
 
 async def _check_brute_force(email: str) -> None:
@@ -155,14 +157,133 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "email": current_user.email,
-        "full_name": current_user.full_name,
+        "full_name": current_user.full_name or "",
         "role": current_user.role,
         "is_admin": current_user.is_admin,
         "organization_id": current_user.organization_id,
+        "phone": current_user.phone,
+        "avatar_url": current_user.avatar_url,
     }
 
 
-# ─── Password reset ───────────────────────────────────────────────────────────
+# ─── Profile update ──────────────────────────────────────────────────────────
+
+class UpdateProfileRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=20)
+
+
+@router.patch("/profile", response_model=UserProfileResponse)
+async def update_profile(
+    payload: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update name, email, and/or phone for the current user."""
+    if payload.email and payload.email != current_user.email:
+        existing = await db.execute(
+            select(User).where(User.email == payload.email, User.id != current_user.id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already in use by another account")
+        current_user.email = payload.email
+
+    if payload.name is not None:
+        current_user.full_name = payload.name
+
+    if payload.phone is not None:
+        current_user.phone = payload.phone or None
+
+    await db.commit()
+    await db.refresh(current_user)
+    logger.info("user.profile_updated", user_id=current_user.id)
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name or "",
+        "role": current_user.role,
+        "is_admin": current_user.is_admin,
+        "organization_id": current_user.organization_id,
+        "phone": current_user.phone,
+        "avatar_url": current_user.avatar_url,
+    }
+
+
+# ─── Change password ─────────────────────────────────────────────────────────
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the current user's password after verifying the existing one."""
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    await db.commit()
+    logger.info("user.password_changed", user_id=current_user.id)
+    return {"message": "Password updated successfully"}
+
+
+# ─── Avatar upload ───────────────────────────────────────────────────────────
+
+import io as _io
+import uuid as _uuid
+from fastapi import UploadFile, File
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_MAX_AVATAR_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post("/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a profile avatar image. Returns the new avatar URL."""
+    from app.core.storage import storage_client
+    from app.config import settings as _cfg
+
+    if file.content_type not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=415, detail="Unsupported image type. Use JPEG, PNG, WebP, or GIF.")
+
+    content = await file.read()
+    if len(content) > _MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=413, detail="Image exceeds 5 MB limit")
+
+    ext = file.filename.rsplit(".", 1)[-1] if file.filename and "." in file.filename else "jpg"
+    object_name = f"avatars/{current_user.id}/{_uuid.uuid4()}.{ext}"
+
+    # Use blueprints bucket (public-ish) or documents bucket; reuse available bucket
+    bucket = getattr(_cfg, "minio_bucket_blueprints", "blueprints")
+    ok = storage_client.upload_file(
+        bucket,
+        object_name,
+        _io.BytesIO(content),
+        len(content),
+        content_type=file.content_type or "image/jpeg",
+    )
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to upload avatar")
+
+    # Build URL — MinIO endpoint + bucket + object path
+    endpoint = _cfg.minio_endpoint
+    scheme = "https" if _cfg.minio_secure else "http"
+    avatar_url = f"{scheme}://{endpoint}/{bucket}/{object_name}"
+
+    current_user.avatar_url = avatar_url
+    await db.commit()
+    logger.info("user.avatar_uploaded", user_id=current_user.id)
+    return {"avatar_url": avatar_url}
+
 
 PASSWORD_RESET_RATE_LIMIT = 3
 _PASSWORD_RESET_WINDOW_SECONDS = 60 * 60  # 1 hour

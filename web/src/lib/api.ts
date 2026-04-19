@@ -649,6 +649,15 @@ export const userApi = {
     (await api.patch('/auth/profile', data)).data,
   changePassword: async (data: { current_password: string; new_password: string }) =>
     (await api.post('/auth/change-password', data)).data,
+  uploadAvatar: async (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return (
+      await api.post('/auth/avatar', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    ).data
+  },
 }
 
 // ─── Organization ───────────────────────────────────────────────────────────

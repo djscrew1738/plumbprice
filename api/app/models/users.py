@@ -41,6 +41,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    phone = Column(String(20), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)

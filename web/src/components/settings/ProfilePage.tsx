@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { User, Lock, Camera } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
-import { useProfile, useUpdateProfile, useChangePassword } from '@/lib/hooks'
+import { useProfile, useUpdateProfile, useChangePassword, useUploadAvatar } from '@/lib/hooks'
 
 export function ProfilePage() {
   const { data: profile, isLoading } = useProfile()
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
+  const uploadAvatar = useUploadAvatar()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -21,6 +23,8 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
 
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null)
+
   useEffect(() => {
     if (profile) {
       setName(profile.full_name ?? '')
@@ -28,6 +32,19 @@ export function ProfilePage() {
       setPhone(profile.phone ?? '')
     }
   }, [profile])
+
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Show local preview immediately
+    const url = URL.createObjectURL(file)
+    setLocalAvatarUrl(url)
+    uploadAvatar.mutate(file, {
+      onError: () => setLocalAvatarUrl(null),
+    })
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }, [uploadAvatar])
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,18 +111,28 @@ export function ProfilePage() {
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[color:var(--line)]">
             <div className="relative">
               <Avatar
-                src={profile?.avatar_url ?? undefined}
+                src={localAvatarUrl ?? profile?.avatar_url ?? undefined}
                 alt={profile?.full_name ?? ''}
                 fallback={profile?.full_name?.charAt(0)?.toUpperCase()}
                 size="xl"
               />
               <button
                 type="button"
-                className="absolute -bottom-1 -right-1 rounded-full bg-[color:var(--accent)] p-1.5 text-white shadow-md hover:bg-[color:var(--accent-strong)] transition-colors"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadAvatar.isPending}
+                className="absolute -bottom-1 -right-1 rounded-full bg-[color:var(--accent)] p-1.5 text-white shadow-md hover:bg-[color:var(--accent-strong)] transition-colors disabled:opacity-60"
                 aria-label="Change avatar"
               >
                 <Camera size={12} />
               </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                onChange={handleAvatarChange}
+                aria-label="Upload avatar image"
+              />
             </div>
             <div>
               <p className="text-sm font-semibold text-[color:var(--ink)]">
