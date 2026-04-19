@@ -193,7 +193,7 @@ export function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                className="rounded-lg p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
                 aria-label="Close dialog"
               >
                 <X size={16} />
@@ -211,7 +211,7 @@ export function Modal({
             )}
 
             {/* Body (scrollable) */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[70vh]">
+            <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[70vh] pb-[max(1rem,env(safe-area-inset-bottom))]">
               {children}
             </div>
           </motion.div>

@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* Toast stack — top-right desktop, top-center mobile */}
-      <div role="region" aria-label="Notifications" className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-[300] flex flex-col gap-2 w-[calc(100vw-2rem)] sm:w-80 pointer-events-none">
+      <div role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false" className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-[300] flex flex-col gap-2 w-[calc(100vw-2rem)] sm:w-80 pointer-events-none">
         <AnimatePresence initial={false}>
           {toasts.map(t => {
             const s = STYLES[t.type]

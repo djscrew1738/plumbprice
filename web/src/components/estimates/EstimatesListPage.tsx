@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -142,6 +142,7 @@ export function EstimatesListPage() {
   const [filter,        setFilter]        = useState('all')
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const [search,        setSearch]        = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [sortBy,        setSortBy]        = useState<SortKey>('newest')
   const [sortOpen,      setSortOpen]      = useState(false)
   const sortRef = useRef<HTMLDivElement>(null)
@@ -193,7 +194,7 @@ export function EstimatesListPage() {
 
   const visible = useMemo(() => {
     let list = estimates.filter(e => {
-      const q = search.toLowerCase()
+      const q = deferredSearch.toLowerCase()
       return !q || (e.title ?? '').toLowerCase().includes(q) || e.county.toLowerCase().includes(q)
     })
     switch (sortBy) {
@@ -203,7 +204,7 @@ export function EstimatesListPage() {
       case 'lowest':  list = [...list].sort((a, b) => a.grand_total - b.grand_total); break
     }
     return list
-  }, [estimates, search, sortBy])
+  }, [estimates, deferredSearch, sortBy])
 
   const { totalValue, avgValue } = useMemo(() => {
     const total = visible.reduce((s, e) => s + (e.grand_total || 0), 0)
@@ -465,7 +466,7 @@ export function EstimatesListPage() {
                               <button
                                 onClick={e => handleDuplicate(est.id, e)}
                                 disabled={duplicating === est.id}
-                                className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+                                className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40 flex items-center justify-center"
                                 aria-label="Duplicate estimate"
                               >
                                 {duplicating === est.id ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
@@ -475,7 +476,7 @@ export function EstimatesListPage() {
                               <button
                                 onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
                                 disabled={deleting === est.id}
-                                className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
+                                className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40 flex items-center justify-center"
                                 aria-label="Delete estimate"
                               >
                                 <Trash2 size={14} />

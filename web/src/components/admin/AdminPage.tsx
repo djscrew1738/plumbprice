@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp } from 'lucide-react'
+import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Plus } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'
@@ -32,6 +32,9 @@ export function AdminPage() {
   const [priceSearch, setPriceSearch] = useState('')
   const [editItem, setEditItem] = useState<CanonicalItem | null>(null)
   const [editValues, setEditValues] = useState<EditValues>({} as EditValues)
+  const [addItemOpen, setAddItemOpen] = useState(false)
+  const [addItemName, setAddItemName] = useState('')
+  const [addItemValues, setAddItemValues] = useState<EditValues>({} as EditValues)
 
   const { data: templates = [], isLoading: templatesLoading, error: templatesError } = useAdminTemplates({
     enabled: tab === 'labor',
@@ -58,6 +61,7 @@ export function AdminPage() {
 
   const saveMarkupMutation = useSaveMarkup()
   const saveItemMutation = useSaveItem()
+  const addItemMutation = useSaveItem()
 
   const loading = (tab === 'labor' && templatesLoading) ||
     (tab === 'markup' && markupLoading) ||
@@ -101,6 +105,46 @@ export function AdminPage() {
       },
     )
   }, [editItem, editValues, toast, saveItemMutation])
+
+  const openAddItem = useCallback(() => {
+    const blank = {} as EditValues
+    for (const slug of SUPPLIERS) {
+      blank[slug] = { name: '', cost: 0, unit: 'ea', sku: '' }
+    }
+    setAddItemValues(blank)
+    setAddItemName('')
+    setAddItemOpen(true)
+  }, [])
+
+  const saveAddItem = useCallback(async () => {
+    const name = addItemName.trim()
+    if (!name) return
+    const updates = SUPPLIERS
+      .filter(slug => addItemValues[slug]?.name && (addItemValues[slug]?.cost ?? 0) > 0)
+      .map(slug => ({
+        supplier: slug,
+        name: addItemValues[slug].name!,
+        cost: Number(addItemValues[slug].cost),
+        unit: addItemValues[slug].unit ?? 'ea',
+        sku: addItemValues[slug].sku || undefined,
+      }))
+    if (updates.length === 0) return
+    addItemMutation.mutate(
+      { canonicalItem: name, updates },
+      {
+        onSuccess: () => {
+          toast.success('Item added', name)
+          setAddItemOpen(false)
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'items'] })
+        },
+        onError: () => toast.error('Could not add item', 'Please try again.'),
+      },
+    )
+  }, [addItemName, addItemValues, addItemMutation, toast, queryClient])
+
+  const handleAddItemValueChange = useCallback((slug: SupplierSlug, field: string, value: string | number) => {
+    setAddItemValues(prev => ({ ...prev, [slug]: { ...prev[slug], [field]: value } }))
+  }, [])
 
   const saveMarkup = async () => {
     setConfirmSave(false)
@@ -205,6 +249,15 @@ export function AdminPage() {
                 onCloseEditItem={() => setEditItem(null)}
                 onEditValueChange={handleEditValueChange}
                 onSaveEditItem={() => void saveEditItem()}
+                addItemOpen={addItemOpen}
+                addItemName={addItemName}
+                addItemValues={addItemValues}
+                addItemSaving={addItemMutation.isPending}
+                onOpenAddItem={openAddItem}
+                onCloseAddItem={() => setAddItemOpen(false)}
+                onAddItemNameChange={setAddItemName}
+                onAddItemValueChange={handleAddItemValueChange}
+                onSaveAddItem={() => void saveAddItem()}
               />
             </TabsContent>
 

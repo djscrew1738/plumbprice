@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Copy, Check, Square, Pencil } from 'lucide-react'
+import { Copy, Check, Square, Pencil, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, LineItem } from '@/types'
 import ReactMarkdown from 'react-markdown'
@@ -43,6 +43,26 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   return (
     <>
+      {messages.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center py-16 px-6 gap-4 text-center select-none">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] border border-[color:var(--accent)]/20">
+            <MessageSquare size={24} className="text-[color:var(--accent-strong)]" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-[color:var(--ink)]">Start a conversation</p>
+            <p className="mt-1 text-sm text-[color:var(--muted-ink)] max-w-xs">
+              Describe the plumbing job below and the AI will generate a detailed price estimate.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center mt-1">
+            {['Kitchen sink rough-in, 2 fixtures', 'Water heater replacement', '3-bed house repipe'].map(hint => (
+              <span key={hint} className="px-3 py-1.5 rounded-full bg-[color:var(--panel-strong)] border border-[color:var(--line)] text-xs text-[color:var(--muted-ink)] font-medium">
+                {hint}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {messages.map((message, index) => (
         <motion.div
           key={message.id}

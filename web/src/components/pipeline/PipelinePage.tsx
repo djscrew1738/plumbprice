@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useDeferredValue, useEffect } from 'react'
 import {
-  CircleDollarSign, RefreshCw, TrendingUp, Plus, X,
+  CircleDollarSign, RefreshCw, TrendingUp, Plus, X, GripVertical,
 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
@@ -34,10 +34,22 @@ export function PipelinePage() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [showCreate,  setShowCreate]  = useState(false)
+  const [showDragHint, setShowDragHint] = useState(false)
+
+  useEffect(() => {
+    const seen = localStorage.getItem('pipeline_drag_hint_seen')
+    if (!seen) setShowDragHint(true)
+  }, [])
+
+  const dismissDragHint = useCallback(() => {
+    localStorage.setItem('pipeline_drag_hint_seen', '1')
+    setShowDragHint(false)
+  }, [])
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [jobTypeFilter, setJobTypeFilter] = useState('')
+  const deferredSearch = useDeferredValue(searchQuery)
 
   const { data, isLoading: loading, error: queryError, refetch: load } = usePipeline()
 
@@ -80,8 +92,8 @@ export function PipelinePage() {
   const filteredProjects = useMemo(() => {
     let result = projects
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+    if (deferredSearch.trim()) {
+      const q = deferredSearch.toLowerCase()
       result = result.filter(p =>
         p.name.toLowerCase().includes(q) ||
         (p.customer_name && p.customer_name.toLowerCase().includes(q))
@@ -93,7 +105,7 @@ export function PipelinePage() {
     }
 
     return result
-  }, [projects, searchQuery, jobTypeFilter])
+  }, [projects, deferredSearch, jobTypeFilter])
 
   const hasActiveFilters = searchQuery.trim() !== '' || jobTypeFilter !== ''
   const isFiltered = hasActiveFilters && filteredProjects.length !== projects.length
@@ -248,7 +260,23 @@ export function PipelinePage() {
 
         {/* Kanban columns */}
         {!loading && !error && filteredProjects.length > 0 && (
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-start">
+          <>
+            {showDragHint && (
+              <div className="mb-3 flex items-center gap-2.5 rounded-xl bg-[color:var(--accent-soft)] border border-[color:var(--accent)]/30 px-4 py-2.5">
+                <GripVertical size={14} className="text-[color:var(--accent-strong)] shrink-0" />
+                <p className="text-xs text-[color:var(--accent-strong)] font-medium flex-1">
+                  Drag cards between columns to move projects through the pipeline.
+                </p>
+                <button
+                  onClick={dismissDragHint}
+                  className="min-h-[32px] min-w-[32px] flex items-center justify-center rounded-lg text-[color:var(--accent-strong)] hover:bg-[color:var(--accent)]/10 transition-colors"
+                  aria-label="Dismiss hint"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-start">
             {STAGES.map((stage, stageIndex) => (
               <PipelineColumn
                 key={stage.key}
@@ -260,7 +288,8 @@ export function PipelinePage() {
                 onProjectDeleted={handleProjectDeleted}
               />
             ))}
-          </div>
+            </div>
+          </>
         )}
         </div>
       </div>
