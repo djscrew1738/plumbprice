@@ -22,9 +22,9 @@ export function useEstimates(
   return useQuery({
     queryKey: estimateKeys.list(params),
     queryFn: async () => {
-      const apiParams = params?.job_type && params.job_type !== 'all'
-        ? { job_type: params.job_type }
-        : {}
+      const apiParams: Record<string, string> = {}
+      if (params?.job_type && params.job_type !== 'all') apiParams.job_type = params.job_type
+      if (params?.status && params.status !== 'all') apiParams.status = params.status
       const res = await api.get('/estimates', { params: apiParams })
       const raw = res.data
       return (Array.isArray(raw) ? raw : (raw?.estimates ?? [])) as EstimateListItem[]

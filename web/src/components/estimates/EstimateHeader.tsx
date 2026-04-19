@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  ArrowLeft, Zap, Copy, Download, Printer, Mail, Trash2, RefreshCw,
+  ArrowLeft, Zap, Copy, Download, Printer, Mail, Trash2, RefreshCw, AlertTriangle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import dynamic from 'next/dynamic'
@@ -18,6 +18,8 @@ export interface EstimateHeaderProps {
     job_type: string
     county: string
     grand_total: number
+    status?: string
+    is_expired?: boolean | null
   }
   outcome: OutcomeValue | null
   outcomeSubmitting: boolean
@@ -72,7 +74,20 @@ export function EstimateHeader({
             <Badge variant={jobTypeVariant[estimate.job_type] ?? 'accent'} size="sm">
               {estimate.job_type}
             </Badge>
+            {estimate.status && (
+              <Badge
+                variant={estimate.status === 'accepted' ? 'success' : estimate.status === 'rejected' ? 'danger' : estimate.status === 'sent' ? 'info' : 'neutral'}
+                size="sm"
+              >
+                {estimate.status}
+              </Badge>
+            )}
             <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.county} County</span>
+            {estimate.is_expired && (
+              <span className="inline-flex items-center gap-0.5 text-[hsl(var(--warning))] text-[10px] font-semibold">
+                <AlertTriangle size={11} /> Expired
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

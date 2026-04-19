@@ -3,7 +3,7 @@
 import { motion, type Variants } from 'framer-motion'
 import { useQueries } from '@tanstack/react-query'
 import Link from 'next/link'
-import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target, BarChart3, Users } from 'lucide-react'
+import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target, BarChart3, Users, AlertTriangle, Send } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -31,7 +31,9 @@ function computeWeeklyStats(jobs: EstimateListItem[]) {
   const recent = jobs.filter(j => new Date(j.created_at).getTime() >= cutoff)
   const totalValue = recent.reduce((sum, j) => sum + (j.grand_total ?? 0), 0)
   const avgValue = recent.length > 0 ? totalValue / recent.length : 0
-  return { count: recent.length, totalValue, avgValue }
+  const pendingSent = jobs.filter(j => j.status === 'sent').length
+  const expired = jobs.filter(j => j.is_expired && j.status !== 'accepted' && j.status !== 'rejected').length
+  return { count: recent.length, totalValue, avgValue, pendingSent, expired }
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -165,9 +167,10 @@ export function LauncherHome() {
       )}
 
       {/* This-week stats */}
-      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="This week's activity">
+      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="This week's activity">
         {stats === null ? (
           <>
+            <Skeleton variant="stat-card" />
             <Skeleton variant="stat-card" />
             <Skeleton variant="stat-card" />
             <Skeleton variant="stat-card" />
@@ -175,7 +178,7 @@ export function LauncherHome() {
           </>
         ) : (
           <motion.div
-            className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
             variants={staggerContainer}
             initial="hidden"
             animate="show"
@@ -194,9 +197,15 @@ export function LauncherHome() {
             />
             <StatCard
               icon={TrendingUp}
-              label="Average job value"
+              label="Avg job value"
               value={stats.avgValue > 0 ? formatCurrency(stats.avgValue) : '—'}
               subText="This week"
+            />
+            <StatCard
+              icon={Send}
+              label="Awaiting reply"
+              value={stats.pendingSent === 0 ? 'None' : `${stats.pendingSent} proposal${stats.pendingSent === 1 ? '' : 's'}`}
+              subText="Proposals sent"
             />
             <StatCard
               icon={Target}
@@ -213,6 +222,25 @@ export function LauncherHome() {
           </motion.div>
         )}
       </section>
+
+      {/* Expired estimates attention banner */}
+      {stats !== null && stats.expired > 0 && (
+        <motion.div
+          className="mt-4 flex items-center gap-3 rounded-2xl border border-[hsl(var(--warning)/0.4)] bg-[hsl(var(--warning)/0.08)] px-4 py-3"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <AlertTriangle size={15} className="shrink-0 text-[hsl(var(--warning))]" />
+          <p className="text-sm text-[color:var(--ink)]">
+            <span className="font-semibold">{stats.expired} estimate{stats.expired === 1 ? '' : 's'} expired</span>
+            {' '}and still open — consider following up or refreshing the quote.
+          </p>
+          <a href="/estimates?status=expired" className="ml-auto shrink-0 text-xs font-semibold text-[hsl(var(--warning))] hover:underline">
+            View →
+          </a>
+        </motion.div>
+      )}
 
       {/* Quick-action cards */}
       <motion.section
@@ -314,8 +342,8 @@ export function LauncherHomeSkeleton() {
         <Skeleton variant="text" className="h-4 w-3/4" />
       </div>
 
-      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Skeleton variant="stat-card" count={3} />
+      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <Skeleton variant="stat-card" count={5} />
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import {
   TrendingUp, Layers, Tag, CircleDollarSign,
-  Calendar, MapPin, FileText,
+  Calendar, MapPin, FileText, AlertTriangle, Clock,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { DonutChart } from '@/components/ui/DonutChart'
@@ -21,6 +21,9 @@ export interface CostBreakdownCardProps {
   confidenceLabel: string
   confidenceScore: number
   createdAt: string
+  status?: string
+  isExpired?: boolean
+  validUntil?: string | null
 }
 
 function formatDate(dateStr: string) {
@@ -39,6 +42,9 @@ export function CostBreakdownCard({
   confidenceLabel,
   confidenceScore,
   createdAt,
+  status,
+  isExpired = false,
+  validUntil,
 }: CostBreakdownCardProps) {
   const costCards = [
     { label: 'Labor',     value: laborTotal,     icon: TrendingUp,       bg: 'bg-[hsl(var(--info)/0.1)] border-[hsl(var(--info)/0.2)]'     },
@@ -105,7 +111,26 @@ export function CostBreakdownCard({
             <span className="text-xs">Supplier: {preferredSupplier}</span>
           </div>
         )}
+        {validUntil && (
+          <div className={cn('flex items-center gap-2', isExpired ? 'text-[hsl(var(--warning))]' : 'text-[color:var(--muted-ink)]')}>
+            {isExpired
+              ? <AlertTriangle size={13} className="shrink-0" />
+              : <Clock size={13} className="shrink-0" />
+            }
+            <span className="text-xs">
+              {isExpired ? 'Expired' : 'Valid until'} {format(new Date(validUntil), 'MMM d, yyyy')}
+            </span>
+          </div>
+        )}
         <div className="ml-auto flex items-center gap-2">
+          {status && (
+            <Badge
+              variant={status === 'accepted' ? 'success' : status === 'rejected' ? 'danger' : status === 'sent' ? 'info' : 'neutral'}
+              size="sm"
+            >
+              {status}
+            </Badge>
+          )}
           <Badge variant={confidenceLabel?.toLowerCase() === 'high' ? 'success' : confidenceLabel?.toLowerCase() === 'medium' ? 'warning' : 'danger'} size="sm">
             {confidenceLabel} confidence
           </Badge>

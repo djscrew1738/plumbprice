@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
-  TrendingUp, Search, ChevronDown, ArrowUpDown, Check, Download, Copy,
+  TrendingUp, Search, ChevronDown, ArrowUpDown, Check, Download, Copy, AlertTriangle,
 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api'
-import { useEstimates, useDeleteEstimate, useDuplicateEstimate } from '@/lib/hooks'
+import { useEstimates, useDeleteEstimate, useDuplicateEstimate, estimateKeys } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { badgeVariants } from '@/components/ui/Badge'
@@ -22,6 +22,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 interface Estimate {
   id: number; title: string; job_type: string; status: string
   grand_total: number; confidence_label: string; county: string; created_at: string
+  outcome?: string | null; is_expired?: boolean | null; valid_until?: string | null
 }
 
 function formatDate(dateStr: string) {
@@ -126,6 +127,14 @@ const FILTERS = [
   { value: 'construction', label: 'Construction' },
   { value: 'commercial', label: 'Commercial' },
 ]
+const STATUS_FILTERS = [
+  { value: 'all',      label: 'All statuses' },
+  { value: 'draft',    label: 'Draft'        },
+  { value: 'sent',     label: 'Sent'         },
+  { value: 'accepted', label: 'Accepted'     },
+  { value: 'rejected', label: 'Rejected'     },
+  { value: 'expired',  label: 'Expired'      },
+]
 type SortKey = 'newest' | 'oldest' | 'highest' | 'lowest'
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'newest',  label: 'Newest first' },
@@ -136,10 +145,17 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 export function EstimatesListPage() {
   const router  = useRouter()
+  const searchParams = useSearchParams()
   const toast   = useToast()
   const queryClient = useQueryClient()
 
+  const initialStatus = searchParams.get('status') ?? 'all'
+  // 'expired' is a client-side filter (is_expired flag), not an API status value
   const [filter,        setFilter]        = useState('all')
+  const [statusFilter,  setStatusFilter]  = useState(
+    ['draft', 'sent', 'accepted', 'rejected'].includes(initialStatus) ? initialStatus : 'all'
+  )
+  const [expiredOnly,   setExpiredOnly]   = useState(initialStatus === 'expired')
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const [search,        setSearch]        = useState('')
   const deferredSearch = useDeferredValue(search)
@@ -148,7 +164,7 @@ export function EstimatesListPage() {
   const sortRef = useRef<HTMLDivElement>(null)
 
   const { data: estimates = [], isLoading: loading, error: queryError, refetch: fetchEstimates } = useEstimates(
-    { job_type: filter },
+    { job_type: filter !== 'all' ? filter : undefined, status: statusFilter !== 'all' ? statusFilter : undefined },
   )
   const deleteMutation = useDeleteEstimate()
   const duplicateMutation = useDuplicateEstimate()
@@ -171,10 +187,10 @@ export function EstimatesListPage() {
   }, [sortOpen])
 
   const handleStatusChange = useCallback((id: number, status: string) => {
-    queryClient.setQueryData<Estimate[]>(['estimates', { filter }], prev =>
+    queryClient.setQueriesData<Estimate[]>({ queryKey: estimateKeys.lists() }, prev =>
       prev?.map(e => e.id === id ? { ...e, status } : e)
     )
-  }, [queryClient, filter])
+  }, [queryClient])
 
   const handleDeleteConfirm = useCallback((id: number) => {
     setConfirmDelete(null)
@@ -194,8 +210,9 @@ export function EstimatesListPage() {
 
   const visible = useMemo(() => {
     let list = estimates.filter(e => {
+      if (expiredOnly && !e.is_expired) return false
       const q = deferredSearch.toLowerCase()
-      return !q || (e.title ?? '').toLowerCase().includes(q) || e.county.toLowerCase().includes(q)
+      return !q || (e.title ?? '').toLowerCase().includes(q) || e.county.toLowerCase().includes(q) || e.status.toLowerCase().includes(q)
     })
     switch (sortBy) {
       case 'newest':  list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break
@@ -204,7 +221,7 @@ export function EstimatesListPage() {
       case 'lowest':  list = [...list].sort((a, b) => a.grand_total - b.grand_total); break
     }
     return list
-  }, [estimates, deferredSearch, sortBy])
+  }, [estimates, deferredSearch, sortBy, expiredOnly])
 
   const { totalValue, avgValue } = useMemo(() => {
     const total = visible.reduce((s, e) => s + (e.grand_total || 0), 0)
@@ -244,7 +261,7 @@ export function EstimatesListPage() {
       <div className="bg-[color:var(--panel)]/80 backdrop-blur-xl border-b border-[color:var(--line)] px-4 py-2.5 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto space-y-2.5">
           <div className="flex items-center justify-between gap-3">
-            {/* Filter pills */}
+            {/* Filter pills — job type */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
               {FILTERS.map(f => (
                 <button
@@ -289,7 +306,7 @@ export function EstimatesListPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search by title or county…"
+              placeholder="Search by title, county, or status…"
               className="flex-1"
               aria-label="Search estimates"
             />
@@ -328,6 +345,41 @@ export function EstimatesListPage() {
                 )}
               </AnimatePresence>
             </div>
+          </div>
+
+          {/* Status filter chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            {STATUS_FILTERS.map(s => {
+              const isActive = s.value === 'expired' ? expiredOnly : (!expiredOnly && statusFilter === s.value)
+              return (
+                <button
+                  key={s.value}
+                  onClick={() => {
+                    if (s.value === 'expired') {
+                      setExpiredOnly(true)
+                      setStatusFilter('all')
+                    } else {
+                      setExpiredOnly(false)
+                      setStatusFilter(s.value)
+                    }
+                  }}
+                  aria-pressed={isActive}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all border',
+                    isActive
+                      ? s.value === 'draft'    ? 'bg-zinc-700 text-white border-zinc-600'
+                        : s.value === 'sent'   ? 'bg-blue-600 text-white border-blue-500'
+                        : s.value === 'accepted' ? 'bg-emerald-600 text-white border-emerald-500'
+                        : s.value === 'rejected' ? 'bg-red-600 text-white border-red-500'
+                        : s.value === 'expired' ? 'bg-amber-600 text-white border-amber-500'
+                        : 'bg-[color:var(--accent)] text-white border-[color:var(--accent)]'
+                      : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] border-[color:var(--line)]',
+                  )}
+                >
+                  {s.label}
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -380,12 +432,24 @@ export function EstimatesListPage() {
           <div className="card">
             <EmptyState
               icon={<FileText size={20} />}
-              title="No estimates yet"
-              description="Chat with the estimator to generate your first price."
+              title={expiredOnly ? 'No expired estimates' : statusFilter !== 'all' ? `No ${statusFilter} estimates` : 'No estimates yet'}
+              description={
+                expiredOnly
+                  ? 'No estimates have expired.'
+                  : statusFilter !== 'all'
+                  ? `No estimates with status "${statusFilter}"${filter !== 'all' ? ` for ${filter} jobs` : ''}.`
+                  : 'Chat with the estimator to generate your first price.'
+              }
               action={
-                <button onClick={() => router.push('/estimator')} className="btn-primary">
-                  Start Estimating
-                </button>
+                expiredOnly || statusFilter !== 'all' ? (
+                  <button onClick={() => { setStatusFilter('all'); setExpiredOnly(false) }} className="btn-ghost text-xs">
+                    Show all statuses
+                  </button>
+                ) : (
+                  <button onClick={() => router.push('/estimator')} className="btn-primary">
+                    Start Estimating
+                  </button>
+                )
               }
             />
           </div>
@@ -397,11 +461,20 @@ export function EstimatesListPage() {
             <EmptyState
               icon={<Search size={20} />}
               title="No matches"
-              description={`No estimates match \u201c${search}\u201d`}
+              description={search ? `No estimates match "${search}"` : 'No estimates match the active filters.'}
               action={
-                <button onClick={() => setSearch('')} className="btn-ghost text-xs">
-                  Clear search
-                </button>
+                <div className="flex items-center gap-2">
+                  {search && (
+                    <button onClick={() => setSearch('')} className="btn-ghost text-xs">
+                      Clear search
+                    </button>
+                  )}
+                  {(statusFilter !== 'all' || expiredOnly) && (
+                    <button onClick={() => { setStatusFilter('all'); setExpiredOnly(false) }} className="btn-ghost text-xs">
+                      Clear status filter
+                    </button>
+                  )}
+                </div>
               }
             />
           </div>
@@ -454,6 +527,14 @@ export function EstimatesListPage() {
                       <div className="flex items-center gap-3 text-[11px] text-[color:var(--muted-ink)]">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county}</span>
                         <span className="flex items-center gap-1"><Calendar size={10} />{formatDate(est.created_at)}</span>
+                        {est.is_expired && (
+                          <Tooltip content="This estimate has expired">
+                            <span className="flex items-center gap-0.5 text-[hsl(var(--warning))]">
+                              <AlertTriangle size={10} />
+                              Expired
+                            </span>
+                          </Tooltip>
+                        )}
                       </div>
                       <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                         {confirmDelete === est.id ? (
@@ -545,7 +626,16 @@ export function EstimatesListPage() {
                         <td className="px-4 py-3"><span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span></td>
                         <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs">{est.county}</td>
                         <td className="px-4 py-3 font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(est.grand_total)}</td>
-                        <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs whitespace-nowrap">{formatDate(est.created_at)}</td>
+                        <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs whitespace-nowrap">
+                          <span>{formatDate(est.created_at)}</span>
+                          {est.is_expired && (
+                            <Tooltip content="This estimate has expired">
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[hsl(var(--warning))] text-[10px] font-semibold">
+                                <AlertTriangle size={10} />Expired
+                              </span>
+                            </Tooltip>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className={cn('flex items-center gap-1 transition-opacity', confirmDelete === est.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')} onClick={e => e.stopPropagation()}>
                             {confirmDelete === est.id ? (

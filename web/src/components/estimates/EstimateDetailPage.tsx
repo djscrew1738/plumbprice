@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { History, Pencil } from 'lucide-react'
@@ -40,6 +40,9 @@ interface EstimateDetail {
   preferred_supplier?: string | null
   line_items: LineItem[]
   created_at: string
+  outcome?: string | null
+  is_expired?: boolean | null
+  valid_until?: string | null
 }
 
 const JOB_TYPE_VARIANT: Record<string, 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
@@ -86,6 +89,13 @@ export function EstimateDetailPage() {
   const [diffV1, setDiffV1] = useState('')
   const [diffV2, setDiffV2] = useState('')
   const [editing, setEditing] = useState(false)
+
+  // Seed outcome UI from server data once loaded
+  useEffect(() => {
+    if (estimate?.outcome && outcome === null) {
+      setOutcome(estimate.outcome as OutcomeValue)
+    }
+  }, [estimate?.outcome, outcome])
   const exportCSV = useCallback(() => {
     if (!estimate) return
     const rows = [
@@ -263,6 +273,9 @@ export function EstimateDetailPage() {
           confidenceLabel={estimate.confidence_label}
           confidenceScore={estimate.confidence_score}
           createdAt={estimate.created_at}
+          status={estimate.status}
+          isExpired={estimate.is_expired ?? false}
+          validUntil={estimate.valid_until ?? null}
         />
 
         {/* ── Line items ─────────────────────────────────────────────────────── */}
