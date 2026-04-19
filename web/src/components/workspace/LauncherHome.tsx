@@ -3,7 +3,7 @@
 import { motion, type Variants } from 'framer-motion'
 import { useQueries } from '@tanstack/react-query'
 import Link from 'next/link'
-import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target, BarChart3 } from 'lucide-react'
+import { FileUp, Sparkles, TrendingUp, Wrench, DollarSign, Clock, MessageSquare, Target, BarChart3, Users } from 'lucide-react'
 import { PrimaryActionCard } from './PrimaryActionCard'
 import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -49,7 +49,7 @@ function computeDailyActivity(jobs: EstimateListItem[]) {
   return DAY_LABELS.map((label, i) => ({ label, value: counts[i] }))
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function StatCard({ icon: Icon, label, value, subText }: { icon: React.ElementType; label: string; value: string; subText?: string }) {
   return (
     <motion.div
       variants={fadeUp}
@@ -61,6 +61,7 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
       <div className="min-w-0">
         <p className="text-[11px] font-medium text-[color:var(--muted-ink)]">{label}</p>
         <p className="truncate text-sm font-semibold text-[color:var(--ink)]">{value}</p>
+        {subText && <p className="text-xs text-gray-500">{subText}</p>}
       </div>
     </motion.div>
   )
@@ -82,8 +83,34 @@ export function LauncherHome() {
   const sessions = sessionsData?.data ?? null
   const outcomeStats = outcomeStatsData?.data ?? null
 
+  const isQueriesLoading = estimatesQuery.isLoading || sessionsQuery.isLoading
+  const estimatesList = estimatesData?.data ?? []
+  const sessionsList = sessionsData?.data ?? []
+  const isEmpty = !isQueriesLoading && estimatesList.length === 0 && sessionsList.length === 0
+
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
+
+  const gettingStartedCards = [
+    {
+      icon: MessageSquare,
+      title: 'Ask a pricing question',
+      description: 'Jump into AI-powered chat pricing for any plumbing job.',
+      href: '/estimator',
+    },
+    {
+      icon: FileUp,
+      title: 'Upload a blueprint',
+      description: 'Upload PDF plans for automatic fixture detection and takeoff.',
+      href: '/blueprints',
+    },
+    {
+      icon: Users,
+      title: 'Invite your team',
+      description: 'Add teammates to collaborate on estimates and projects.',
+      href: '/settings',
+    },
+  ]
 
   return (
     <div className="content-container py-5">
@@ -99,6 +126,43 @@ export function LauncherHome() {
           Start a quick quote via chat or upload job files for a comprehensive pricing package.
         </p>
       </section>
+
+      {/* Getting Started — shown only when no estimates AND no sessions */}
+      {isEmpty && (
+        <motion.section
+          className="mt-4"
+          aria-label="Getting started"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="shell-panel p-4">
+            <h2 className="mb-3 border-b border-[color:var(--line)] pb-2 text-xs font-bold uppercase tracking-wider text-[color:var(--ink)]">
+              Getting Started
+            </h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {gettingStartedCards.map(card => (
+                <Link
+                  key={card.href}
+                  href={card.href}
+                  className="group flex flex-col gap-3 rounded-xl border border-[color:var(--line)] bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:bg-[color:var(--panel)]"
+                >
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                    <card.icon size={18} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-[color:var(--ink)]">{card.title}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted-ink)]">{card.description}</p>
+                  </div>
+                  <span className="mt-auto inline-flex items-center rounded-lg bg-[color:var(--accent-soft)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-strong)] transition-colors group-hover:bg-[color:var(--accent-strong)] group-hover:text-white">
+                    Get started →
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+      )}
 
       {/* This-week stats */}
       <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="This week's activity">
@@ -120,16 +184,19 @@ export function LauncherHome() {
               icon={Wrench}
               label="Estimates this week"
               value={stats.count === 0 ? 'None yet' : `${stats.count} estimate${stats.count === 1 ? '' : 's'}`}
+              subText="Last 7 days"
             />
             <StatCard
               icon={DollarSign}
               label="Total quoted this week"
               value={stats.totalValue > 0 ? formatCurrency(stats.totalValue) : '—'}
+              subText="Last 7 days"
             />
             <StatCard
               icon={TrendingUp}
               label="Average job value"
               value={stats.avgValue > 0 ? formatCurrency(stats.avgValue) : '—'}
+              subText="This week"
             />
             <StatCard
               icon={Target}
@@ -141,6 +208,7 @@ export function LauncherHome() {
                     ? `${outcomeStats.total} recorded`
                     : `${Math.round(outcomeStats.win_rate * 100)}% (${outcomeStats.won}/${outcomeStats.total})`
               }
+              subText="All time"
             />
           </motion.div>
         )}

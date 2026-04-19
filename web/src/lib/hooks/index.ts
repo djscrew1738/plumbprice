@@ -107,3 +107,5 @@ export {
   type OrgUser,
   type OrgInvite,
 } from './useUser'
+
+export { useWebSocket } from './useWebSocket'

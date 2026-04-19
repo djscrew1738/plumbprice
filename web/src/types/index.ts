@@ -8,6 +8,7 @@ export interface ChatMessage {
   assumptions?: string[]
   timestamp: Date
   classified_by?: 'keyword' | 'llm' | null
+  isError?: boolean
 }
 
 export interface EstimateBreakdown {

@@ -25,6 +25,7 @@ interface ChatMessageListProps {
   onEditLineItems: (messageId: string) => void
   onSaveLineItems: (messageId: string, lineItems: LineItem[]) => void
   onCancelEditLineItems: () => void
+  onRetry?: () => void
 }
 
 export function ChatMessageList({
@@ -38,6 +39,7 @@ export function ChatMessageList({
   onEditLineItems,
   onSaveLineItems,
   onCancelEditLineItems,
+  onRetry,
 }: ChatMessageListProps) {
   return (
     <>
@@ -65,6 +67,15 @@ export function ChatMessageList({
                   <div className="chat-prose pr-4">
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
+                  {message.isError && onRetry && (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      className="mt-2 text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 text-[color:var(--muted-ink)] transition-colors"
+                    >
+                      Retry
+                    </button>
+                  )}
                   <Tooltip content="Copy">
                     <button
                       type="button"

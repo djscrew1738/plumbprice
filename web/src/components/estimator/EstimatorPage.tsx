@@ -122,6 +122,7 @@ export function EstimatorPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const resumeErrorRef = useRef(error)
   const abortRef = useRef<AbortController | null>(null)
+  const lastUserMessageRef = useRef<string>('')
 
   const uploadMode = entryMode === 'upload-job-files'
 
@@ -409,6 +410,7 @@ export function EstimatorPage() {
       timestamp: new Date(),
     }
 
+    lastUserMessageRef.current = message
     setMessages(prev => [...prev, userMsg])
     setInput('')
     if (inputRef.current) {
@@ -507,7 +509,7 @@ export function EstimatorPage() {
     } catch {
       setMessages(prev => prev.map(m =>
         m.id === streamId
-          ? { ...m, content: 'Could not reach the API. Please check that the backend is running.' }
+          ? { ...m, content: 'Could not reach the API. Please check that the backend is running.', isError: true }
           : m
       ))
     } finally {
@@ -638,6 +640,7 @@ export function EstimatorPage() {
                   onEditLineItems={handleEditLineItems}
                   onSaveLineItems={handleSaveLineItems}
                   onCancelEditLineItems={handleCancelEditLineItems}
+                  onRetry={() => void sendMessage(lastUserMessageRef.current)}
                 />
 
                 <div ref={bottomRef} />
