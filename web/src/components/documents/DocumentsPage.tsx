@@ -3,12 +3,12 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { FileText, Upload, Trash2, Download } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
 import {
   suppliersApi,
   downloadDocument,
   type DocumentItem,
 } from '@/lib/api'
+import { formatRelativeTime } from '@/lib/utils'
 import { useDocuments, useUploadDocument, useDeleteDocument } from '@/lib/hooks'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -205,7 +205,7 @@ export function DocumentsPage() {
         header: 'Uploaded',
         render: (row) => (
           <span className="text-[color:var(--muted-ink)] text-xs tabular-nums">
-            {formatDistanceToNow(new Date(row.created_at), { addSuffix: true })}
+            {formatRelativeTime(row.created_at)}
           </span>
         ),
       },

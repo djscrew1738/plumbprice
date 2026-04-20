@@ -17,8 +17,20 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/web"
 STANDALONE_DIR="$WEB_DIR/.next/standalone"
+PREV_STATIC_BACKUP="$(mktemp -d)"
+
+cleanup() {
+  rm -rf "$PREV_STATIC_BACKUP"
+}
+trap cleanup EXIT
 
 cd "$REPO_ROOT"
+
+if [ -d "$STANDALONE_DIR/.next/static" ]; then
+  echo "==> Backing up previously deployed static chunks"
+  mkdir -p "$PREV_STATIC_BACKUP"
+  cp -a "$STANDALONE_DIR/.next/static/." "$PREV_STATIC_BACKUP/"
+fi
 
 echo "==> Building Next.js (production)"
 cd "$WEB_DIR"
@@ -30,6 +42,9 @@ cp -r "$WEB_DIR/public" "$STANDALONE_DIR/public"
 
 echo "==> Merging .next/static into standalone (preserving old chunks)"
 mkdir -p "$STANDALONE_DIR/.next/static"
+if [ -d "$PREV_STATIC_BACKUP" ]; then
+  cp -a "$PREV_STATIC_BACKUP/." "$STANDALONE_DIR/.next/static/" 2>/dev/null || true
+fi
 cp -r "$WEB_DIR/.next/static/"* "$STANDALONE_DIR/.next/static/"
 
 echo "==> Restarting plumbprice-web service"

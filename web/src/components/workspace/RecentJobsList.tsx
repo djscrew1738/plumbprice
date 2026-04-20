@@ -2,11 +2,10 @@
 
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import type { EstimateListItem } from '@/lib/api'
 import { estimatesApi } from '@/lib/api'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Inbox } from 'lucide-react'
@@ -41,7 +40,7 @@ function formatRelativeDate(value: string) {
     return 'Unknown date'
   }
 
-  return formatDistanceToNow(date, { addSuffix: true })
+  return formatRelativeTime(date)
 }
 
 function humanizeStatus(status: string) {

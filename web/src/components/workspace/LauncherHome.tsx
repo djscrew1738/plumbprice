@@ -9,8 +9,7 @@ import { RecentJobsList } from './RecentJobsList'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { BarChart } from '@/components/ui/BarChart'
 import { estimatesApi, sessionsApi, outcomesApi, type EstimateListItem } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
-import { formatDistanceToNow } from 'date-fns'
+import { formatCurrency, formatRelativeTime } from '@/lib/utils'
 
 /* ── Animation helpers ───────────────────────────── */
 
@@ -312,7 +311,7 @@ export function LauncherHome() {
                       {s.title ?? `Session #${s.id}`}
                     </p>
                     <p className="text-[11px] text-[color:var(--muted-ink)]">
-                      {formatDistanceToNow(new Date(s.updated_at), { addSuffix: true })}
+                      {formatRelativeTime(s.updated_at)}
                       {s.county ? ` · ${s.county}` : ''}
                     </p>
                   </div>
@@ -360,4 +359,3 @@ export function LauncherHomeSkeleton() {
     </div>
   )
 }
-

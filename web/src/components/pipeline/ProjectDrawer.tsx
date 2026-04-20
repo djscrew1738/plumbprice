@@ -11,9 +11,9 @@ import {
   ArrowRightLeft, Send, CheckCircle2, XCircle, MessageSquare, UserPlus,
   Activity as ActivityIcon, Trash2,
 } from 'lucide-react'
-import { format, isValid, formatDistanceToNow } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { projectsApi, api } from '@/lib/api'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -627,9 +627,7 @@ function ActivityTab({ projectId }: { projectId: number }) {
             const meta = ACTIVITY_ICON[entry.kind] ?? { icon: MessageSquare, className: 'text-zinc-400' }
             const Icon = meta.icon
             const actorName = entry.actor?.full_name || entry.actor?.email || 'Someone'
-            const when = isValid(new Date(entry.created_at))
-              ? formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })
-              : ''
+            const when = formatRelativeTime(entry.created_at, { unknownLabel: '' })
             return (
               <li
                 key={entry.id}
