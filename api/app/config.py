@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     llm_classify_timeout: float = 20.0
     llm_classify_threshold: float = 0.75
     llm_embedding_model: str = "mxbai-embed-large"
-    llm_vision_model: str = "minicpm-o2.6"
+    llm_vision_model: str = "llama3.2-vision"
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3200", "https://app.ctlplumbingllc.com"]
