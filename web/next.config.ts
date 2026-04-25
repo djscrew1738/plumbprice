@@ -9,6 +9,17 @@ const apiOrigin =
 const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {},
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      // Rename the polyfills chunk to avoid Cloudflare WAF false-positive that
+      // blocks any URL containing "polyfills" (anti-polyfill.io supply-chain rule).
+      const splitChunks = config.optimization?.splitChunks as Record<string, any> | undefined
+      if (splitChunks?.cacheGroups?.polyfills) {
+        splitChunks.cacheGroups.polyfills.name = 'pf'
+      }
+    }
+    return config
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
