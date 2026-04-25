@@ -79,7 +79,12 @@ export function LauncherHome() {
   const estimatesData = estimatesQuery.data
   const sessionsData = sessionsQuery.data
   const outcomeStatsData = outcomeStatsQuery.data
-  const stats = estimatesData ? computeWeeklyStats(estimatesData.data) : null
+  const EMPTY_STATS = { count: 0, totalValue: 0, avgValue: 0, pendingSent: 0, expired: 0 }
+  const stats = estimatesData
+    ? computeWeeklyStats(estimatesData.data)
+    : estimatesQuery.isError
+      ? EMPTY_STATS
+      : null
   const dailyActivity = estimatesData ? computeDailyActivity(estimatesData.data) : null
   const sessions = sessionsData?.data ?? null
   const outcomeStats = outcomeStatsData?.data ?? null
