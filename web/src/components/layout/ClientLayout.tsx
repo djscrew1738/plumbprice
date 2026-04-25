@@ -23,7 +23,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
     defaultOptions: {
       queries: {
         staleTime: 5 * 60_000,   // 5 min — reduces refetches on route transitions
-        gcTime: 2 * 60_000,      // 2 min — frees memory faster
+        gcTime: 10 * 60_000,     // 10 min — must exceed staleTime to avoid early GC
         retry: 1,
         refetchOnWindowFocus: false,
       },
