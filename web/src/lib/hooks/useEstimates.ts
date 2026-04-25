@@ -21,6 +21,7 @@ export function useEstimates(
 ) {
   return useQuery({
     queryKey: estimateKeys.list(params),
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       const apiParams: Record<string, string> = {}
       if (params?.job_type && params.job_type !== 'all') apiParams.job_type = params.job_type
@@ -39,6 +40,7 @@ export function useEstimate(
 ) {
   return useQuery({
     queryKey: estimateKeys.detail(id),
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       const res = await api.get(`/estimates/${id}`)
       return res.data as EstimateDetailResponse

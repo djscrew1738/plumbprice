@@ -244,7 +244,12 @@ async def lifespan(app: FastAPI):
 
     # Probe Hermes / Ollama availability — non-blocking, just logs the result
     from app.services.llm_service import llm_service
-    llm_ok = await llm_service.check_available()
+    import asyncio as _asyncio
+    try:
+        llm_ok = await _asyncio.wait_for(llm_service.check_available(), timeout=5.0)
+    except _asyncio.TimeoutError:
+        llm_ok = False
+        logger.warning("Hermes LLM probe timed out — keyword-only classification active")
     if llm_ok:
         logger.info(
             "Hermes LLM ready",
@@ -258,7 +263,6 @@ async def lifespan(app: FastAPI):
         )
 
     # Warm the price enrichment cache, then schedule periodic auto-refresh
-    import asyncio as _asyncio
     from app.services.data_sources.price_enrichment import get_enrichment_service
 
     enrichment_svc = get_enrichment_service()
@@ -414,6 +418,8 @@ async def health_check():
 
     # LLM check
     llm_ok = llm_service._available
+    if llm_ok is None:
+        llm_ok = await llm_service.check_available()
     checks["llm"] = {
         "provider": "hermes3/ollama",
         "endpoint": settings.hermes_endpoint_url,

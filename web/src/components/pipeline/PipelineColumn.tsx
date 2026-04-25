@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, type DragEvent } from 'react'
+import { useState, useCallback, memo, type DragEvent } from 'react'
 import { CircleDollarSign } from 'lucide-react'
 import { type ProjectPipelineItem } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -24,7 +24,7 @@ export interface PipelineColumnProps {
   onProjectDeleted?: (id: number) => void
 }
 
-export function PipelineColumn({
+export const PipelineColumn = memo(function PipelineColumn({
   stage,
   projects,
   stageIndex,
@@ -117,4 +117,4 @@ export function PipelineColumn({
       </div>
     </section>
   )
-}
+})

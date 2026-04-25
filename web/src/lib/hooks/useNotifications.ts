@@ -37,7 +37,7 @@ export function useNotifications() {
   return useQuery<AppNotification[]>({
     queryKey: notificationKeys.all,
     queryFn: async () => (await notificationsApi.list({ limit: 20 })).map(mapNotification),
-    refetchInterval: 60_000,
+    refetchInterval: 5 * 60_000,   // 5 min — notifications don't need sub-minute freshness
   })
 }
 
@@ -45,8 +45,8 @@ export function useUnreadCount() {
   const { data } = useQuery<number>({
     queryKey: notificationKeys.unreadCount,
     queryFn: notificationsApi.unreadCount,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 5 * 60_000,   // 5 min — badge updates on mark-read via mutation
+    refetchOnWindowFocus: false,
   })
   return data ?? 0
 }

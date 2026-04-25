@@ -68,6 +68,7 @@ export interface OrgInvite {
 export function useProfile() {
   return useQuery({
     queryKey: userKeys.profile(),
+    staleTime: 10 * 60_000,   // Profile rarely changes mid-session
     queryFn: () => userApi.getProfile() as Promise<UserProfile>,
   })
 }
@@ -125,6 +126,7 @@ export function useUploadAvatar() {
 export function useOrganization() {
   return useQuery({
     queryKey: userKeys.org(),
+    staleTime: 10 * 60_000,
     queryFn: () => orgApi.get() as Promise<Organization>,
   })
 }
@@ -172,6 +174,7 @@ export function useUploadOrgLogo() {
 export function useOrgUsers() {
   return useQuery({
     queryKey: userKeys.orgUsers(),
+    staleTime: 5 * 60_000,
     queryFn: () => orgApi.listUsers() as Promise<OrgUser[]>,
   })
 }
@@ -197,6 +200,7 @@ export function useInviteUser() {
 export function useOrgInvites() {
   return useQuery({
     queryKey: userKeys.orgInvites(),
+    staleTime: 5 * 60_000,
     queryFn: () => orgApi.listInvites() as Promise<OrgInvite[]>,
   })
 }

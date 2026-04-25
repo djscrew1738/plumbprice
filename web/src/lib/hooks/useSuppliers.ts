@@ -30,6 +30,7 @@ export function useSuppliers(
 ) {
   return useQuery({
     queryKey: supplierKeys.all,
+    staleTime: 10 * 60_000,   // Supplier pricing is slow-changing
     queryFn: async () => {
       const res = await api.get('/suppliers/catalog')
       const raw: Record<string, Record<string, { sku: string; name: string; cost: number }>> =
@@ -62,6 +63,7 @@ export function useSupplierCatalog(
 ) {
   return useQuery({
     queryKey: supplierKeys.catalog(params),
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       const res = await suppliersApi.catalog(params?.search)
       return res.data
@@ -76,6 +78,7 @@ export function useSuppliersList(
 ) {
   return useQuery({
     queryKey: supplierKeys.list(),
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       const res = await suppliersApi.list()
       return res.data

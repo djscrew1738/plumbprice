@@ -15,6 +15,7 @@ export function useDocuments(
 ) {
   return useQuery({
     queryKey: documentKeys.all,
+    staleTime: 5 * 60_000,
     queryFn: listDocuments,
     ...options,
   })

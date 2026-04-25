@@ -15,6 +15,7 @@ export function usePipeline(
 ) {
   return useQuery({
     queryKey: pipelineKeys.all,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       const response = await projectsApi.list()
       return response.data

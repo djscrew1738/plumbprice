@@ -22,8 +22,8 @@ export function ClientLayout({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30_000,
-        gcTime: 5 * 60_000,
+        staleTime: 5 * 60_000,   // 5 min — reduces refetches on route transitions
+        gcTime: 2 * 60_000,      // 2 min — frees memory faster
         retry: 1,
         refetchOnWindowFocus: false,
       },
@@ -54,6 +54,10 @@ export function ClientLayout({ children }: { children: ReactNode }) {
   // the app chrome — no sidebar, header, mobile nav, or auth provider.
   const isPublicSurface = pathname?.startsWith('/p/') ?? false
 
+  // Auth pages need AuthProvider (for useAuth()) but not app chrome —
+  // they render their own full-screen layout.
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(pathname ?? '')
+
   return (
     <>
       <OfflineBanner />
@@ -81,6 +85,14 @@ export function ClientLayout({ children }: { children: ReactNode }) {
               {children}
             </main>
           </ToastProvider>
+        ) : isAuthPage ? (
+          <AuthProvider>
+          <ToastProvider>
+            <main id="main-content" tabIndex={-1} className="min-h-dvh outline-none">
+              {children}
+            </main>
+          </ToastProvider>
+          </AuthProvider>
         ) : (
         <AuthProvider>
         <ToastProvider>

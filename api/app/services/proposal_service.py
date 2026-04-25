@@ -1,5 +1,6 @@
 """Proposal Service — email delivery via Resend, PDF rendering, and public accept tokens."""
 
+import asyncio
 import base64
 import html
 import secrets
@@ -170,11 +171,11 @@ async def send_proposal_email(
 
     html_body = _build_estimate_html(estimate, recipient_name, message, accept_url=accept_url)
 
-    # Attempt PDF generation — non-fatal. If WeasyPrint's native deps are
-    # missing we still send the HTML-only email.
+    # Run WeasyPrint in a thread pool — it's synchronous and blocks ~100-500ms
     pdf_bytes: Optional[bytes] = None
     try:
-        pdf_bytes = render_pdf(
+        pdf_bytes = await asyncio.to_thread(
+            render_pdf,
             estimate,
             accept_url=accept_url,
             recipient_name=recipient_name,
@@ -200,7 +201,7 @@ async def send_proposal_email(
                     "filename": f"estimate-{estimate.id}.pdf",
                     "content": base64.b64encode(pdf_bytes).decode("ascii"),
                 }]
-            response = _resend.Emails.send(payload)
+            response = await asyncio.to_thread(_resend.Emails.send, payload)
             resend_id = response.get("id")
             logger.info("proposal.email_sent", estimate_id=estimate_id, to=recipient_email, resend_id=resend_id)
         except Exception as e:
