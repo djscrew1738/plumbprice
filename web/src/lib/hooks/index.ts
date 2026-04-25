@@ -112,3 +112,4 @@ export {
 } from './useUser'
 
 export { useWebSocket } from './useWebSocket'
+export { useSafeQuery } from './useSafeQuery'

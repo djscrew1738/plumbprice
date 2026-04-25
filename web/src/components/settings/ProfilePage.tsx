@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { useProfile, useUpdateProfile, useChangePassword, useUploadAvatar } from '@/lib/hooks'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 export function ProfilePage() {
-  const { data: profile, isLoading } = useProfile()
+  const { data: profile, isLoading, isError, refetch } = useProfile()
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
   const uploadAvatar = useUploadAvatar()
@@ -93,6 +94,10 @@ export function ProfilePage() {
         ))}
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState message="Failed to load profile" onRetry={() => void refetch()} />
   }
 
   return (

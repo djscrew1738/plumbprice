@@ -12,6 +12,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 
 const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { cn } from '@/lib/utils'
 
 type SortKey = 'recent' | 'oldest' | 'messages'
@@ -36,7 +37,7 @@ function formatRelativeTime(dateStr: string): string {
 export function SessionHistoryPage() {
   const router = useRouter()
   const toast = useToast()
-  const { data: sessions, isLoading } = useSessions()
+  const { data: sessions, isLoading, isError, refetch } = useSessions()
   const deleteSession = useDeleteSession()
   const cloneSession = useCloneSession()
 
@@ -121,6 +122,15 @@ export function SessionHistoryPage() {
             />
           ))}
         </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-8">
+        <h1 className="text-xl font-semibold text-[color:var(--ink)]">Chat History</h1>
+        <ErrorState message="Failed to load chat history" onRetry={() => void refetch()} />
       </div>
     )
   }

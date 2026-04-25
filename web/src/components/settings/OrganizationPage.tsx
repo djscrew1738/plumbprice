@@ -20,6 +20,7 @@ import {
   useRemoveUser,
   type OrgUser,
 } from '@/lib/hooks'
+import { ErrorState } from '@/components/ui/ErrorState'
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -49,7 +50,7 @@ export function OrganizationPage() {
   const { user } = useAuth()
   const isAdmin = user?.is_admin ?? false
 
-  const { data: org, isLoading: orgLoading } = useOrganization()
+  const { data: org, isLoading: orgLoading, isError: orgError, refetch: refetchOrg } = useOrganization()
   const updateOrg = useUpdateOrganization()
 
   const { data: orgUsers, isLoading: usersLoading } = useOrgUsers()
@@ -212,6 +213,10 @@ export function OrganizationPage() {
         ))}
       </div>
     )
+  }
+
+  if (orgError) {
+    return <ErrorState message="Failed to load organization" onRetry={() => void refetchOrg()} />
   }
 
   return (
