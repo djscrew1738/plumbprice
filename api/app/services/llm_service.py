@@ -3,8 +3,8 @@ LLM Service — dual-model Ollama backend (OpenAI-compatible API).
 
 Model strategy
 --------------
-  Primary   : qwen2.5:7b-instruct  (better reasoning, richer JSON)
-  Secondary : hermes3:3b            (fast fallback, ~3 s)
+  Primary   : qwen3:8b      (better reasoning, richer JSON)
+  Secondary : hermes3:3b    (fast fallback, ~3 s)
 
 The service tracks which model is active.  When the primary model fails
 (connection error or timeout) it circuit-breaks down to the secondary.
@@ -15,52 +15,47 @@ formatter if neither is available.
 
 from __future__ import annotations
 
+from functools import lru_cache
 import json
 import time
 from typing import Optional
 import structlog
 
 from app.config import settings
+from app.services.labor_engine import list_template_codes
+from app.services.pricing_engine import County
 
 _CIRCUIT_RESET_SECONDS = 120   # retry primary after this many seconds
-_CLASSIFY_TIMEOUT      = 8.0   # budget for intent classification
-_RESPONSE_TIMEOUT      = 12.0  # budget for conversational generation
 
 logger = structlog.get_logger()
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-_CLASSIFY_SYSTEM = """\
-You are a plumbing estimator AI for DFW (Dallas-Fort Worth) Texas contractors.
-Classify the user's natural-language plumbing request into structured JSON.
+_VALID_TASK_CODES = frozenset(code.upper() for code in list_template_codes())
 
-Valid task_code values (pick the single best match, or null if unknown):
-  TOILET_REPLACE_STANDARD, TOILET_COMFORT_HEIGHT,
-  WH_50G_GAS_STANDARD, WH_50G_GAS_ATTIC, WH_40G_GAS_STANDARD,
-  WH_50G_ELECTRIC_STANDARD, WH_TANKLESS_GAS,
-  PRV_REPLACE, HOSE_BIB_REPLACE, SHOWER_VALVE_REPLACE,
-  KITCHEN_FAUCET_REPLACE, GARBAGE_DISPOSAL_INSTALL,
-  LAV_FAUCET_REPLACE, ANGLE_STOP_REPLACE, PTRAP_REPLACE,
-  DRAIN_CLEAN_STANDARD, MAIN_LINE_CLEAN, HYDROJETTING,
-  SLAB_LEAK_REPAIR, LEAK_DETECTION, WATER_SOFTENER_INSTALL,
-  TUB_SHOWER_COMBO_REPLACE, EXPANSION_TANK_ONLY,
-  GAS_LINE_REPAIR_MINOR, GAS_LINE_NEW_RUN,
-  WHOLE_HOUSE_REPIPE_PEX, SEWER_SPOT_REPAIR,
-  RECIRC_PUMP_INSTALL, DISHWASHER_HOOKUP, WATER_MAIN_REPAIR,
-  CAMERA_INSPECTION, BACKFLOW_PREVENTER_INSTALL,
-  CLEAN_OUT_INSTALL, WATER_FILTER_WHOLE_HOUSE
+
+@lru_cache(maxsize=1)
+def _build_classify_system_prompt() -> str:
+    task_codes = ",\n  ".join(sorted(_VALID_TASK_CODES))
+    counties = " | ".join(f'"{county.value}"' for county in County)
+    return f"""\
+You are a plumbing estimator AI for DFW (Dallas-Fort Worth) Texas contractors.
+Classify the user's natural-language plumbing, construction, or commercial request into structured JSON.
+
+Valid task_code values (pick the single best match from the real labor template catalog, or null if unknown):
+  {task_codes}
 
 Return ONLY valid JSON with these exact keys:
-{
+{{
   "task_code": string | null,
   "access_type": "first_floor" | "second_floor" | "attic" | "crawlspace" | "slab" | "basement",
   "urgency": "standard" | "same_day" | "emergency",
-  "county": "Dallas" | "Tarrant" | "Collin" | "Denton" | "Rockwall" | "Parker" | "Kaufman",
+  "county": {counties},
   "city": string | null,
   "quantity": integer (1–20),
   "preferred_supplier": "ferguson" | "moore_supply" | "apex" | null,
   "confidence": float (0.0–1.0)
-}
+}}
 """
 
 _RESPONSE_SYSTEM = """\
@@ -139,6 +134,14 @@ class LLMService:
             return None
 
     @property
+    def _classify_timeout(self) -> float:
+        return max(1.0, float(settings.llm_classify_timeout))
+
+    @property
+    def _response_timeout(self) -> float:
+        return max(1.0, float(settings.llm_timeout))
+
+    @property
     def _active_model(self) -> str:
         """Pick the model string appropriate for the active provider."""
         provider = (settings.default_llm_provider or "hermes").lower()
@@ -202,12 +205,12 @@ class LLMService:
         if self._is_blocked():
             return None
 
-        client = self._make_client(timeout=_CLASSIFY_TIMEOUT)
+        client = self._make_client(timeout=self._classify_timeout)
         if client is None:
             return None
 
         try:
-            messages: list[dict] = [{"role": "system", "content": _CLASSIFY_SYSTEM}]
+            messages: list[dict] = [{"role": "system", "content": _build_classify_system_prompt()}]
             if history:
                 for turn in history[-6:]:  # last 3 exchanges max
                     role = turn.get("role", "user")
@@ -235,9 +238,11 @@ class LLMService:
             from app.services.pricing_engine import CITY_ZONE_MULTIPLIERS
             raw_city = (data.get("city") or "").strip().lower()
             city = raw_city if raw_city in CITY_ZONE_MULTIPLIERS else None
+            raw_task_code = str(data.get("task_code") or "").strip().upper()
+            task_code = raw_task_code if raw_task_code in _VALID_TASK_CODES else None
 
             result = {
-                "task_code":          data.get("task_code") or None,
+                "task_code":          task_code,
                 "access_type":        data.get("access_type", "first_floor"),
                 "urgency":            data.get("urgency", "standard"),
                 "county":             county,
@@ -289,7 +294,7 @@ class LLMService:
         if self._is_blocked():
             return None
 
-        client = self._make_client(timeout=_RESPONSE_TIMEOUT)
+        client = self._make_client(timeout=self._response_timeout)
         if client is None:
             return None
 
@@ -375,7 +380,7 @@ class LLMService:
             )
             return
 
-        client = self._make_client(timeout=_RESPONSE_TIMEOUT)
+        client = self._make_client(timeout=self._response_timeout)
         if client is None:
             yield self.make_static_narrative(
                 template_name, grand_total, labor_total, materials_total, county, quantity
@@ -437,7 +442,7 @@ class LLMService:
         Probe the Ollama endpoint with the primary model.
         Returns True if reachable. Logs the active model tier.
         """
-        client = self._make_client(timeout=10.0)
+        client = self._make_client(timeout=max(10.0, self._classify_timeout))
         if client is None:
             return False
         try:

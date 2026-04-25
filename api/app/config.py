@@ -44,17 +44,17 @@ class Settings(BaseSettings):
     # AI — Hermes / Ollama (OpenAI-compatible local inference)
     hermes_endpoint_url: str = "http://localhost:11434/v1"
     # Primary model: best quality (used first)
-    llm_primary_model: str = "qwen2.5:7b-instruct"
+    llm_primary_model: str = "qwen3:8b"
     # Secondary model: fast fallback (used when primary circuit-breaks)
     llm_secondary_model: str = "hermes3:3b"
     # Legacy alias — kept for backward-compat; overridden by llm_primary_model when set
-    hermes_model: str = "qwen2.5:7b-instruct"
+    hermes_model: str = "qwen3:8b"
     hermes_api_key: str = "ollama"
     llm_timeout: float = 30.0
     llm_classify_timeout: float = 20.0
     llm_classify_threshold: float = 0.75
-    llm_embedding_model: str = "nomic-embed-text"
-    llm_vision_model: str = "llama3.2-vision"
+    llm_embedding_model: str = "mxbai-embed-large"
+    llm_vision_model: str = "minicpm-o2.6"
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3200", "https://app.ctlplumbingllc.com"]
