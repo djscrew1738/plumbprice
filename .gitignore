@@ -76,3 +76,9 @@ deploy/runtime.env
 deploy/*.pem
 deploy/*.key
 .aider*
+
+# coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml

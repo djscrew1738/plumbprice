@@ -1,0 +1,29 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+# Skip the eval harness by default — opt-in via RUN_EVAL=1 env var.
+# (See tests/eval/conftest.py for the gating logic.)
+addopts = "-ra"
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+    "app/scripts/*",
+    "app/migrations/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+# Baseline: ~33% as of 2.1.1-rc1 (with pre-existing flaky tests excluded).
+# Ratchet upward as new tests land (target: 60% by GA). CI fails if
+# coverage drops below this floor — never lower it without filing an issue.
+fail_under = 30
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
