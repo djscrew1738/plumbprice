@@ -1,0 +1,223 @@
+{
+  "passed": 10,
+  "total": 10,
+  "results": [
+    {
+      "case_id": "water_heater_50g_gas_dallas",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "WH_50G_GAS_STANDARD",
+        "county": "Dallas",
+        "grand_total": 1808.3,
+        "quantity": 2,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "WH_50G_GAS_STANDARD",
+          "WH_50G_GAS_ATTIC"
+        ],
+        "county": "Dallas",
+        "min_price": 1400,
+        "max_price": 2400,
+        "min_confidence": 0.6
+      }
+    },
+    {
+      "case_id": "water_heater_tankless_plano",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "WH_TANKLESS_GAS",
+        "county": "Collin",
+        "grand_total": 3187.82,
+        "quantity": 4,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "WH_TANKLESS_GAS"
+        ],
+        "county": "Collin",
+        "min_price": 2800,
+        "max_price": 6500,
+        "min_confidence": 0.6
+      }
+    },
+    {
+      "case_id": "toilet_replace_fort_worth",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "TOILET_REPLACE_STANDARD",
+        "county": "Tarrant",
+        "grand_total": 505.63,
+        "quantity": 1,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "TOILET_REPLACE_STANDARD",
+          "TOILET_INSTALL_NEW"
+        ],
+        "county": "Tarrant",
+        "min_price": 350,
+        "max_price": 950,
+        "min_confidence": 0.55
+      }
+    },
+    {
+      "case_id": "prv_replace_frisco",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "PRV_REPLACE",
+        "county": "Collin",
+        "grand_total": 603.36,
+        "quantity": 1,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "PRV_REPLACE"
+        ],
+        "county": "Collin",
+        "min_price": 400,
+        "max_price": 950,
+        "min_confidence": 0.55
+      }
+    },
+    {
+      "case_id": "shower_valve_irving",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "SHOWER_VALVE_CARTRIDGE",
+        "county": "Dallas",
+        "grand_total": 385.56,
+        "quantity": 1,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "SHOWER_VALVE_REPLACE",
+          "SHOWER_VALVE_CARTRIDGE"
+        ],
+        "county": "Dallas",
+        "min_price": 300,
+        "max_price": 900,
+        "min_confidence": 0.5
+      }
+    },
+    {
+      "case_id": "drain_clean_richardson",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "DRAIN_CLEAN_KITCHEN",
+        "county": "Dallas",
+        "grand_total": 351.9,
+        "quantity": 1,
+        "confidence": 0.75
+      },
+      "expected": {
+        "task_code": [
+          "DRAIN_CLEAN_STANDARD",
+          "DRAIN_CLEAN_KITCHEN",
+          "MAIN_LINE_CLEAN"
+        ],
+        "county": "Dallas",
+        "min_price": 150,
+        "max_price": 600,
+        "min_confidence": 0.5
+      }
+    },
+    {
+      "case_id": "garbage_disposal_arlington",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "GARBAGE_DISPOSAL_INSTALL",
+        "county": "Tarrant",
+        "grand_total": 401.58,
+        "quantity": 1,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "GARBAGE_DISPOSAL_INSTALL"
+        ],
+        "county": "Tarrant",
+        "min_price": 300,
+        "max_price": 800,
+        "min_confidence": 0.55
+      }
+    },
+    {
+      "case_id": "hose_bib_quantity_three",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "HOSE_BIB_REPLACE",
+        "county": "Dallas",
+        "grand_total": 966.79,
+        "quantity": 3,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "HOSE_BIB_REPLACE"
+        ],
+        "county": "Dallas",
+        "min_price": 350,
+        "max_price": 1500,
+        "min_confidence": 0.5,
+        "quantity": 3
+      }
+    },
+    {
+      "case_id": "angle_stop_pair_denton",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "ANGLE_STOP_REPLACE",
+        "county": "Denton",
+        "grand_total": 257.62,
+        "quantity": 0,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "ANGLE_STOP_REPLACE_PAIR",
+          "ANGLE_STOP_REPLACE"
+        ],
+        "county": "Denton",
+        "min_price": 180,
+        "max_price": 700,
+        "min_confidence": 0.5
+      }
+    },
+    {
+      "case_id": "water_softener_rockwall",
+      "passed": true,
+      "failures": [],
+      "actual": {
+        "task_code": "WATER_SOFTENER_INSTALL",
+        "county": "Rockwall",
+        "grand_total": 1880.8,
+        "quantity": 3,
+        "confidence": 0.9
+      },
+      "expected": {
+        "task_code": [
+          "WATER_SOFTENER_INSTALL"
+        ],
+        "county": "Rockwall",
+        "min_price": 1200,
+        "max_price": 3500,
+        "min_confidence": 0.55
+      }
+    }
+  ]
+}

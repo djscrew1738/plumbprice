@@ -99,6 +99,8 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3200","https://app.ctlplumbingllc.com"]}
     ports:
       - "127.0.0.1:${API_PORT:-8201}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -174,6 +176,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: celery -A worker.worker worker --loglevel=info --concurrency=4
     deploy:
       resources:

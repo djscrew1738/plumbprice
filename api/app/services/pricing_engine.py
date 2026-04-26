@@ -378,6 +378,8 @@ class PricingEngine:
         if not template:
             raise ValueError(f"Unknown labor template: {task_code}")
 
+        job_type = template.category if template.category in MARKUP_RULES else "service"
+
         # 1. Labor calculation
         labor_data = template.calculate_labor_cost(access=access, urgency=urgency)
         labor_cost = labor_data["total_labor_cost"]
@@ -390,12 +392,12 @@ class PricingEngine:
         tax_amount = round(materials_cost * tax_rate, 2)
 
         # 4. Markup
-        markup_rules = MARKUP_RULES.get("service", _DEFAULT_MARKUP_RULES["service"])
+        markup_rules = MARKUP_RULES.get(job_type, _DEFAULT_MARKUP_RULES["service"])
         materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
         misc_flat = markup_rules["misc_flat"]
 
         # 5. Trip charge (first-visit service call)
-        trip_cost = get_trip_charge(county) if include_trip_charge else 0.0
+        trip_cost = get_trip_charge(county) if include_trip_charge and job_type == "service" else 0.0
 
         # 6. Permit (if required for this job type)
         permit_cost = get_permit_cost(task_code, county)
@@ -546,7 +548,7 @@ class PricingEngine:
         return EstimateResult(
             template_code=task_code,
             assembly_code=assembly_code,
-            job_type="service",
+            job_type=job_type,
             access_type=access,
             urgency_type=urgency,
             county=county,

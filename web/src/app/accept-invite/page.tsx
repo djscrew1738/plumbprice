@@ -64,12 +64,7 @@ function AcceptInviteForm() {
         password,
         full_name: fullName || undefined,
       })
-      try {
-        localStorage.setItem('pp_token', data.access_token)
-        localStorage.setItem('pp_user', JSON.stringify(data.user))
-      } catch {
-        // ignore storage errors
-      }
+      if (!data.user) setError('Could not complete sign in.')
       router.push('/')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail

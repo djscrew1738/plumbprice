@@ -230,14 +230,22 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
           )
         })}
       </div>
-      <button
-        onClick={handleCreateEstimate}
-        className="mt-2 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:shadow-lg transition-all active:scale-[0.98]"
-      >
-        <Zap size={13} />
-        Create Estimate
-        <ArrowRight size={12} />
-      </button>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          onClick={handleCreateEstimate}
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:shadow-lg transition-all active:scale-[0.98]"
+        >
+          <Zap size={13} />
+          Create Estimate
+          <ArrowRight size={12} />
+        </button>
+        <a
+          href={`/blueprints/${jobId}/review`}
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold border border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-all"
+        >
+          Review detections
+        </a>
+      </div>
     </div>
   )
 }

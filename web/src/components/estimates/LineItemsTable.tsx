@@ -2,11 +2,12 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { FileText } from 'lucide-react'
+import { FileText, Brain, Award, Info } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatCurrencyDecimal } from '@/lib/utils'
+import { WhyThisPriceModal } from './WhyThisPriceModal'
 
 export interface LineItem {
   line_type: string
@@ -24,6 +25,16 @@ export interface LineItem {
       doc_name: string
       score: number
       chunk_idx: number
+    }>
+    memory_hits?: Array<{
+      id: number
+      kind: string
+      score: number | null
+    }>
+    similar_outcomes?: Array<{
+      estimate_id: number
+      outcome: string
+      price: number | null
     }>
     [key: string]: unknown
   } | null
@@ -64,6 +75,7 @@ export function LineItemsTable({
 }: LineItemsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey | undefined>(undefined)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [whyItem, setWhyItem] = useState<LineItem | null>(null)
 
   const laborLines    = useMemo(() => lineItems.filter(l => l.line_type === 'labor'), [lineItems])
   const materialLines = useMemo(() => lineItems.filter(l => l.line_type === 'material'), [lineItems])
@@ -127,6 +139,44 @@ export function LineItemsTable({
                 </span>
               </Tooltip>
             )}
+            {(item.trace_json?.memory_hits?.length ?? 0) > 0 && (
+              <Tooltip
+                content={`Used ${item.trace_json!.memory_hits!.length} learned fact(s) about your business`}
+              >
+                <span className="inline-flex items-center gap-1 text-xs text-[color:var(--muted-ink)] cursor-help">
+                  <Brain size={10} />
+                  memory ×{item.trace_json!.memory_hits!.length}
+                </span>
+              </Tooltip>
+            )}
+            {(item.trace_json?.similar_outcomes?.length ?? 0) > 0 && (() => {
+              const outs = item.trace_json!.similar_outcomes!
+              const won = outs.filter(o => o.outcome === 'won').length
+              return (
+                <Tooltip
+                  content={
+                    `${outs.length} similar past job${outs.length > 1 ? 's' : ''} — ${won} won` +
+                    outs.slice(0, 3)
+                      .map(o => `\n• ${o.outcome}${o.price ? ` $${Math.round(o.price).toLocaleString()}` : ''}`)
+                      .join('')
+                  }
+                >
+                  <span className="inline-flex items-center gap-1 text-xs text-[color:var(--muted-ink)] cursor-help">
+                    <Award size={10} />
+                    {won}/{outs.length} won
+                  </span>
+                </Tooltip>
+              )
+            })()}
+            <button
+              type="button"
+              onClick={() => setWhyItem(item)}
+              className="inline-flex items-center gap-1 text-xs text-[color:var(--muted-ink)] hover:text-[color:var(--accent)] transition-colors"
+              aria-label="Why this price?"
+            >
+              <Info size={11} />
+              Why?
+            </button>
           </div>
         </div>
       ),
@@ -237,6 +287,7 @@ export function LineItemsTable({
           <span className="text-xl font-extrabold text-[color:var(--ink)] tabular-nums">{formatCurrencyDecimal(grandTotal)}</span>
         </div>
       </div>
+      <WhyThisPriceModal item={whyItem} onClose={() => setWhyItem(null)} />
     </motion.div>
   )
 }

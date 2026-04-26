@@ -68,6 +68,28 @@ async def test_classify_successful_json_response(mock_openai):
     assert svc._available is True
 
 
+async def test_classify_prompt_contains_full_task_catalog(mock_openai):
+    payload = {
+        "task_code": "ROUGH_IN_MASTER_BATH",
+        "access_type": "first_floor",
+        "urgency": "standard",
+        "county": "Collin",
+        "quantity": 1,
+        "preferred_supplier": None,
+        "confidence": 0.9,
+    }
+    mock_openai.chat.completions.create.return_value = _make_completion(json.dumps(payload))
+
+    svc = LLMService()
+    result = await svc.classify("rough in a master bath")
+
+    assert result is not None
+    assert result["task_code"] == "ROUGH_IN_MASTER_BATH"
+    prompt = mock_openai.chat.completions.create.await_args.kwargs["messages"][0]["content"]
+    assert "ROUGH_IN_MASTER_BATH" in prompt
+    assert "COMMERCIAL_URINAL_INSTALL" in prompt
+
+
 async def test_classify_clamps_confidence_to_range(mock_openai):
     payload = {
         "task_code": "KITCHEN_FAUCET_REPLACE",
@@ -113,6 +135,25 @@ async def test_classify_returns_none_on_invalid_json(mock_openai):
 
     # Parse error should return None but NOT mark service unavailable
     assert result is None
+
+
+async def test_classify_rejects_unknown_task_code(mock_openai):
+    payload = {
+        "task_code": "NOT_A_REAL_TASK",
+        "access_type": "first_floor",
+        "urgency": "standard",
+        "county": "Dallas",
+        "quantity": 1,
+        "preferred_supplier": None,
+        "confidence": 0.8,
+    }
+    mock_openai.chat.completions.create.return_value = _make_completion(json.dumps(payload))
+
+    svc = LLMService()
+    result = await svc.classify("some made up task")
+
+    assert result is not None
+    assert result["task_code"] is None
 
 
 async def test_classify_marks_unavailable_on_connection_error(mock_openai):

@@ -4,7 +4,7 @@ from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion, Pr
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.models.labor import LaborTemplate, MaterialAssembly, MarkupRule
 from app.models.documents import UploadedDocument, DocumentChunk
-from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection
+from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection, BlueprintDetectionFeedback
 from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
 from app.models.pricing_template import PricingTemplate
@@ -12,6 +12,9 @@ from app.models.sessions import ChatSession, ChatMessage
 from app.models.outcomes import EstimateOutcome
 from app.models.auth_tokens import PasswordResetToken
 from app.models.notifications import Notification
+from app.models.agent_memory import AgentMemory
+from app.models.photos import Photo
+from app.models.vision_mappings import VisionItemMapping
 
 __all__ = [
     "User", "Organization", "UserInvite",
@@ -20,7 +23,7 @@ __all__ = [
     "Supplier", "SupplierProduct", "SupplierPriceHistory",
     "LaborTemplate", "MaterialAssembly", "MarkupRule",
     "UploadedDocument", "DocumentChunk",
-    "BlueprintJob", "BlueprintPage", "BlueprintDetection",
+    "BlueprintJob", "BlueprintPage", "BlueprintDetection", "BlueprintDetectionFeedback",
     "AuditLog", "AssumptionLog",
     "TaxRate",
     "PricingTemplate",
@@ -28,4 +31,7 @@ __all__ = [
     "EstimateOutcome",
     "PasswordResetToken",
     "Notification",
+    "AgentMemory",
+    "Photo",
+    "VisionItemMapping",
 ]

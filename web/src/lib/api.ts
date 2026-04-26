@@ -15,18 +15,8 @@ const BASE_URL = typeof window === 'undefined'
 export const api = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
   timeout: 30_000,
-})
-
-// Attach stored JWT on every request
-api.interceptors.request.use(config => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('pp_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-  }
-  return config
 })
 
 // On 401, clear session and redirect to login
@@ -34,12 +24,9 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error?.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('pp_token')
-      localStorage.removeItem('pp_user')
-      document.cookie = 'pp_token=; path=/; max-age=0'
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login'
-      }
+      // Best effort server-side cookie clear for HttpOnly auth cookie.
+      void fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
+      if (!window.location.pathname.startsWith('/login')) window.location.href = '/login'
     }
     return Promise.reject(error)
   }
@@ -133,16 +120,13 @@ export const chatApi = {
 
   /** SSE stream — yields parsed ChatPriceStreamEvents until done */
   async *priceStream(body: ChatPriceRequest): AsyncGenerator<ChatPriceStreamEvent> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('pp_token') : null
     const base = typeof window === 'undefined'
       ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
       : ''
     const res = await fetch(`${base}/api/v1/chat/price/stream`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(body),
     })
     if (!res.ok || !res.body) {
@@ -639,6 +623,35 @@ export interface PricingTemplateSummary {
 export const templatesApi = {
   list: () => api.get<PricingTemplateSummary[]>('/templates/pricing'),
   get: (id: string) => api.get<PricingTemplateSummary & Record<string, unknown>>(`/templates/pricing/${encodeURIComponent(id)}`),
+}
+
+// ─── Agent Memories ─────────────────────────────────────────────────────────
+
+export type MemoryKind = 'preference' | 'profile' | 'customer' | 'job_history' | 'fact'
+
+export interface AgentMemory {
+  id: number
+  kind: MemoryKind
+  content: string
+  importance: number
+  metadata?: Record<string, unknown> | null
+  source_session_id?: number | null
+  created_at?: string | null
+  last_referenced_at?: string | null
+}
+
+export const memoriesApi = {
+  list: async (kind?: MemoryKind): Promise<AgentMemory[]> =>
+    (await api.get('/memories', { params: kind ? { kind } : undefined })).data,
+  create: async (body: { content: string; kind?: MemoryKind; importance?: number }): Promise<AgentMemory> =>
+    (await api.post('/memories', body)).data,
+  update: async (id: number, body: Partial<{ content: string; kind: MemoryKind; importance: number }>): Promise<AgentMemory> =>
+    (await api.patch(`/memories/${id}`, body)).data,
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/memories/${id}`)
+  },
+  extractFromSession: async (session_id: number) =>
+    (await api.post('/memories/extract', { session_id })).data,
 }
 
 // ─── User / Profile ─────────────────────────────────────────────────────────

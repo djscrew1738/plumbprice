@@ -1,0 +1,111 @@
+# PlumbPrice AI Regression Eval — Locked Golden Set
+#
+# Each case represents a real-world DFW plumbing inquiry with the
+# expected classification outcome.  These cases must continue to pass
+# after every model swap, prompt change, or pricing-engine refactor.
+#
+# Schema:
+#   id             : stable identifier (do not rename)
+#   message        : natural-language prompt fed to /api/v1/chat/price
+#   expect:
+#     task_code    : exact code (or list of acceptable alternates)
+#     county       : Dallas | Tarrant | Collin | Denton | Rockwall | Parker | Kaufman
+#     min_price    : grand_total floor (USD) — inclusive
+#     max_price    : grand_total ceiling (USD) — inclusive
+#     min_confidence : minimum classification confidence (0.0–1.0)
+#     quantity     : (optional) expected detected quantity
+#
+# Tolerances are intentionally wide; tighten only after a stable run of
+# 10 consecutive green CI builds.
+
+cases:
+  - id: water_heater_50g_gas_dallas
+    message: "How much to install a 50 gallon gas water heater in Dallas?"
+    expect:
+      task_code: [WH_50G_GAS_STANDARD, WH_50G_GAS_ATTIC]
+      county: Dallas
+      min_price: 1400
+      max_price: 2400
+      min_confidence: 0.6
+
+  - id: water_heater_tankless_plano
+    message: "Need a tankless gas water heater installed in Plano, second floor."
+    expect:
+      task_code: [WH_TANKLESS_GAS]
+      county: Collin
+      min_price: 2800
+      max_price: 6500
+      min_confidence: 0.6
+
+  - id: toilet_replace_fort_worth
+    message: "Replace a standard toilet in Fort Worth, Tarrant County."
+    expect:
+      task_code: [TOILET_REPLACE_STANDARD, TOILET_INSTALL_NEW]
+      county: Tarrant
+      min_price: 350
+      max_price: 950
+      min_confidence: 0.55
+
+  - id: prv_replace_frisco
+    message: "Pressure reducing valve is leaking in Frisco — need it replaced."
+    expect:
+      task_code: [PRV_REPLACE]
+      county: Collin
+      min_price: 400
+      max_price: 950
+      min_confidence: 0.55
+
+  - id: shower_valve_irving
+    message: "Replace a shower valve cartridge in Irving."
+    expect:
+      task_code: [SHOWER_VALVE_REPLACE, SHOWER_VALVE_CARTRIDGE]
+      county: Dallas
+      min_price: 300
+      max_price: 900
+      min_confidence: 0.5
+
+  - id: drain_clean_richardson
+    message: "Kitchen sink is backed up in Richardson — need a drain cleared."
+    expect:
+      task_code: [DRAIN_CLEAN_STANDARD, DRAIN_CLEAN_KITCHEN, MAIN_LINE_CLEAN]
+      county: Dallas
+      min_price: 150
+      max_price: 600
+      min_confidence: 0.5
+
+  - id: garbage_disposal_arlington
+    message: "Install a new garbage disposal in Arlington."
+    expect:
+      task_code: [GARBAGE_DISPOSAL_INSTALL]
+      county: Tarrant
+      min_price: 300
+      max_price: 800
+      min_confidence: 0.55
+
+  - id: hose_bib_quantity_three
+    message: "Replace 3 outdoor hose bibs at a house in Dallas."
+    expect:
+      task_code: [HOSE_BIB_REPLACE]
+      county: Dallas
+      min_price: 350
+      max_price: 1500
+      min_confidence: 0.5
+      quantity: 3
+
+  - id: angle_stop_pair_denton
+    message: "Both angle stops under the bathroom sink are leaking in Denton."
+    expect:
+      task_code: [ANGLE_STOP_REPLACE_PAIR, ANGLE_STOP_REPLACE]
+      county: Denton
+      min_price: 180
+      max_price: 700
+      min_confidence: 0.5
+
+  - id: water_softener_rockwall
+    message: "Customer in Rockwall wants a water softener installed."
+    expect:
+      task_code: [WATER_SOFTENER_INSTALL]
+      county: Rockwall
+      min_price: 1200
+      max_price: 3500
+      min_confidence: 0.55

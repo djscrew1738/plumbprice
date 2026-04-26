@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,34 @@ router = APIRouter()
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_WINDOW_MINUTES = 15
 _LOCKOUT_WINDOW_SECONDS = LOCKOUT_WINDOW_MINUTES * 60
+AUTH_COOKIE_NAME = "pp_token"
+
+
+def _auth_cookie_secure() -> bool:
+    return settings.environment.lower() in {"production", "staging"}
+
+
+def _set_auth_cookie(response: Response, token: str) -> None:
+    max_age = settings.access_token_expire_minutes * 60
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        expires=max_age,
+        httponly=True,
+        secure=_auth_cookie_secure(),
+        samesite="lax",
+        path="/",
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=AUTH_COOKIE_NAME,
+        path="/",
+        samesite="lax",
+        secure=_auth_cookie_secure(),
+    )
 
 
 class TokenResponse(BaseModel):
@@ -71,6 +99,7 @@ class RegisterRequest(BaseModel):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -106,6 +135,7 @@ async def login(
         data={"sub": str(user_id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
+    _set_auth_cookie(response, access_token)
 
     return {
         "access_token": access_token,
@@ -122,6 +152,7 @@ async def login(
 
 @router.post("/register", response_model=TokenResponse)
 async def register(
+    response: Response,
     request: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -144,11 +175,19 @@ async def register(
     await db.refresh(user)
 
     access_token = create_access_token(data={"sub": str(user.id)})
+    _set_auth_cookie(response, access_token)
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user": {"id": user.id, "email": user.email, "full_name": user.full_name},
     }
+
+
+@router.post("/logout", response_model=MessageResponse)
+async def logout(response: Response):
+    """Clear auth cookie."""
+    _clear_auth_cookie(response)
+    return {"message": "Logged out successfully"}
 
 
 @router.get("/me", response_model=UserProfileResponse)
@@ -398,6 +437,7 @@ class AcceptInviteRequest(BaseModel):
 
 @router.post("/accept-invite", response_model=TokenResponse)
 async def accept_invite(
+    response: Response,
     payload: AcceptInviteRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -465,6 +505,7 @@ async def accept_invite(
         data={"sub": str(user_id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
+    _set_auth_cookie(response, access_token)
     logger.info("invite.accepted", user_id=user_id, email=user_email)
 
     return {

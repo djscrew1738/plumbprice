@@ -139,13 +139,15 @@ class TestTaxRates:
 # ─── LaborTemplateData.calculate_labor_cost ───────────────────────────────────
 
 class TestLaborCalculation:
+    LEAD_RATE = 185.0
+
     def _make_template(self, base_hours=2.0, helper=False, helper_hours=None):
         return LaborTemplateData(
             code="TEST",
             name="Test Job",
             category="service",
             base_hours=base_hours,
-            lead_rate=105.0,
+            lead_rate=self.LEAD_RATE,
             helper_required=helper,
             helper_rate=55.0,
             helper_hours=helper_hours,
@@ -156,7 +158,7 @@ class TestLaborCalculation:
         tmpl = self._make_template(base_hours=2.0)
         result = tmpl.calculate_labor_cost(access="first_floor", urgency="standard")
         assert result["adjusted_hours"] == 2.0
-        assert result["lead_cost"] == 2.0 * 105.0
+        assert result["lead_cost"] == 2.0 * self.LEAD_RATE
 
     def test_attic_multiplier(self):
         tmpl = self._make_template(base_hours=2.0)
@@ -188,7 +190,7 @@ class TestLaborCalculation:
     def test_disposal_cost_always_present(self):
         tmpl = self._make_template(base_hours=2.0)
         result = tmpl.calculate_labor_cost()
-        assert result["disposal_cost"] == pytest.approx(0.25 * 105.0)
+        assert result["disposal_cost"] == pytest.approx(0.25 * self.LEAD_RATE)
 
     def test_total_labor_cost_sums_components(self):
         tmpl = self._make_template(base_hours=2.0, helper=True, helper_hours=1.0)
@@ -291,6 +293,28 @@ class TestPricingEngineServiceEstimate:
             include_trip_charge=False,
         )
         assert with_trip.grand_total > without_trip.grand_total
+
+    def test_construction_template_uses_construction_rules_without_trip_charge(self):
+        result = engine.calculate_service_estimate(
+            task_code="ROUGH_IN_MASTER_BATH",
+            materials=[],
+            county="Dallas",
+        )
+        assert result.job_type == "construction"
+        assert result.trip_total == 0.0
+        assert result.misc_total == 65.0
+        assert all(li.line_type != "trip" for li in result.line_items)
+
+    def test_commercial_template_uses_commercial_rules_without_trip_charge(self):
+        result = engine.calculate_service_estimate(
+            task_code="COMMERCIAL_URINAL_INSTALL",
+            materials=[],
+            county="Dallas",
+        )
+        assert result.job_type == "commercial"
+        assert result.trip_total == 0.0
+        assert result.misc_total == 85.0
+        assert all(li.line_type != "trip" for li in result.line_items)
 
     def test_water_heater_includes_permit(self):
         wh_materials = [

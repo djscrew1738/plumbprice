@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter  # noqa: F401
 from slowapi.util import get_remote_address  # noqa: F401  (kept for compat)
@@ -18,12 +18,28 @@ from app.schemas.chat import ChatPriceRequest, ChatPriceResponse
 from app.services.agent import process_chat_message
 from app.services.estimate_service import persist_estimate
 from app.services.llm_service import llm_service
+from app.services.memory_service import memory_service
 from app.core.limiter import limiter
 
 logger = structlog.get_logger()
 router = APIRouter()
 
 STREAM_TIMEOUT_SECONDS = 20
+
+
+async def _extract_memories_background(*, user_id: int, session_id: int) -> None:
+    """Background task: pull durable memories from a recent chat session.
+
+    Uses its own DB session so the request session can close cleanly.
+    """
+    from app.database import AsyncSessionLocal
+    try:
+        async with AsyncSessionLocal() as bg_db:
+            await memory_service.extract_from_session(
+                bg_db, user_id=user_id, session_id=session_id,
+            )
+    except Exception as e:
+        logger.warning("memory.background_extract_failed", error=str(e))
 
 
 async def _upsert_session(
@@ -151,6 +167,7 @@ async def _resolve_customer_project(
 @limiter.limit("30/minute")
 async def chat_price(    request: Request,
     body: ChatPriceRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -170,6 +187,7 @@ async def chat_price(    request: Request,
             job_type=body.job_type,
             history=history or None,
             db=db,
+            user_id=current_user.id,
         )
 
         estimate_result = result.pop("_estimate_result", None)
@@ -210,6 +228,24 @@ async def chat_price(    request: Request,
             estimate_id=estimate_id,
         )
         await db.commit()
+
+        # Schedule async memory extraction every ~3 user messages.
+        try:
+            from app.models.sessions import ChatMessage as _CM
+            count_q = await db.execute(
+                select(func.count(_CM.id)).where(
+                    _CM.session_id == session_id, _CM.role == "user",
+                )
+            )
+            user_turns = count_q.scalar() or 0
+            if user_turns and user_turns % 3 == 0:
+                background_tasks.add_task(
+                    _extract_memories_background,
+                    user_id=current_user.id,
+                    session_id=session_id,
+                )
+        except Exception as e:
+            logger.warning("memory.schedule_failed", error=str(e))
 
         estimate_payload = result.get("estimate")
         if estimate_result is not None:
@@ -286,6 +322,7 @@ async def chat_price_stream(
             history=history or None,
             db=db,
             skip_llm_response=True,   # streaming endpoint generates LLM tokens below
+            user_id=current_user.id,
         )
     except Exception as e:
         logger.error("Chat stream pricing error", error=str(e), user_id=current_user.id, exc_info=True)
@@ -345,6 +382,11 @@ async def chat_price_stream(
     # Use template_name already resolved by process_chat_message (avoids redundant lookup)
     template_name = result.get("_template_name") or result.get("template_used") or ""
     rag_context = result.get("_rag_context") or ""
+    memory_context = result.get("_memory_context") or ""
+    outcome_context = result.get("_outcome_context") or ""
+    combined_context = "\n\n".join(
+        c for c in [memory_context, outcome_context, rag_context] if c
+    )
     quantity = result.get("classification", {}).get("quantity", 1) if result.get("classification") else 1
     est = pricing_event["estimate"]
 
@@ -366,7 +408,7 @@ async def chat_price_stream(
                         county=body.county or "Dallas",
                         quantity=quantity,
                         history=history or None,
-                        context=rag_context
+                        context=combined_context
                     ):
                         yield f"event: token\ndata: {json.dumps(token)}\n\n"
                 else:

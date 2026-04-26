@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { User, Building2 } from 'lucide-react'
+import { User, Building2, Brain } from 'lucide-react'
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { ProfilePage } from './ProfilePage'
 import { OrganizationPage } from './OrganizationPage'
+import { MemoryPage } from './MemoryPage'
 
 export function SettingsLayout() {
   const [activeTab, setActiveTab] = useState('profile')
@@ -14,7 +15,7 @@ export function SettingsLayout() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[color:var(--ink)]">Settings</h1>
         <p className="text-sm text-[color:var(--muted-ink)] mt-1">
-          Manage your account and organization
+          Manage your account, organization, and AI memory
         </p>
       </div>
 
@@ -26,6 +27,9 @@ export function SettingsLayout() {
           <TabsTrigger value="organization" icon={Building2}>
             Organization
           </TabsTrigger>
+          <TabsTrigger value="memory" icon={Brain}>
+            AI Memory
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -34,6 +38,10 @@ export function SettingsLayout() {
 
         <TabsContent value="organization">
           <OrganizationPage />
+        </TabsContent>
+
+        <TabsContent value="memory">
+          <MemoryPage />
         </TabsContent>
       </TabsRoot>
     </div>

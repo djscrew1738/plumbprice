@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Plus } from 'lucide-react'
+import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Plus, Eye } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'
@@ -16,6 +16,7 @@ import { StatsTab } from './StatsTab'
 import { JobsPage } from './JobsPage'
 import { AdminUsersPage } from './UsersPage'
 import { AnalyticsTab } from './AnalyticsTab'
+import { VisionMappingsTab } from './VisionMappingsTab'
 
 const SUPPLIERS = ['ferguson', 'moore_supply', 'apex'] as const
 type SupplierSlug = typeof SUPPLIERS[number]
@@ -208,6 +209,7 @@ export function AdminPage() {
             <TabsTrigger value="jobs" icon={Briefcase}>Jobs</TabsTrigger>
             <TabsTrigger value="users" icon={Users}>Users</TabsTrigger>
             <TabsTrigger value="analytics" icon={TrendingUp}>Analytics</TabsTrigger>
+            <TabsTrigger value="vision" icon={Eye}>Vision Map</TabsTrigger>
           </TabsList>
 
           <div className="mt-4">
@@ -275,6 +277,10 @@ export function AdminPage() {
 
             <TabsContent value="analytics">
               <AnalyticsTab />
+            </TabsContent>
+
+            <TabsContent value="vision">
+              <VisionMappingsTab />
             </TabsContent>
           </div>
         </TabsRoot>

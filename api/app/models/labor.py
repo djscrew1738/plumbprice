@@ -17,8 +17,8 @@ class LaborTemplate(Base):
     min_hours = Column(Float, nullable=True)
     max_hours = Column(Float, nullable=True)
 
-    # Rates (DFW 2024-2025)
-    lead_rate = Column(Float, default=95.0)   # Master plumber $/hr
+    # Rates (DFW 2025-2026)
+    lead_rate = Column(Float, default=185.0)   # Master plumber $/hr
     helper_required = Column(Boolean, default=False)
     helper_rate = Column(Float, default=50.0)
     helper_hours = Column(Float, nullable=True)

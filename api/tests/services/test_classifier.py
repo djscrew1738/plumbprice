@@ -97,6 +97,21 @@ def test_classify_prv():
     assert result["task_code"] == "PRV_REPLACE"
 
 
+def test_classify_construction_master_bath_rough_in():
+    result = classify_request("price to rough in a master bath in Plano")
+    assert result["task_code"] == "ROUGH_IN_MASTER_BATH"
+    assert result["county"] == "Collin"
+    assert result["assembly_code"] is None
+    assert result["confidence"] >= 0.74
+
+
+def test_classify_commercial_urinal_install():
+    result = classify_request("install a commercial urinal in an office restroom")
+    assert result["task_code"] == "COMMERCIAL_URINAL_INSTALL"
+    assert result["assembly_code"] == "URINAL_INSTALL_KIT"
+    assert result["confidence"] >= 0.74
+
+
 def test_classify_unknown_returns_none_task():
     result = classify_request("I need a plumber to help me")
     assert result["task_code"] is None

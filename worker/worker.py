@@ -13,6 +13,7 @@ app = Celery(
         "worker.tasks.supplier_refresh",
         "worker.tasks.document_processing",
         "worker.tasks.blueprint_analysis",
+        "worker.tasks.privacy",
     ],
 )
 
@@ -25,6 +26,10 @@ app.conf.update(
     beat_schedule={
         "refresh-supplier-prices-daily": {
             "task": "worker.tasks.supplier_refresh.refresh_all_suppliers",
+            "schedule": 86400.0,  # every 24 hours
+        },
+        "purge-expired-uploads-daily": {
+            "task": "worker.tasks.privacy.purge_expired_uploads",
             "schedule": 86400.0,  # every 24 hours
         },
     },

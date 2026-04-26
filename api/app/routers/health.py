@@ -62,6 +62,13 @@ async def worker_health():
     return {"status": "unhealthy", "celery_broker": "disconnected", "redis": redis_status}
 
 
+@router.get("/llm")
+async def llm_health():
+    """LLM tier + cloud fallback cost snapshot."""
+    from app.services.llm_service import llm_service
+    return llm_service.get_status()
+
+
 @router.get("/dependencies")
 async def dependencies_check(db: AsyncSession = Depends(get_db)):
     """Check all external dependencies."""

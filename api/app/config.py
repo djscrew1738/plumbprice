@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     minio_bucket_blueprints: str = "blueprints"
     minio_bucket_documents: str = "documents"
     minio_bucket_proposals: str = "proposals"
+    minio_bucket_photos: str = "photos"
 
     # Auth
     secret_key: str = Field(...)
@@ -40,6 +41,14 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     default_llm_provider: str = "openai"
     default_llm_model: str = "gpt-4o-mini"
+    # Cloud fallback (used when both local Ollama tiers circuit-break)
+    llm_cloud_fallback_enabled: bool = True
+    llm_cloud_fallback_provider: str = "openai"  # openai | anthropic
+    llm_cloud_fallback_model: str = "gpt-4o-mini"
+    # Cost ceiling: max USD spent on cloud calls per UTC day
+    llm_cloud_daily_cap_usd: float = 5.0
+    # Approximate cost per 1k tokens for the fallback model (input+output blended)
+    llm_cloud_cost_per_1k_tokens_usd: float = 0.0006
 
     # AI — Hermes / Ollama (OpenAI-compatible local inference)
     hermes_endpoint_url: str = "http://localhost:11434/v1"
@@ -58,6 +67,61 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3200", "https://app.ctlplumbingllc.com"]
+
+    # Privacy / data retention
+    # How long uploaded user content (blueprints, photos, audio, docs) is kept
+    # before being purged.  Soft-deleted records are hard-deleted after this
+    # window via the `purge_expired_uploads` celery beat task.
+    data_retention_days: int = 90
+    # How long after soft-delete to wait before hard-delete (grace period)
+    soft_delete_grace_days: int = 7
+
+    # Phase 4 — Voice (Whisper STT)
+    # Cloud STT settings — uses OPENAI_API_KEY via the existing openai client.
+    voice_stt_enabled: bool = True
+    voice_stt_model: str = "whisper-1"
+    # Per-minute Whisper cost (OpenAI list price as of 2025).
+    voice_stt_cost_per_minute_usd: float = 0.006
+    # Daily ceiling for STT spend, separate from LLM budget.
+    voice_stt_daily_cap_usd: float = 2.0
+    # Hard upload cap for a single voice clip.
+    voice_stt_max_seconds: int = 90
+    voice_stt_max_bytes: int = 15 * 1024 * 1024
+
+    # Cloud TTS — optional spoken reply on /voice/quote. Off by default.
+    voice_tts_enabled: bool = False
+    voice_tts_model: str = "gpt-4o-mini-tts"
+    voice_tts_voice: str = "alloy"
+    voice_tts_format: str = "mp3"
+    voice_tts_cost_per_1k_chars_usd: float = 0.015
+    voice_tts_daily_cap_usd: float = 1.0
+    voice_tts_max_chars: int = 600
+
+    # Phase 2 — Blueprint review
+    # Detections below this confidence are flagged for manual review.
+    blueprint_review_threshold: float = 0.65
+
+    # Phase 5 — Public customer agent (autonomous widget)
+    # Master switch for the public quote widget.
+    public_agent_enabled: bool = True
+    # Maximum draft total this agent will hand back to a customer; jobs
+    # priced above this fall back to "we'll call you" lead capture.
+    public_agent_max_total_usd: float = 7500.0
+    # Only these task_codes are quotable by the public widget — anything
+    # else triggers lead-capture fallback. Keep this conservative; expand
+    # via env: PUBLIC_AGENT_ALLOWED_TASKS="A,B,C".
+    public_agent_allowed_tasks: str = (
+        "TOILET_REPLACE,LAV_FAUCET_REPLACE,KITCHEN_FAUCET_REPLACE,"
+        "ANGLE_STOP_REPLACE,ANGLE_STOP_REPLACE_PAIR,HOSE_BIB_REPLACE,"
+        "WATER_HEATER_REPLACE_50G_GAS,WATER_HEATER_REPLACE_40G_GAS,"
+        "WATER_HEATER_REPLACE_50G_ELEC,DISPOSAL_REPLACE,"
+        "DRAIN_CLEAN_STANDARD,DRAIN_CLEAN_KITCHEN,DRAIN_CLEAN_BATHTUB,"
+        "DRAIN_CLEAN_SHOWER,P_TRAP_REPLACE,SUPPLY_LINE_REPLACE,"
+        "SHOWER_HEAD_REPLACE,TUB_SPOUT_REPLACE,DISHWASHER_HOOKUP"
+    )
+    # IP-based rate ceiling: stops a single visitor abusing the widget.
+    public_agent_rate_per_minute: int = 10
+    public_agent_rate_per_day: int = 80
 
     # External price data sources
     apify_token: Optional[str] = None

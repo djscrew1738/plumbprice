@@ -15,6 +15,7 @@ formatter if neither is available.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from functools import lru_cache
 import json
 import time
@@ -44,6 +45,13 @@ Classify the user's natural-language plumbing, construction, or commercial reque
 
 Valid task_code values (pick the single best match from the real labor template catalog, or null if unknown):
   {task_codes}
+
+Disambiguation rules (apply BEFORE picking task_code):
+- "sink backed up / clogged / slow / draining slow / won't drain" → DRAIN_CLEAN_STANDARD (or DRAIN_CLEAN_KITCHEN / MAIN_LINE_CLEAN), NOT a fixture replacement (KITCHEN_FAUCET_REPLACE, LAV_SINK_REPLACE).
+- "toilet won't flush / clogged / backed up" → DRAIN_CLEAN_STANDARD, NOT TOILET_REPLACE.
+- "angle stop(s) / shutoff valve / supply valve leaking / replace" → ANGLE_STOP_REPLACE (or ANGLE_STOP_REPLACE_PAIR if two/both/pair). The fact that they sit under a sink does NOT mean the sink itself is being replaced.
+- "sewer line broken / cracked / collapsed / needs excavation" → SEWER_SPOT_REPAIR, NOT MAIN_LINE_CLEAN.
+- Quantity: extract integer from words like "two", "three", "both", "pair" (both/pair = 2). Default 1.
 
 Return ONLY valid JSON with these exact keys:
 {{
@@ -82,13 +90,64 @@ class LLMService:
         # None = untested | True = known good | False = circuit-broken
         self._available: Optional[bool] = None
         self._last_failure_at: Optional[float] = None
-        # Which model tier is currently active: "primary" or "secondary"
+        # Which model tier is currently active: "primary" | "secondary" | "cloud"
         self._active_tier: str = "primary"
+        # Cloud cost tracking (per UTC day)
+        self._cloud_cost_day: Optional[str] = None
+        self._cloud_cost_usd: float = 0.0
+        self._cloud_calls_today: int = 0
+
+    # ── Cost tracking ─────────────────────────────────────────────────────────
+
+    def _today_key(self) -> str:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def _reset_cost_if_new_day(self) -> None:
+        today = self._today_key()
+        if self._cloud_cost_day != today:
+            self._cloud_cost_day = today
+            self._cloud_cost_usd = 0.0
+            self._cloud_calls_today = 0
+
+    def _cloud_budget_remaining(self) -> float:
+        self._reset_cost_if_new_day()
+        return max(0.0, settings.llm_cloud_daily_cap_usd - self._cloud_cost_usd)
+
+    def _record_cloud_usage(self, total_tokens: int) -> None:
+        self._reset_cost_if_new_day()
+        cost = (total_tokens / 1000.0) * settings.llm_cloud_cost_per_1k_tokens_usd
+        self._cloud_cost_usd += cost
+        self._cloud_calls_today += 1
+        logger.info(
+            "llm.cloud_usage",
+            tokens=total_tokens,
+            cost_usd=round(cost, 4),
+            day_total_usd=round(self._cloud_cost_usd, 4),
+            day_remaining_usd=round(self._cloud_budget_remaining(), 4),
+        )
+
+    def get_status(self) -> dict:
+        """Public snapshot of LLM availability + cost state for /health."""
+        self._reset_cost_if_new_day()
+        return {
+            "active_tier": self._active_tier,
+            "active_model": self._active_model,
+            "available": self._available is not False,
+            "cloud_fallback_enabled": settings.llm_cloud_fallback_enabled,
+            "cloud_calls_today": self._cloud_calls_today,
+            "cloud_cost_today_usd": round(self._cloud_cost_usd, 4),
+            "cloud_cap_usd": settings.llm_cloud_daily_cap_usd,
+            "cloud_budget_remaining_usd": round(self._cloud_budget_remaining(), 4),
+        }
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _make_client(self, timeout: float):
         """Create a fresh AsyncOpenAI-compatible client for the active provider.
+
+        When `_active_tier == 'cloud'`, force the configured cloud fallback
+        provider (overriding `default_llm_provider`).  Otherwise, follow the
+        normal provider preference for local/cloud routing.
 
         Provider selection (settings.default_llm_provider):
           - "openai":   api.openai.com using OPENAI_API_KEY
@@ -102,6 +161,22 @@ class LLMService:
         """
         try:
             from openai import AsyncOpenAI
+
+            if self._active_tier == "cloud":
+                cloud_provider = (settings.llm_cloud_fallback_provider or "openai").lower()
+                if cloud_provider == "anthropic" and settings.anthropic_api_key:
+                    return AsyncOpenAI(
+                        base_url=getattr(settings, "anthropic_base_url", None) or "https://api.anthropic.com/v1",
+                        api_key=settings.anthropic_api_key,
+                        timeout=timeout,
+                    )
+                if cloud_provider == "openai" and settings.openai_api_key:
+                    return AsyncOpenAI(
+                        base_url="https://api.openai.com/v1",
+                        api_key=settings.openai_api_key,
+                        timeout=timeout,
+                    )
+                return None  # cloud tier requested but no key — caller handles
 
             provider = (settings.default_llm_provider or "hermes").lower()
 
@@ -143,7 +218,9 @@ class LLMService:
 
     @property
     def _active_model(self) -> str:
-        """Pick the model string appropriate for the active provider."""
+        """Pick the model string appropriate for the active tier/provider."""
+        if self._active_tier == "cloud":
+            return settings.llm_cloud_fallback_model
         provider = (settings.default_llm_provider or "hermes").lower()
         if provider == "openai" and settings.openai_api_key:
             return settings.default_llm_model
@@ -172,8 +249,10 @@ class LLMService:
 
     def _mark_unavailable(self, error: str) -> None:
         """
-        On first failure of the primary, promote secondary.
-        On second failure (secondary already active), fully circuit-break.
+        Tier escalation on connection/timeout failures:
+          primary  → secondary
+          secondary → cloud (if enabled, has key, and budget remains)
+          cloud    → fully circuit-break (keyword-only fallback)
         """
         if self._active_tier == "primary":
             logger.warning(
@@ -183,12 +262,39 @@ class LLMService:
                 error=error,
             )
             self._active_tier = "secondary"
-            self._available = None          # allow immediate retry on secondary
+            self._available = None
             self._last_failure_at = None
+        elif self._active_tier == "secondary":
+            cloud_ok = (
+                settings.llm_cloud_fallback_enabled
+                and self._cloud_budget_remaining() > 0
+                and (
+                    (settings.llm_cloud_fallback_provider == "openai" and settings.openai_api_key)
+                    or (settings.llm_cloud_fallback_provider == "anthropic" and settings.anthropic_api_key)
+                )
+            )
+            if cloud_ok:
+                logger.warning(
+                    "Both local LLMs unavailable — escalating to cloud fallback",
+                    cloud_provider=settings.llm_cloud_fallback_provider,
+                    cloud_model=settings.llm_cloud_fallback_model,
+                    budget_remaining_usd=round(self._cloud_budget_remaining(), 4),
+                    error=error,
+                )
+                self._active_tier = "cloud"
+                self._available = None
+                self._last_failure_at = None
+            else:
+                logger.warning(
+                    "Both local LLMs unavailable and no cloud fallback — keyword-only mode",
+                    error=error,
+                )
+                self._available = False
+                self._last_failure_at = time.monotonic()
         else:
             logger.warning(
-                "Secondary LLM also unavailable — using keyword classifier only",
-                model=settings.llm_secondary_model,
+                "Cloud LLM also unavailable — using keyword classifier only",
+                model=settings.llm_cloud_fallback_model,
                 error=error,
             )
             self._available = False
@@ -253,6 +359,12 @@ class LLMService:
             }
 
             self._available = True
+            if self._active_tier == "cloud":
+                try:
+                    usage = getattr(response, "usage", None)
+                    self._record_cloud_usage(int(getattr(usage, "total_tokens", 0)) if usage else 0)
+                except Exception:
+                    pass
             logger.info(
                 "LLM classification",
                 task_code=result["task_code"],
@@ -267,8 +379,8 @@ class LLMService:
             err_type = type(e).__name__
             if "Connection" in err_type or "Timeout" in err_type or "ReadTimeout" in err_type:
                 self._mark_unavailable(str(e))
-                # Retry immediately on the secondary if we just promoted it
-                if self._active_tier == "secondary" and self._available is None:
+                # Retry immediately on next tier if we just promoted (secondary or cloud)
+                if self._active_tier in ("secondary", "cloud") and self._available is None:
                     return await self.classify(message, history)
             else:
                 logger.warning("LLM classify parse error", error=str(e), error_type=err_type)
@@ -330,6 +442,12 @@ class LLMService:
             text = (response.choices[0].message.content or "").strip()
             if text:
                 logger.debug("LLM response generated", chars=len(text), model=model, tier=self._active_tier)
+            if self._active_tier == "cloud":
+                try:
+                    usage = getattr(response, "usage", None)
+                    self._record_cloud_usage(int(getattr(usage, "total_tokens", 0)) if usage else 0)
+                except Exception:
+                    pass
             return text or None
 
         except Exception as e:  # noqa: BLE001

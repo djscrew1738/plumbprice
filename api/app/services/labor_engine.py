@@ -1,6 +1,6 @@
 """
 Labor Engine — All DFW plumbing labor templates with 2025-2026 rates.
-Master Plumber: $105/hr, Journeyman: $80/hr, Helper/Apprentice: $55/hr
+Master Plumber: $185/hr, Journeyman: $80/hr, Helper/Apprentice: $55/hr
 
 Rate basis: DFW metro plumbing contractor survey Q1 2026, PHCC-Texas wage data,
 and BLS Occupational Employment Statistics for Dallas-Fort Worth-Arlington MSA.
@@ -32,7 +32,7 @@ class LaborTemplateData:
     name: str
     category: str  # service, construction, commercial
     base_hours: float
-    lead_rate: float = 105.0  # DFW master plumber 2025-2026
+    lead_rate: float = 185.0  # DFW master plumber 2025-2026
     helper_required: bool = False
     helper_rate: float = 55.0
     helper_hours: Optional[float] = None
@@ -1994,7 +1994,7 @@ LABOR_TEMPLATES: dict[str, LaborTemplateData] = {
         name="Remote Video Diagnostic Consultation",
         category="service",
         base_hours=0.5,
-        lead_rate=105.0,
+        lead_rate=185.0,
         helper_required=False,
         disposal_hours=0.0,
         applicable_assemblies=[],

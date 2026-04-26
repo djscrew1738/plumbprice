@@ -22,6 +22,9 @@ class UploadedDocument(Base):
     processing_error = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Privacy / retention
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    retention_until = Column(DateTime(timezone=True), nullable=True, index=True)
 
     chunks = relationship("DocumentChunk", back_populates="document")
 
@@ -35,7 +38,7 @@ class DocumentChunk(Base):
     content = Column(Text, nullable=False)
     # embedding vector stored as JSON for now (pgvector extension adds proper vector column)
     embedding_json = Column(JSON, nullable=True)
-    embedding = Column(Vector(768), nullable=True)
+    embedding = Column(Vector(1024), nullable=True)
     metadata_json = Column(JSON, nullable=True)
     token_count = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

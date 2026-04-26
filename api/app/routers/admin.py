@@ -936,3 +936,129 @@ async def upload_org_logo(
     await db.commit()
 
     return {"logo_url": logo_url}
+
+
+# ─── Phase 3.5 — Vision-item to task-code mapping admin ────────────────────────
+
+from app.models.vision_mappings import VisionItemMapping
+from app.services.photo_quote import _ITEM_TO_TASK
+
+
+class VisionMappingPayload(BaseModel):
+    item_type: str = Field(..., min_length=1, max_length=80)
+    default_task_code: str = Field(..., min_length=1, max_length=120)
+    problem_task_code: Optional[str] = Field(default=None, max_length=120)
+    enabled: bool = True
+    note: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("item_type")
+    @classmethod
+    def _normalize_type(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+@router.get("/vision-mappings")
+async def list_vision_mappings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """List vision-item mappings — both DB overrides and the static defaults."""
+    rows = (await db.execute(select(VisionItemMapping).order_by(VisionItemMapping.item_type))).scalars().all()
+    db_keys = {r.item_type for r in rows}
+
+    overrides = [
+        {
+            "id": r.id,
+            "item_type": r.item_type,
+            "default_task_code": r.default_task_code,
+            "problem_task_code": r.problem_task_code,
+            "enabled": r.enabled,
+            "note": r.note,
+            "source": "db",
+        }
+        for r in rows
+    ]
+    static_only = [
+        {
+            "id": None,
+            "item_type": k,
+            "default_task_code": v[0],
+            "problem_task_code": v[1],
+            "enabled": True,
+            "note": None,
+            "source": "static",
+        }
+        for k, v in sorted(_ITEM_TO_TASK.items())
+        if k not in db_keys
+    ]
+    valid_codes = {c.upper() for c in list_template_codes()}
+    return {
+        "mappings": overrides + static_only,
+        "valid_task_codes": sorted(valid_codes),
+    }
+
+
+@router.post("/vision-mappings", status_code=201)
+async def upsert_vision_mapping(
+    body: VisionMappingPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """Create or update a mapping override (keyed on item_type)."""
+    valid = {c.upper() for c in list_template_codes()}
+    if body.default_task_code.upper() not in valid:
+        raise HTTPException(status_code=400, detail=f"Unknown task_code: {body.default_task_code}")
+    if body.problem_task_code and body.problem_task_code.upper() not in valid:
+        raise HTTPException(status_code=400, detail=f"Unknown task_code: {body.problem_task_code}")
+
+    existing = (
+        await db.execute(select(VisionItemMapping).where(VisionItemMapping.item_type == body.item_type))
+    ).scalar_one_or_none()
+    if existing:
+        existing.default_task_code = body.default_task_code
+        existing.problem_task_code = body.problem_task_code
+        existing.enabled = body.enabled
+        existing.note = body.note
+        existing.updated_by = current_user.id
+        row = existing
+    else:
+        row = VisionItemMapping(
+            item_type=body.item_type,
+            default_task_code=body.default_task_code,
+            problem_task_code=body.problem_task_code,
+            enabled=body.enabled,
+            note=body.note,
+            organization_id=current_user.organization_id,
+            updated_by=current_user.id,
+        )
+        db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    logger.info("admin.vision_mapping_upsert", item_type=row.item_type, by=current_user.id)
+    return {
+        "id": row.id,
+        "item_type": row.item_type,
+        "default_task_code": row.default_task_code,
+        "problem_task_code": row.problem_task_code,
+        "enabled": row.enabled,
+        "note": row.note,
+    }
+
+
+@router.delete("/vision-mappings/{item_type}", status_code=204)
+async def delete_vision_mapping(
+    item_type: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """Remove an override (the static fallback then takes effect again)."""
+    key = item_type.strip().lower()
+    row = (
+        await db.execute(select(VisionItemMapping).where(VisionItemMapping.item_type == key))
+    ).scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Mapping not found")
+    await db.delete(row)
+    await db.commit()
+    logger.info("admin.vision_mapping_delete", item_type=key, by=current_user.id)
+    return None

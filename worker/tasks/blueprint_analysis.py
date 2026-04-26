@@ -4,6 +4,7 @@ import asyncio
 import io
 import os
 import random
+import re
 import fitz  # PyMuPDF
 import structlog
 from worker.worker import app
@@ -15,6 +16,26 @@ from app.config import settings
 from sqlalchemy import select
 
 logger = structlog.get_logger()
+
+
+# Common architectural / engineering scale notations.
+_SCALE_PATTERNS = [
+    re.compile(r'(\d+\s*/\s*\d+)\s*"?\s*=\s*1\'?[-\s]*0?"?', re.IGNORECASE),  # 1/4" = 1'-0"
+    re.compile(r'(\d+)\s*"?\s*=\s*1\'?[-\s]*0?"?', re.IGNORECASE),             # 1" = 1'-0"
+    re.compile(r'1\s*:\s*(\d{2,4})'),                                          # 1:50, 1:100
+    re.compile(r'scale\s*[:=]?\s*([^\n,;]{1,30})', re.IGNORECASE),
+]
+
+
+def _detect_scale(text: str) -> str | None:
+    """Pull the first scale notation out of native PDF text, if any."""
+    if not text:
+        return None
+    for pat in _SCALE_PATTERNS:
+        m = pat.search(text)
+        if m:
+            return m.group(0).strip()[:60]
+    return None
 
 
 async def _async_analyze_blueprint(job_id: int, storage_path: str):
@@ -43,12 +64,23 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
             await db.commit()
 
             total_fixture_count = 0
+            review_threshold = float(getattr(settings, "blueprint_review_threshold", 0.65))
             for i in range(len(pdf)):
                 page = pdf[i]
                 # High resolution render for vision
                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                 img_data = pix.tobytes("png")
-                
+
+                # Native PDF text extraction (cheap, no LLM round-trip)
+                try:
+                    page_text = page.get_text("text") or ""
+                except Exception as text_exc:  # pragma: no cover
+                    logger.warning("vision.text_extract_failed",
+                                   job_id=job_id, page=i + 1, error=str(text_exc))
+                    page_text = ""
+                page_text = page_text.strip()
+                scale_text = _detect_scale(page_text)
+
                 # Upload page image to MinIO
                 page_filename = f"jobs/{job_id}/page_{i+1}.png"
                 storage_client.upload_file(
@@ -73,24 +105,28 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                         job_id=job_id,
                         page_number=i+1,
                         storage_path=page_filename,
-                        status="processing"
+                        status="processing",
+                        ocr_text=page_text[:50000] if page_text else None,
+                        scale_text=scale_text,
                     )
                     db.add(bp_page)
                     await db.flush()
                 else:
                     bp_page.storage_path = page_filename
                     bp_page.status = "processing"
+                    bp_page.ocr_text = page_text[:50000] if page_text else None
+                    bp_page.scale_text = scale_text
                     await db.flush()
 
-                # 4. Classify sheet
-                classification = await vision_service.classify_sheet(img_data)
+                # 4. Classify sheet (with OCR hint)
+                classification = await vision_service.classify_sheet(img_data, ocr_hint=page_text)
                 bp_page.sheet_type = classification.get("sheet_type")
                 bp_page.sheet_number = classification.get("sheet_number")
                 bp_page.title = classification.get("title")
                 
                 # 5. Detect fixtures ONLY if it's a plumbing sheet
                 if bp_page.sheet_type == "plumbing":
-                    detect_result = await vision_service.detect_fixtures(img_data)
+                    detect_result = await vision_service.detect_fixtures(img_data, ocr_hint=page_text)
                     detections = detect_result.get("fixtures", [])
                     if detect_result.get("status") == "error":
                         # Surface vision failures rather than silently producing 0 fixtures.
@@ -102,12 +138,15 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                         )
                         bp_page.status = "vision_error"
                     for det in detections:
-                        total_fixture_count += det.get("count", 1)
+                        det_count = int(det.get("count", 1) or 1)
+                        det_conf  = float(det.get("confidence", 0.0) or 0.0)
+                        total_fixture_count += det_count
                         db.add(BlueprintDetection(
                             page_id=bp_page.id,
                             fixture_type=det.get("type"),
-                            count=det.get("count", 1),
-                            confidence=det.get("confidence", 0.0)
+                            count=det_count,
+                            confidence=det_conf,
+                            needs_review=(det_conf < review_threshold),
                         ))
                 
                 bp_page.status = "complete"

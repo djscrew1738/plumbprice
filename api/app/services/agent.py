@@ -9,7 +9,7 @@ Classification pipeline (in order):
 """
 
 import re
-from typing import Optional
+from typing import NamedTuple, Optional
 import structlog
 
 from app.config import settings
@@ -72,6 +72,50 @@ def _normalize(message: str) -> str:
     for pattern, replacement in _NORMALIZE_PATTERNS:
         result = pattern.sub(replacement, result)
     return result
+
+
+_TEMPLATE_TOKEN_RE = re.compile(r"[a-z0-9]+")
+_TEMPLATE_MATCH_STOPWORDS = {
+    "a", "an", "and", "bathroom", "bid", "building", "by", "cost", "estimate",
+    "for", "from", "help", "how", "in", "install", "installed", "job", "line",
+    "me", "my", "need", "new", "of", "on", "per", "plumber", "plumbing",
+    "price", "quote", "repair", "replace", "replacement", "service", "set",
+    "the", "to", "unit", "with",
+}
+
+
+def _tokenize_template_match(text: str) -> set[str]:
+    tokens = {
+        token
+        for token in _TEMPLATE_TOKEN_RE.findall(text.lower())
+        if len(token) > 1 and token not in _TEMPLATE_MATCH_STOPWORDS
+    }
+    if "restroom" in tokens:
+        tokens.add("bath")
+    return tokens
+
+
+class _TemplateSearchEntry(NamedTuple):
+    code_phrase: str
+    core_tokens: set[str]
+    note_tokens: set[str]
+
+
+def _build_template_search_index() -> dict[str, _TemplateSearchEntry]:
+    index: dict[str, _TemplateSearchEntry] = {}
+    for code, template in LABOR_MAP.items():
+        code_phrase = code.replace("_", " ").lower()
+        core_tokens = _tokenize_template_match(f"{code_phrase} {template.name}")
+        note_tokens = _tokenize_template_match(template.notes or "")
+        index[code] = _TemplateSearchEntry(
+            code_phrase=code_phrase,
+            core_tokens=core_tokens,
+            note_tokens=note_tokens,
+        )
+    return index
+
+
+_TEMPLATE_SEARCH_INDEX = _build_template_search_index()
 
 
 # ─── Job Classification ───────────────────────────────────────────────────────
@@ -856,6 +900,62 @@ COUNTY_KEYWORDS: dict[str, list[str]] = {
 }
 
 
+def _default_assembly_for_task(task_code: Optional[str]) -> Optional[str]:
+    if not task_code:
+        return None
+
+    keyword_cfg = TASK_KEYWORDS.get(task_code)
+    if keyword_cfg and keyword_cfg.get("assembly"):
+        return keyword_cfg["assembly"]
+
+    template = LABOR_MAP.get(task_code)
+    if template and template.applicable_assemblies:
+        return template.applicable_assemblies[0]
+
+    return None
+
+
+def _classify_from_template_catalog(msg_lower: str) -> Optional[tuple[str, Optional[str], float]]:
+    msg_tokens = _tokenize_template_match(msg_lower)
+    if not msg_tokens:
+        return None
+
+    best_task: Optional[str] = None
+    best_assembly: Optional[str] = None
+    best_score = 0.0
+
+    for code, search in _TEMPLATE_SEARCH_INDEX.items():
+        core_tokens = search.core_tokens
+        note_tokens = search.note_tokens
+        if not core_tokens:
+            continue
+
+        core_overlap = msg_tokens & core_tokens
+        if not core_overlap:
+            continue
+
+        score = len(core_overlap) * 2.0
+        score += len(msg_tokens & note_tokens) * 0.25
+
+        code_phrase = search.code_phrase
+        if code_phrase in msg_lower:
+            score += 3.0
+
+        if len(core_overlap) >= min(2, len(core_tokens)):
+            score += 1.0
+
+        if score > best_score:
+            best_score = score
+            best_task = code
+            best_assembly = _default_assembly_for_task(code)
+
+    if not best_task or best_score < 4.0:
+        return None
+
+    confidence = min(0.74 + max(0.0, best_score - 4.0) * 0.03, 0.88)
+    return best_task, best_assembly, confidence
+
+
 def classify_request(message: str) -> dict:
     """
     Rule-based classification of plumbing service request.
@@ -925,6 +1025,20 @@ def classify_request(message: str) -> dict:
     _is_toilet_msg   = "toilet" in msg_lower or "commode" in msg_lower
     _is_clog_context = bool(_toilet_clog_signals.search(msg_lower))
 
+    # "sink" + drain/clog signal → DRAIN_CLEAN_*, not faucet/sink replacement
+    _sink_clog_signals = re.compile(
+        r'\b(clogged|clog|back(ed)?\s*up|won\'?t\s+drain|not\s+drain|slow\s+drain|drain(ing)?\s+slow|backup|stopped\s+up)\b'
+    )
+    _is_sink_msg     = re.search(r'\b(sink|basin|lavatory|lav)\b', msg_lower) is not None
+    _is_sink_clog    = _is_sink_msg and bool(_sink_clog_signals.search(msg_lower))
+
+    # angle-stop / shutoff-valve mention → ANGLE_STOP_REPLACE family,
+    # never LAV_SINK_REPLACE / KITCHEN_FAUCET_REPLACE just because a sink is referenced.
+    _angle_stop_signals = re.compile(
+        r'\b(angle\s*stop|angle\s*valve|shut[\s-]?off\s*valve|stop\s*valve|supply\s*valve)s?\b'
+    )
+    _is_angle_stop = bool(_angle_stop_signals.search(msg_lower))
+
     # "sewer" + repair/excavate signal → SEWER_SPOT_REPAIR, not MAIN_LINE_CLEAN
     _sewer_repair_signals = re.compile(r'\b(repair|broken|cracked|collapse|excavat|dig|spot)\b')
     _is_sewer_repair = bool(_sewer_repair_signals.search(msg_lower)) and \
@@ -964,6 +1078,29 @@ def classify_request(message: str) -> dict:
             task_code, assembly_code, confidence = "WH_50G_GAS_STANDARD", "WH_50G_GAS_KIT", 0.82
 
     # ── Disambiguation overrides ──────────────────────────────────────────────
+    elif _is_angle_stop:
+        # Angle stops always win over sink/faucet replacement.
+        # "both" / "pair" / "two" / explicit qty>1 → pair variant if available.
+        _is_pair = bool(re.search(r'\b(both|pair|two|2)\b', msg_lower)) or quantity >= 2
+        pair_code = "ANGLE_STOP_REPLACE_PAIR"
+        if _is_pair and pair_code in TASK_KEYWORDS:
+            task_code     = pair_code
+            assembly_code = TASK_KEYWORDS[pair_code].get("assembly")
+            confidence    = 0.85
+        else:
+            task_code     = "ANGLE_STOP_REPLACE"
+            assembly_code = TASK_KEYWORDS["ANGLE_STOP_REPLACE"].get("assembly")
+            confidence    = 0.85
+
+    elif _is_sink_clog:
+        # Kitchen vs generic
+        if "kitchen" in msg_lower and "DRAIN_CLEAN_KITCHEN" in TASK_KEYWORDS:
+            task_code     = "DRAIN_CLEAN_KITCHEN"
+        else:
+            task_code     = "DRAIN_CLEAN_STANDARD"
+        assembly_code = None
+        confidence    = 0.82
+
     elif _is_toilet_msg and _is_clog_context:
         task_code     = "DRAIN_CLEAN_STANDARD"
         assembly_code = None
@@ -1017,6 +1154,11 @@ def classify_request(message: str) -> dict:
                     confidence = min(confidence + 0.05, 0.95)
 
                 break   # first priority-sorted match wins
+
+        if not task_code:
+            template_match = _classify_from_template_catalog(msg_lower)
+            if template_match:
+                task_code, assembly_code, confidence = template_match
 
     # ── 6. Preferred supplier ─────────────────────────────────────────────────
     preferred_supplier = None
@@ -1145,6 +1287,7 @@ async def process_chat_message(
     history: list[dict] | None = None,
     db=None,
     skip_llm_response: bool = False,
+    user_id: Optional[int] = None,
 ) -> dict:
     """
     Main entry point for chat pricing requests.
@@ -1194,11 +1337,10 @@ async def process_chat_message(
             if not preferred_supplier and llm_result.get("preferred_supplier"):
                 classification["preferred_supplier"] = llm_result["preferred_supplier"]
 
-            # Inject assembly from TASK_KEYWORDS if LLM resolved a task_code
-            # that the keyword classifier missed
+            # Inject assembly when the resolved task_code maps to a known kit.
             new_task = classification["task_code"]
-            if not classification.get("assembly_code") and new_task in TASK_KEYWORDS:
-                classification["assembly_code"] = TASK_KEYWORDS[new_task].get("assembly")
+            if not classification.get("assembly_code"):
+                classification["assembly_code"] = _default_assembly_for_task(new_task)
 
             classification["confidence"] = llm_result.get("confidence", 0.85)
             classified_by = "llm"
@@ -1212,6 +1354,86 @@ async def process_chat_message(
 
     classification["classified_by"] = classified_by
 
+    # ── County normalization ─────────────────────────────────────────────────
+    # LLMs frequently default county to Dallas while correctly identifying the
+    # city. Re-derive county from the detected city when a caller hasn't pinned
+    # it explicitly so e.g. "Plano" → Collin, "Fort Worth" → Tarrant, etc.
+    if not county:
+        detected_city = (classification.get("city") or "").strip().lower()
+        if detected_city:
+            for county_name, city_list in COUNTY_KEYWORDS.items():
+                if detected_city in city_list:
+                    derived = county_name.capitalize()
+                    if classification.get("county") != derived:
+                        logger.info(
+                            "county.derived_from_city",
+                            city=detected_city,
+                            previous=classification.get("county"),
+                            derived=derived,
+                        )
+                    classification["county"] = derived
+                    break
+
+    # ── Task-code normalization (catch common LLM misclassifications) ────────
+    # The LLM sometimes returns a fixture-replacement code when the customer
+    # is clearly describing a drain or angle-stop issue.  Re-apply the same
+    # disambiguation rules used by the keyword classifier as a safety net.
+    msg_lower_norm = (message or "").lower()
+    current_task   = (classification.get("task_code") or "").upper()
+
+    _angle_stop_re = re.compile(
+        r'\b(angle\s*stop|angle\s*valve|shut[\s-]?off\s*valve|stop\s*valve|supply\s*valve)s?\b'
+    )
+    _sink_clog_re = re.compile(
+        r'\b(clogged|clog|back(ed)?\s*up|won\'?t\s+drain|not\s+drain|slow\s+drain|drain(ing)?\s+slow|backup|stopped\s+up)\b'
+    )
+    _sink_re      = re.compile(r'\b(sink|basin|lavatory|lav)\b')
+    _pair_re      = re.compile(r'\b(both|pair|two|2)\b')
+
+    _fixture_codes = {
+        "KITCHEN_FAUCET_REPLACE", "LAV_FAUCET_REPLACE", "LAV_SINK_REPLACE",
+        "TOILET_REPLACE", "TOILET_COMFORT_HEIGHT",
+    }
+
+    # Angle-stop wins over fixture replacement
+    if _angle_stop_re.search(msg_lower_norm) and current_task in _fixture_codes:
+        is_pair = bool(_pair_re.search(msg_lower_norm)) or (classification.get("quantity") or 1) >= 2
+        new_code = "ANGLE_STOP_REPLACE_PAIR" if is_pair and "ANGLE_STOP_REPLACE_PAIR" in TASK_KEYWORDS \
+                                              else "ANGLE_STOP_REPLACE"
+        logger.info(
+            "task_code.normalized",
+            reason="angle_stop_over_fixture",
+            previous=current_task,
+            corrected=new_code,
+        )
+        classification["task_code"]      = new_code
+        classification["assembly_code"]  = TASK_KEYWORDS.get(new_code, {}).get("assembly")
+        classification["classified_by"]  = "post_llm_rule"
+        # Force qty=2 when "both/pair" present and we landed on the singleton variant
+        if is_pair and new_code == "ANGLE_STOP_REPLACE":
+            classification["quantity"] = max(2, int(classification.get("quantity") or 1))
+        current_task = new_code
+
+    # Sink/faucet replacement when description is actually a clog → drain clean
+    elif (
+        current_task in {"KITCHEN_FAUCET_REPLACE", "LAV_FAUCET_REPLACE", "LAV_SINK_REPLACE"}
+        and _sink_re.search(msg_lower_norm)
+        and _sink_clog_re.search(msg_lower_norm)
+    ):
+        new_code = "DRAIN_CLEAN_KITCHEN" if (
+            "kitchen" in msg_lower_norm and "DRAIN_CLEAN_KITCHEN" in TASK_KEYWORDS
+        ) else "DRAIN_CLEAN_STANDARD"
+        logger.info(
+            "task_code.normalized",
+            reason="sink_clog_over_replacement",
+            previous=current_task,
+            corrected=new_code,
+        )
+        classification["task_code"]      = new_code
+        classification["assembly_code"]  = None
+        classification["classified_by"]  = "post_llm_rule"
+        current_task = new_code
+
     # ── Unclassifiable ────────────────────────────────────────────────────────
     task_code    = classification.get("task_code")
     assembly_code = classification.get("assembly_code")
@@ -1219,10 +1441,10 @@ async def process_chat_message(
     if not task_code:
         return {
             "answer": (
-                "I can help price plumbing services! Try asking something like:\n"
+                "I can help price plumbing, construction, and commercial plumbing work. Try asking something like:\n"
                 "• _How much to replace a water heater in the attic?_\n"
-                "• _Price to replace a toilet first floor_\n"
-                "• _Cost for a kitchen faucet in Dallas_"
+                "• _Price to rough in a master bath in Plano_\n"
+                "• _Cost to install a commercial mop sink in Dallas_"
             ),
             "estimate": None,
             "confidence": 0.0,
@@ -1276,6 +1498,10 @@ async def process_chat_message(
     # Retrieve RAG context if DB session is available
     rag_context = ""
     rag_sources: list[dict] = []
+    memory_context = ""
+    memory_hits: list[dict] = []
+    outcome_context = ""
+    outcome_hits: list[dict] = []
     if db:
         try:
             chunks = await rag_service.retrieve(db, message, top_k=3)
@@ -1297,8 +1523,69 @@ async def process_chat_message(
         except Exception as e:
             logger.warning("rag.retrieve_failed", error=str(e))
 
+        # Long-term memory retrieval (Phase 1)
+        if user_id is not None:
+            try:
+                from app.services.memory_service import memory_service
+                memory_hits = await memory_service.retrieve(
+                    db, user_id=user_id, query=message, top_k=5
+                )
+                if memory_hits:
+                    memory_context = "Known facts about this user:\n" + "\n".join(
+                        f"- ({m['kind']}) {m['content']}" for m in memory_hits
+                    )
+                    for li in result.line_items:
+                        li.trace_json = {
+                            **(li.trace_json or {}),
+                            "memory_hits": [
+                                {"id": m["id"], "kind": m["kind"], "score": m["score"]}
+                                for m in memory_hits
+                            ],
+                        }
+                    logger.info("memory.context_retrieved", count=len(memory_hits))
+            except Exception as e:
+                logger.warning("memory.retrieve_failed", error=str(e))
+
+        # Similar past job outcomes (Phase 1 — outcomes context)
+        if user_id is not None:
+            try:
+                from app.services.outcomes_context import get_similar_outcomes_context
+                from app.models.users import User
+                org_id = None
+                user_row = await db.get(User, user_id)
+                if user_row is not None:
+                    org_id = getattr(user_row, "organization_id", None)
+                outcome_context, outcome_hits = await get_similar_outcomes_context(
+                    db,
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message=message,
+                    job_type=job_type,
+                    task_code=classification.get("task_code"),
+                    limit=5,
+                )
+                if outcome_hits:
+                    for li in result.line_items:
+                        li.trace_json = {
+                            **(li.trace_json or {}),
+                            "similar_outcomes": [
+                                {
+                                    "estimate_id": h["estimate_id"],
+                                    "outcome": h["outcome"],
+                                    "price": h["final_price"] or h["grand_total"],
+                                }
+                                for h in outcome_hits[:3]
+                            ],
+                        }
+                    logger.info("outcomes.context_retrieved", count=len(outcome_hits))
+            except Exception as e:
+                logger.warning("outcomes.retrieve_failed", error=str(e))
+
     llm_opener = None
     if not skip_llm_response:
+        combined_context = "\n\n".join(
+            c for c in [memory_context, outcome_context, rag_context] if c
+        )
         llm_opener = await llm_service.generate_response(
             message=message,
             grand_total=result.grand_total,
@@ -1309,7 +1596,7 @@ async def process_chat_message(
             county=result.county,
             quantity=quantity,
             history=history,
-            context=rag_context
+            context=combined_context
         )
 
     # ── Step 6: Format final response ────────────────────────────────────────
@@ -1317,4 +1604,8 @@ async def process_chat_message(
     response["_estimate_result"] = result   # raw, for callers (not serialised)
     response["_template_name"]   = template_name  # for stream endpoint
     response["_rag_context"]     = rag_context  # for stream endpoint
+    response["_memory_context"]  = memory_context
+    response["_memory_hits"]     = memory_hits
+    response["_outcome_context"] = outcome_context
+    response["_outcome_hits"]    = outcome_hits
     return response

@@ -29,6 +29,7 @@ class StorageClient:
             settings.minio_bucket_blueprints,
             settings.minio_bucket_documents,
             settings.minio_bucket_proposals,
+            settings.minio_bucket_photos,
         ]
         for bucket in buckets:
             try:

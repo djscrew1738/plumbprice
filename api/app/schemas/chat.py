@@ -20,7 +20,7 @@ class ChatPriceRequest(BaseModel):
     message: str = Field(..., min_length=3, max_length=5000)
     job_type: Optional[str] = None  # service, construction, commercial
     location: Optional[str] = None  # city or county
-    county: Optional[str] = "Dallas"
+    county: Optional[str] = None
     preferred_supplier: Optional[str] = None
     conversation_id: Optional[str] = None
     session_id: Optional[int] = None  # persist to an existing session

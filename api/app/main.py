@@ -25,7 +25,7 @@ if settings.sentry_dsn:
         send_default_pii=False,
     )
 from app.database import init_db, AsyncSessionLocal
-from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics
+from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -380,6 +380,7 @@ app.add_exception_handler(BlueprintError, blueprint_error_handler)
 
 app.include_router(auth.router,      prefix="/api/v1/auth",       tags=["auth"])
 app.include_router(chat.router,      prefix="/api/v1/chat",        tags=["chat"])
+app.include_router(outcomes.router,  prefix="/api/v1/estimates",   tags=["outcomes"])
 app.include_router(estimates.router, prefix="/api/v1/estimates",   tags=["estimates"])
 app.include_router(projects.router,  prefix="/api/v1/projects",    tags=["projects"])
 app.include_router(suppliers.router, prefix="/api/v1/suppliers",   tags=["suppliers"])
@@ -387,12 +388,15 @@ app.include_router(blueprints.router,prefix="/api/v1/blueprints",  tags=["bluepr
 app.include_router(proposals.router, prefix="/api/v1/proposals",   tags=["proposals"])
 app.include_router(documents.router, prefix="/api/v1/documents",   tags=["documents"])
 app.include_router(sessions.router,  prefix="/api/v1/sessions",    tags=["sessions"])
-app.include_router(outcomes.router,  prefix="/api/v1/estimates",   tags=["outcomes"])
 app.include_router(admin.router,     prefix="/api/v1/admin",       tags=["admin"])
 app.include_router(templates.router,  prefix="/api/v1/templates", tags=["templates"])
 app.include_router(public.router,    prefix="/api/v1/public",     tags=["public"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(analytics.router,     prefix="/api/v1/analytics",     tags=["analytics"])
+app.include_router(memories.router,      prefix="/api/v1/memories",      tags=["memories"])
+app.include_router(photos.router,        prefix="/api/v1/photos",        tags=["photos"])
+app.include_router(voice.router,         prefix="/api/v1/voice",         tags=["voice"])
+app.include_router(public_agent.router,  prefix="/api/v1/public-agent",  tags=["public-agent"])
 app.include_router(health.router,    tags=["health"])
 
 
