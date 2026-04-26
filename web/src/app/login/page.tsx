@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Droplets, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
+import { BrandFooter } from '@/components/layout/BrandFooter'
 
 function LoginForm() {
   const router = useRouter()
@@ -146,9 +147,7 @@ function LoginForm() {
           </a>
         </p>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-5">
-          PlumbPrice AI · DFW Contractors Only
-        </p>
+        <BrandFooter className="mt-5" />
       </motion.div>
     </div>
   )

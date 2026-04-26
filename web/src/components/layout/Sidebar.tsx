@@ -7,6 +7,7 @@ import { Keyboard, X } from 'lucide-react'
 import { PRIMARY_NAV, SECONDARY_NAV, matchesPathname } from './nav'
 import { RecentJobsList } from '@/components/workspace/RecentJobsList'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { OWNER_NAME, PRODUCT_VERSION } from '@/lib/branding'
 
 function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => void; showRecentRail?: boolean }) {
   const pathname = usePathname()
@@ -101,6 +102,9 @@ function SidebarContent({ onClose, showRecentRail = false }: { onClose?: () => v
               <kbd className="ml-auto rounded border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-1.5 py-0.5 font-mono text-[10px]">?</kbd>
             </button>
           </Tooltip>
+          <p className="mt-2 px-3 text-center text-[10px] leading-tight text-[color:var(--muted-ink)] opacity-60">
+            v{PRODUCT_VERSION} · by {OWNER_NAME}
+          </p>
         </div>
       </div>
     </div>

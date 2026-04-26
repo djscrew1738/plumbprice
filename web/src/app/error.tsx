@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Droplets, RotateCcw, Home } from 'lucide-react'
+import { BrandFooter } from '@/components/layout/BrandFooter'
 
 export default function Error({
   error,
@@ -70,9 +71,7 @@ export default function Error({
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-5">
-          PlumbPrice AI · DFW Contractors Only
-        </p>
+        <BrandFooter className="mt-5" />
       </div>
     </div>
   )

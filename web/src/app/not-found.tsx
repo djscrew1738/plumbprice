@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Droplets } from 'lucide-react'
+import { BrandFooter } from '@/components/layout/BrandFooter'
 
 export default function NotFound() {
   return (
@@ -33,9 +34,7 @@ export default function NotFound() {
           </Link>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-5">
-          PlumbPrice AI · DFW Contractors Only
-        </p>
+        <BrandFooter className="mt-5" />
       </div>
     </div>
   )

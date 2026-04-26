@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { BUILT_BY_LINE } from '@/lib/branding'
 
 export const metadata = {
   title: 'Changelog — PlumbPrice',
@@ -87,6 +88,10 @@ export default function ChangelogPage() {
           </section>
         ))}
       </div>
+
+      <footer className="mx-auto mt-16 max-w-3xl border-t border-slate-200 pt-6 text-center text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-600">
+        {BUILT_BY_LINE}
+      </footer>
     </div>
   )
 }

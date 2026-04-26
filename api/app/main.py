@@ -293,8 +293,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="PlumbPrice AI API",
-    description="Autonomous plumbing pricing and estimating platform for DFW contractors",
+    description=(
+        "Autonomous plumbing pricing and estimating platform for DFW contractors. "
+        "Built by Cory Nichols / CTL Plumbing."
+    ),
     version=settings.version,
+    contact={"name": "Cory Nichols / CTL Plumbing"},
     lifespan=lifespan,
     docs_url="/docs" if settings.environment == "development" else None,
     redoc_url="/redoc" if settings.environment == "development" else None,
