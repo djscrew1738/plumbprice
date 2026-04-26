@@ -7,6 +7,7 @@ import { Menu, MapPin, LogOut, Settings, ChevronRight } from 'lucide-react'
 import { getPageMeta, PAGE_META } from './nav'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationBell } from './NotificationBell'
+import { OutboxBadge } from './OutboxBadge'
 import { useAuth } from '@/contexts/AuthContext'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -146,6 +147,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </Tooltip>
         <div className="flex items-center gap-2">
+          <OutboxBadge />
           <NotificationBell />
           <ThemeToggle />
           <div className="relative" ref={menuRef}>

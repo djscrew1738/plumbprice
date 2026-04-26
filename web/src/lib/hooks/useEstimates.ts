@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { api, estimatesApi, type EstimateListItem, type EstimateDetailResponse } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
+import { enqueue as outboxEnqueue } from '@/lib/outbox'
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
 
@@ -58,6 +59,20 @@ export function useCreateEstimate() {
 
   return useMutation({
     mutationFn: async (body: { type: 'service' | 'construction'; data: Record<string, unknown> }) => {
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+      const flagOn = typeof window !== 'undefined' &&
+        (window.localStorage.getItem('flag:outbox_offline') === '1')
+
+      // If we're offline AND the user has explicitly opted in (flag mirrored to
+      // localStorage by the flag bag), queue for later. We don't auto-queue when
+      // the flag is off because the server won't know about deduping.
+      if (offline && flagOn) {
+        const url = body.type === 'service' ? '/estimates/service' : '/estimates/construction'
+        const { clientId } = await outboxEnqueue('estimate.create', 'POST', url, body.data)
+        toast.info('Saved offline — will sync when reconnected')
+        return { queued: true, clientId, optimistic: { id: -1, ...body.data } }
+      }
+
       const res = body.type === 'service'
         ? await estimatesApi.createService(body.data)
         : await estimatesApi.createConstruction(body.data)
