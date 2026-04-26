@@ -537,6 +537,52 @@ export interface WinRateByTaskRow {
   win_rate: number | null
 }
 
+export interface JobCostActuals {
+  estimate_id: number
+  actual_labor_hours: number | null
+  actual_labor_cost: number | null
+  actual_materials_cost: number | null
+  actual_subcontractor_cost: number | null
+  actual_other_cost: number | null
+  actual_revenue: number | null
+  notes: string | null
+  closed_at: string | null
+  updated_at: string | null
+}
+
+export type JobCostActualsBody = Partial<Omit<JobCostActuals, 'estimate_id' | 'updated_at'>>
+
+export interface VarianceBlock {
+  estimated: number | null
+  actual: number | null
+  delta: number | null
+  pct: number | null
+}
+
+export interface EstimateVariance {
+  estimate_id: number
+  estimate_title: string | null
+  labor: VarianceBlock
+  materials: VarianceBlock
+  subcontractor: VarianceBlock
+  other: VarianceBlock
+  total_cost: VarianceBlock
+  revenue: VarianceBlock
+  gross_margin: VarianceBlock
+  actual_labor_hours: number | null
+  closed_at: string | null
+  has_actuals: boolean
+}
+
+export interface VarianceByTaskRow {
+  task_code: string
+  n: number
+  estimated_cost: number
+  actual_cost: number
+  delta: number
+  pct: number | null
+}
+
 export const outcomesApi = {
   record: (estimateId: number, body: RecordOutcomeRequest) =>
     api.post<OutcomeResponse>(`/estimates/${estimateId}/outcome`, body),
@@ -550,6 +596,19 @@ export const outcomesApi = {
     api.post<WinRateByTaskRow[]>('/estimates/winrate/by-task', {
       task_codes: taskCodes ?? null,
       min_n: minN,
+    }),
+  getActuals: (estimateId: number) =>
+    api.get<JobCostActuals | null>(`/estimates/${estimateId}/actuals`),
+  upsertActuals: (estimateId: number, body: JobCostActualsBody) =>
+    api.put<{ estimate_id: number; id: number; closed_at: string | null }>(
+      `/estimates/${estimateId}/actuals`,
+      body,
+    ),
+  getVariance: (estimateId: number) =>
+    api.get<EstimateVariance>(`/estimates/${estimateId}/variance`),
+  varianceByTask: (minN = 3) =>
+    api.get<VarianceByTaskRow[]>('/estimates/variance/by-task', {
+      params: { min_n: minN },
     }),
 }
 

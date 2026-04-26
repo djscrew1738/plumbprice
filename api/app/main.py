@@ -25,7 +25,7 @@ if settings.sentry_dsn:
         send_default_pii=False,
     )
 from app.database import init_db, AsyncSessionLocal
-from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions
+from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -403,6 +403,7 @@ app.include_router(voice.router,         prefix="/api/v1/voice",         tags=["
 app.include_router(public_agent.router,  prefix="/api/v1/public-agent",  tags=["public-agent"])
 app.include_router(feature_flags.router, prefix="/api/v1",               tags=["feature-flags"])
 app.include_router(addon_suggestions.router, prefix="/api/v1/estimates", tags=["estimates"])
+app.include_router(jobcost.router,           prefix="/api/v1/estimates", tags=["jobcost"])
 app.include_router(health.router,    tags=["health"])
 
 
