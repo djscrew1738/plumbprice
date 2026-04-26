@@ -583,6 +583,15 @@ export interface VarianceByTaskRow {
   pct: number | null
 }
 
+export interface DocDraft {
+  text: string
+  source: 'llm' | 'static'
+}
+
+export interface ChangeOrderDraft extends DocDraft {
+  delta: number
+}
+
 export const outcomesApi = {
   record: (estimateId: number, body: RecordOutcomeRequest) =>
     api.post<OutcomeResponse>(`/estimates/${estimateId}/outcome`, body),
@@ -609,6 +618,18 @@ export const outcomesApi = {
   varianceByTask: (minN = 3) =>
     api.get<VarianceByTaskRow[]>('/estimates/variance/by-task', {
       params: { min_n: minN },
+    }),
+  generateCoverLetter: (estimateId: number, customerName?: string) =>
+    api.post<DocDraft>(`/estimates/${estimateId}/docs/cover-letter`, {
+      customer_name: customerName ?? null,
+    }),
+  generateScopeOfWork: (estimateId: number) =>
+    api.post<DocDraft>(`/estimates/${estimateId}/docs/scope-of-work`),
+  generateChangeOrder: (originalId: number, revisedId: number, reason?: string) =>
+    api.post<ChangeOrderDraft>('/estimates/change-order', {
+      original_id: originalId,
+      revised_id: revisedId,
+      reason: reason ?? null,
     }),
 }
 

@@ -458,6 +458,47 @@ class LLMService:
                 logger.debug("LLM response generation skipped", error=str(e))
             return None
 
+    async def complete(
+        self,
+        system: str,
+        user: str,
+        *,
+        max_tokens: int = 400,
+        temperature: float = 0.4,
+    ) -> Optional[str]:
+        """Generic single-shot completion. Returns None when LLM is unavailable."""
+        if self._is_blocked():
+            return None
+        client = self._make_client(timeout=self._response_timeout)
+        if client is None:
+            return None
+        try:
+            model = self._active_model
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            text = (response.choices[0].message.content or "").strip()
+            if self._active_tier == "cloud":
+                try:
+                    usage = getattr(response, "usage", None)
+                    self._record_cloud_usage(int(getattr(usage, "total_tokens", 0)) if usage else 0)
+                except Exception:
+                    pass
+            return text or None
+        except Exception as e:  # noqa: BLE001
+            err_type = type(e).__name__
+            if "Connection" in err_type or "Timeout" in err_type or "ReadTimeout" in err_type:
+                self._mark_unavailable(str(e))
+            else:
+                logger.debug("LLM completion skipped", error=str(e))
+            return None
+
     @staticmethod
     def make_static_narrative(
         template_name: str,
