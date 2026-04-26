@@ -86,8 +86,14 @@ def evaluate_response(case: dict, response: dict) -> CaseResult:
         )
 
     expected_county = expect.get("county")
-    if expected_county and actual_county != expected_county:
-        failures.append(f"county: expected {expected_county!r}, got {actual_county!r}")
+    if expected_county:
+        expected_counties = (
+            [str(c).title() for c in expected_county]
+            if isinstance(expected_county, list)
+            else [str(expected_county).title()]
+        )
+        if actual_county not in expected_counties:
+            failures.append(f"county: expected one of {expected_counties}, got {actual_county!r}")
 
     min_price = expect.get("min_price")
     max_price = expect.get("max_price")

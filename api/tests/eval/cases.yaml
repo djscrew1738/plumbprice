@@ -109,3 +109,183 @@ cases:
       min_price: 1200
       max_price: 3500
       min_confidence: 0.55
+
+  - id: kitchen_faucet_replace_grapevine
+    message: "Replace a kitchen faucet in Grapevine."
+    expect:
+      task_code: [KITCHEN_FAUCET_REPLACE]
+      county: Tarrant
+      min_price: 250
+      max_price: 750
+      min_confidence: 0.55
+
+  - id: lav_faucet_replace_carrollton
+    message: "Need a bathroom sink faucet replaced in Carrollton."
+    expect:
+      task_code: [LAV_FAUCET_REPLACE]
+      county: [Dallas, Denton]
+      min_price: 200
+      max_price: 650
+      min_confidence: 0.55
+
+  - id: dishwasher_hookup_mckinney
+    message: "Hook up a new dishwasher in McKinney."
+    expect:
+      task_code: [DISHWASHER_HOOKUP]
+      county: Collin
+      min_price: 200
+      max_price: 600
+      min_confidence: 0.55
+
+  - id: gas_line_new_run_southlake
+    message: "Run a new gas line to a pool heater in Southlake."
+    expect:
+      task_code: [GAS_LINE_NEW_RUN]
+      county: Tarrant
+      min_price: 600
+      max_price: 3500
+      min_confidence: 0.5
+
+  - id: slab_leak_repair_garland
+    message: "Slab leak under the master bath in Garland — needs repair."
+    expect:
+      task_code: [SLAB_LEAK_REPAIR, SLAB_LEAK_REREROUTE, SLAB_LEAK_REROUTE]
+      county: Dallas
+      min_price: 1500
+      max_price: 6000
+      min_confidence: 0.45
+
+  - id: sewer_camera_lewisville
+    message: "Need a sewer line camera inspection in Lewisville."
+    expect:
+      task_code: [CAMERA_INSPECTION]
+      county: Denton
+      min_price: 200
+      max_price: 600
+      min_confidence: 0.55
+
+  - id: hydrojet_main_line_keller
+    message: "Hydrojet the main line at a house in Keller."
+    expect:
+      task_code: [HYDROJETTING]
+      county: Tarrant
+      min_price: 400
+      max_price: 1500
+      min_confidence: 0.5
+
+  - id: toilet_flange_repair_mesquite
+    message: "Toilet is rocking — needs the flange repaired in Mesquite."
+    expect:
+      task_code: [TOILET_FLANGE_REPAIR, TOILET_REPLACE_STANDARD, TOILET_WAX_RING_ONLY]
+      county: Dallas
+      min_price: 250
+      max_price: 800
+      min_confidence: 0.5
+
+  - id: expansion_tank_install_allen
+    message: "Install a new expansion tank on the water heater in Allen."
+    expect:
+      task_code: [EXPANSION_TANK_INSTALL, EXPANSION_TANK_ONLY, WH_50G_GAS_STANDARD, WH_REPAIR_GAS]
+      county: Collin
+      min_price: 200
+      max_price: 2400
+      min_confidence: 0.5
+
+  - id: ro_system_install_flower_mound
+    message: "Install a reverse osmosis system under the kitchen sink in Flower Mound."
+    expect:
+      task_code: [RO_SYSTEM_INSTALL, FILTRATION_WHOLE_HOUSE, KITCHEN_FAUCET_REPLACE]
+      county: Denton
+      min_price: 200
+      max_price: 1800
+      min_confidence: 0.5
+
+  - id: water_softener_repipe_dallas
+    message: "Customer wants whole-house PEX repipe in Dallas after a slab leak."
+    expect:
+      task_code: [WHOLE_HOUSE_REPIPE_PEX]
+      county: Dallas
+      min_price: 800
+      max_price: 16000
+      min_confidence: 0.45
+
+  - id: leak_detection_plano
+    message: "Suspect a hidden water leak — need leak detection in Plano."
+    expect:
+      task_code: [LEAK_DETECTION]
+      county: Collin
+      min_price: 250
+      max_price: 800
+      min_confidence: 0.55
+
+  - id: backflow_test_annual_irving
+    message: "Annual backflow preventer test in Irving."
+    expect:
+      task_code: [BACKFLOW_TEST_ANNUAL]
+      county: Dallas
+      min_price: 100
+      max_price: 600
+      min_confidence: 0.55
+
+  - id: sump_pump_install_richardson
+    message: "Install a sump pump in the basement crawlspace in Richardson."
+    expect:
+      task_code: [SUMP_PUMP_INSTALL]
+      county: Dallas
+      min_price: 500
+      max_price: 1800
+      min_confidence: 0.5
+
+  - id: shower_head_replace_addison
+    message: "Replace a shower head in Addison."
+    expect:
+      task_code: [SHOWER_HEAD_REPLACE]
+      county: Dallas
+      min_price: 100
+      max_price: 350
+      min_confidence: 0.55
+
+  - id: tub_spout_replace_bedford
+    message: "Tub spout is leaking — replace it in Bedford."
+    expect:
+      task_code: [TUB_SPOUT_REPLACE]
+      county: Tarrant
+      min_price: 150
+      max_price: 450
+      min_confidence: 0.55
+
+  - id: water_hammer_arrester_prosper
+    message: "Pipes are banging when faucets close in Prosper — need a water hammer arrester."
+    expect:
+      task_code: [WATER_HAMMER_ARRESTER]
+      county: Collin
+      min_price: 150
+      max_price: 500
+      min_confidence: 0.5
+
+  - id: tankless_descale_southlake
+    message: "Tankless water heater needs annual descaling in Southlake."
+    expect:
+      task_code: [TANKLESS_WH_DESCALE, WH_FLUSH_MAINTENANCE]
+      county: Tarrant
+      min_price: 150
+      max_price: 600
+      min_confidence: 0.55
+
+  - id: toilet_fill_valve_replace_cedar_hill
+    message: "Toilet runs constantly in Cedar Hill — replace the fill valve."
+    expect:
+      task_code: [TOILET_FILL_VALVE_REPLACE, TOILET_TANK_REBUILD]
+      county: Dallas
+      min_price: 150
+      max_price: 600
+      min_confidence: 0.5
+
+  - id: outdoor_hose_bib_freeze_repair_denton
+    message: "Outdoor hose bib burst from the freeze in Denton — needs repair."
+    expect:
+      task_code: [HOSE_BIB_FREEZE_REPAIR, HOSE_BIB_REPLACE]
+      county: Denton
+      min_price: 200
+      max_price: 700
+      min_confidence: 0.5
