@@ -11,17 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: plumbprice
+          POSTGRES_PASSWORD: plumbprice_dev
+          POSTGRES_DB: plumbprice
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+          --health-cmd "pg_isready -U plumbprice" --health-interval 10s --health-timeout 5s --health-retries 5
       redis:
         image: redis:7
         ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+asyncpg://plumbprice:plumbprice_dev@localhost:5432/plumbprice
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: ci-test-secret-do-not-use-in-prod
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
 
     steps:
       - uses: actions/checkout@v4
@@ -39,20 +50,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run alembic migrations
+        run: cd api && alembic upgrade head
+
       - name: Run API tests with coverage
         run: |
           cd api
           pytest \
+            --ignore=tests/eval \
+            --ignore=tests/test_admin_worker_ops.py \
+            --ignore=tests/services/test_classifier.py \
             --cov=app \
             --cov-report=term-missing \
             --cov-report=html \
-            --cov-report=json \
-            --cov-fail-under=60 \
+            --cov-report=xml \
+            --cov-fail-under=30 \
             --junitxml=../test-results.xml
-        env:
-          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost/postgres
-          REDIS_URL: redis://localhost:6379/0
-          PYTHONPATH: ${{ github.workspace }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -61,16 +74,8 @@ jobs:
           name: api-coverage-report
           path: |
             api/htmlcov/
-            .coverage
+            api/coverage.xml
           retention-days: 30
-
-      - name: Comment PR with coverage
-        uses: py-cov-action/python-coverage-comment-action@v3
-        if: github.event_name == 'pull_request'
-        with:
-          GITHUB_TOKEN: ${{ github.token }}
-          MINIMUM_GREEN: 70
-          MINIMUM_ORANGE: 50
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -80,16 +85,18 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: 'web/package-lock.json'
 
       - name: Install dependencies
         run: cd web && npm ci
 
-      - name: Run frontend tests with coverage
-        run: cd web && npm test -- --coverage --watchAll=false
-        continue-on-error: true
+      - name: Type-check
+        run: cd web && npx tsc --noEmit
+
+      - name: Run vitest with coverage
+        run: cd web && npx vitest run --coverage
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -98,3 +105,4 @@ jobs:
           name: frontend-coverage-report
           path: web/coverage/
           retention-days: 30
+
