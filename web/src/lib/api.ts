@@ -249,6 +249,11 @@ export const estimatesApi = {
     api.get(`/estimates/${id}/versions/${versionId}`),
   diffVersions: (id: number, v1: string, v2: string) =>
     api.get(`/estimates/${id}/versions/diff`, { params: { v1, v2 } }),
+  suggestAddons: (taskCodes: string[], maxSuggestions = 8) =>
+    api.post<Array<{ task_code: string; rationale: string; severity: 'code_required' | 'recommended' | 'best_practice' }>>(
+      '/estimates/suggest-addons',
+      { task_codes: taskCodes, max_suggestions: maxSuggestions },
+    ),
 }
 
 // ─── Projects / Pipeline ──────────────────────────────────────────────────────
