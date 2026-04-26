@@ -54,12 +54,68 @@ async def liveness_check():
 
 @router.get("/worker")
 async def worker_health():
-    """Check Celery worker health via async Redis ping."""
+    """Check Celery worker health: broker reachable + at least one worker
+    responsive via `celery inspect`. Reports active task counts per worker
+    so monitoring can alert if no worker is consuming the queue."""
     redis_status = await _ping_redis()
-    if redis_status == "ok":
-        return {"status": "healthy", "celery_broker": "connected", "redis": "ok"}
-    logger.error("worker_health_check_failed", redis=redis_status)
-    return {"status": "unhealthy", "celery_broker": "disconnected", "redis": redis_status}
+    if redis_status != "ok":
+        logger.error("worker_health_check_failed", redis=redis_status)
+        return {"status": "unhealthy", "celery_broker": "disconnected",
+                "redis": redis_status, "workers": []}
+
+    # Probe Celery for live workers. The inspect call is synchronous + can
+    # block on broker round-trips, so we time-bound it via run_in_executor.
+    import asyncio as _aio
+    workers: dict | None = None
+    inspect_error: str | None = None
+
+    def _probe() -> dict:
+        try:
+            from worker.worker import app as celery_app
+            insp = celery_app.control.inspect(timeout=2.0)
+            return {
+                "ping": insp.ping() or {},
+                "active": insp.active() or {},
+                "stats": insp.stats() or {},
+            }
+        except Exception as e:  # pragma: no cover
+            raise RuntimeError(str(e))
+
+    try:
+        loop = _aio.get_event_loop()
+        workers = await _aio.wait_for(loop.run_in_executor(None, _probe), timeout=3.0)
+    except _aio.TimeoutError:
+        inspect_error = "celery inspect timed out"
+    except Exception as e:
+        inspect_error = str(e)
+
+    if not workers or not workers.get("ping"):
+        # Broker is up but nobody's listening — the most common silent failure mode.
+        return {
+            "status": "degraded",
+            "celery_broker": "connected",
+            "redis": "ok",
+            "workers": [],
+            "worker_count": 0,
+            "error": inspect_error or "no workers responded to ping",
+        }
+
+    summary = []
+    for name, _ in (workers["ping"] or {}).items():
+        summary.append({
+            "name": name,
+            "active_tasks": len((workers.get("active") or {}).get(name) or []),
+            "concurrency": ((workers.get("stats") or {}).get(name) or {})
+                .get("pool", {}).get("max-concurrency"),
+        })
+
+    return {
+        "status": "healthy",
+        "celery_broker": "connected",
+        "redis": "ok",
+        "workers": summary,
+        "worker_count": len(summary),
+    }
 
 
 @router.get("/llm")
