@@ -633,6 +633,38 @@ export const outcomesApi = {
     }),
 }
 
+export interface PublicAgentAudit {
+  id: number
+  created_at: string | null
+  client_ip: string | null
+  user_agent: string | null
+  message: string
+  county: string | null
+  customer_email: string | null
+  status: string
+  task_code: string | null
+  grand_total: number | null
+  lead_id: number | null
+  anomaly_score: number
+  anomaly_flags: string[]
+  reviewed_at: string | null
+  reviewed_by: number | null
+  review_note: string | null
+}
+
+export const publicAgentAuditApi = {
+  list: (opts: { minScore?: number; unreviewed?: boolean; limit?: number } = {}) =>
+    api.get<PublicAgentAudit[]>('/admin/public-agent/audits', {
+      params: {
+        min_score: opts.minScore ?? 0,
+        unreviewed: opts.unreviewed ? 1 : 0,
+        limit: opts.limit ?? 50,
+      },
+    }),
+  markReviewed: (id: number, note?: string) =>
+    api.post<PublicAgentAudit>(`/admin/public-agent/audits/${id}/review`, { note: note ?? null }),
+}
+
 // ─── Analytics ───────────────────────────────────────────────────────────────
 
 export interface OutcomeListItem {

@@ -37,6 +37,7 @@ from app.database import get_db
 from app.models.projects import Project, ProjectActivity
 from app.services.agent import process_chat_message
 from app.services.estimate_service import persist_estimate
+from app.services.public_agent_audit import record_audit
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -270,6 +271,27 @@ async def public_quote(
         estimate_result=estimate_result if ok else None,
         note=public_answer,
     )
+
+    try:
+        audit = await record_audit(
+            db,
+            client_ip=client_ip,
+            user_agent=request.headers.get("user-agent"),
+            message=body.message,
+            county=body.county,
+            customer_email=(body.customer.email if body.customer else None),
+            status=response_status,
+            task_code=task_code,
+            grand_total=grand_total if ok else None,
+            lead_id=lead_id,
+        )
+        if audit.anomaly_score >= 0.5:
+            logger.warning("public_agent.anomaly",
+                           ip=client_ip, score=audit.anomaly_score,
+                           flags=audit.anomaly_flags, audit_id=audit.id)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("public_agent.audit_failed", error=str(e))
+
     await db.commit()
 
     logger.info("public_agent.response",
