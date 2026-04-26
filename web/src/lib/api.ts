@@ -513,11 +513,44 @@ export interface OutcomeStats {
   confidence_breakdown: Record<string, { count: number; won: number; win_rate: number | null }>
 }
 
+export interface WinRateBucket {
+  n: number
+  won: number
+  lost: number
+  win_rate: number | null
+}
+
+export interface WinRateMarkupResponse {
+  target_markup_pct: number
+  band_pp: number
+  band_lo_pct: number
+  band_hi_pct: number
+  in_band: WinRateBucket
+  overall: WinRateBucket
+}
+
+export interface WinRateByTaskRow {
+  task_code: string
+  n: number
+  won: number
+  lost: number
+  win_rate: number | null
+}
+
 export const outcomesApi = {
   record: (estimateId: number, body: RecordOutcomeRequest) =>
     api.post<OutcomeResponse>(`/estimates/${estimateId}/outcome`, body),
   stats: () =>
     api.get<OutcomeStats>('/estimates/stats'),
+  winrateByMarkup: (markupPct: number, bandPp = 5) =>
+    api.get<WinRateMarkupResponse>('/estimates/winrate/markup', {
+      params: { markup_pct: markupPct, band_pp: bandPp },
+    }),
+  winrateByTask: (taskCodes?: string[], minN = 3) =>
+    api.post<WinRateByTaskRow[]>('/estimates/winrate/by-task', {
+      task_codes: taskCodes ?? null,
+      min_n: minN,
+    }),
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────

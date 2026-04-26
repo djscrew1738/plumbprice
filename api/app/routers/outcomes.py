@@ -12,6 +12,11 @@ from app.database import get_db
 from app.models.estimates import Estimate
 from app.models.outcomes import EstimateOutcome
 from app.models.users import User
+from app.services.winrate_service import (
+    DEFAULT_BAND_PP,
+    winrate_by_markup_band,
+    winrate_by_task_code,
+)
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -151,3 +156,43 @@ async def outcome_stats(
         "win_rate": win_rate,
         "confidence_breakdown": confidence_breakdown,
     }
+
+
+@router.get("/winrate/markup", response_model=dict)
+async def winrate_markup(
+    markup_pct: float,
+    band_pp: float = DEFAULT_BAND_PP,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Win-rate around a target markup-% band (e.g. ?markup_pct=0.28&band_pp=5)."""
+    if markup_pct < 0 or markup_pct > 5:
+        raise HTTPException(status_code=400, detail="markup_pct must be a fraction between 0 and 5")
+    if band_pp <= 0 or band_pp > 50:
+        raise HTTPException(status_code=400, detail="band_pp must be in (0, 50]")
+    return await winrate_by_markup_band(
+        db,
+        organization_id=current_user.organization_id,
+        target_markup_pct=markup_pct,
+        band_pp=band_pp,
+    )
+
+
+class WinRateByTaskRequest(BaseModel):
+    task_codes: Optional[list[str]] = None
+    min_n: int = Field(default=3, ge=1, le=100)
+
+
+@router.post("/winrate/by-task", response_model=list)
+async def winrate_by_task(
+    body: WinRateByTaskRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Per-task-code win-rate. Pass `task_codes` to scope to the current estimate."""
+    return await winrate_by_task_code(
+        db,
+        organization_id=current_user.organization_id,
+        task_codes=body.task_codes,
+        min_n=body.min_n,
+    )
