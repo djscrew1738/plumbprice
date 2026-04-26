@@ -4,7 +4,7 @@ Phase 3.5 — Photo model.
 Persists field-tech photos used by the quick-quote workflow so they can be
 attached to a project and referenced from an estimate.
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, DateTime, Float
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -27,6 +27,12 @@ class Photo(Base):
     county = Column(String(100), nullable=True)
     urgency = Column(String(40), nullable=True)
     access = Column(String(40), nullable=True)
+
+    # Phase 2.1.1 — optional jobsite geo coordinates captured at upload time.
+    # The client EXIF-strips photos for privacy, then re-attaches lat/lng
+    # explicitly only when the user grants geolocation permission.
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
 
     vision = Column(JSON, nullable=True)   # raw vision_service.describe_photo output
     quote = Column(JSON, nullable=True)    # quick-quote totals + lines snapshot

@@ -69,6 +69,8 @@ async def quick_quote(
     access: str = Form("first_floor"),
     persist: bool = Form(False),
     project_id: Optional[int] = Form(None),
+    lat: Optional[float] = Form(None),
+    lng: Optional[float] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -165,6 +167,8 @@ async def quick_quote(
             county=county,
             urgency=urgency,
             access=access,
+            lat=lat,
+            lng=lng,
             vision=vision,
             quote={
                 "lines": quote.get("lines", []),

@@ -15,6 +15,8 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ShortcutsDialog } from '@/components/ui/ShortcutsDialog'
 import { RouteAnnouncer } from '@/components/layout/RouteAnnouncer'
 import { OfflineBanner } from '@/components/layout/OfflineBanner'
+import { UpdateBanner } from '@/components/layout/UpdateBanner'
+import { InstallPrompt } from '@/components/layout/InstallPrompt'
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import { registerServiceWorker } from '@/lib/registerSW'
 
@@ -61,6 +63,8 @@ export function ClientLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <OfflineBanner />
+      <UpdateBanner />
+      {!isPublicSurface && <InstallPrompt />}
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
