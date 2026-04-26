@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Optional
 
 import structlog
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -266,14 +266,62 @@ async def get_photo_meta(
 @router.get("/{photo_id}/file")
 async def get_photo_file(
     photo_id: int,
+    w: Optional[int] = Query(
+        None,
+        ge=64,
+        le=4096,
+        description="Optional width to resize to (px). Aspect ratio preserved.",
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Stream the original photo bytes, or a JPEG-encoded resize when ``w`` is set.
+
+    The resize path is intended for thumbnails and mobile lists where the
+    full ~2-3 MB original would crush LTE. Resized output is always JPEG
+    quality 80 — caller picks ``w`` to match its rendered size.
+    """
     p = await _load_photo(db, photo_id, current_user)
     data = storage_client.download_file(p.storage_bucket, p.storage_path)
     if data is None:
         raise HTTPException(status_code=404, detail="Photo file missing in storage")
-    return StreamingResponse(data, media_type=p.content_type or "image/jpeg")
+
+    if w is None:
+        return StreamingResponse(
+            data,
+            media_type=p.content_type or "image/jpeg",
+            headers={"Cache-Control": "private, max-age=300"},
+        )
+
+    # Resize path. Read fully into memory (photos are pre-resized to <=2MB
+    # by the capture page; admin-uploaded ones are bounded by _MAX_BYTES).
+    try:
+        from PIL import Image as _PILImage
+
+        raw = data.read() if hasattr(data, "read") else b"".join(data)
+        img = _PILImage.open(io.BytesIO(raw))
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        ratio = w / float(img.width) if img.width else 1.0
+        new_size = (w, max(1, int(round(img.height * ratio))))
+        img.thumbnail(new_size, _PILImage.LANCZOS)
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=80, optimize=True)
+        out.seek(0)
+        return StreamingResponse(
+            out,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "private, max-age=600"},
+        )
+    except Exception as exc:
+        logger.warning("photo_resize_failed", photo_id=photo_id, w=w, error=str(exc))
+        # Fall back to original on resize failure rather than 500.
+        if hasattr(data, "seek"):
+            try:
+                data.seek(0)
+            except Exception:
+                pass
+        return StreamingResponse(data, media_type=p.content_type or "image/jpeg")
 
 
 @router.post("/{photo_id}/attach")
