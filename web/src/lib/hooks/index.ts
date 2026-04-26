@@ -113,3 +113,4 @@ export {
 
 export { useWebSocket } from './useWebSocket'
 export { useSafeQuery } from './useSafeQuery'
+export { useFeatureFlags, useFlag, featureFlagsKey } from './useFeatureFlags'

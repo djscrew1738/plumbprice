@@ -335,6 +335,23 @@ export const adminApi = {
     supplier: string,
     body: { name: string; cost: number; unit: string; sku?: string },
   ) => api.put(`/admin/canonical-items/${encodeURIComponent(item)}/${supplier}`, body),
+  listFlags: () => api.get<FlagRow[]>('/admin/flags'),
+  toggleFlag: (key: string, enabled: boolean) =>
+    api.put<{ key: string; enabled: boolean }>(`/admin/flags/${encodeURIComponent(key)}`, { enabled }),
+  upsertFlag: (body: { key: string; enabled: boolean; description?: string | null }) =>
+    api.post<{ key: string; enabled: boolean; description?: string | null }>('/admin/flags', body),
+  deleteFlag: (key: string) => api.delete(`/admin/flags/${encodeURIComponent(key)}`),
+}
+
+export interface FlagRow {
+  key: string
+  enabled: boolean
+  description?: string | null
+  updated_at?: string | null
+}
+
+export const flagsApi = {
+  list: () => api.get<Record<string, boolean>>('/flags'),
 }
 
 // ─── Blueprints ─────────────────────────────────────────────────────────────

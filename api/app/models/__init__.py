@@ -15,6 +15,7 @@ from app.models.notifications import Notification
 from app.models.agent_memory import AgentMemory
 from app.models.photos import Photo
 from app.models.vision_mappings import VisionItemMapping
+from app.models.feature_flags import FeatureFlag
 
 __all__ = [
     "User", "Organization", "UserInvite",
@@ -34,4 +35,5 @@ __all__ = [
     "AgentMemory",
     "Photo",
     "VisionItemMapping",
+    "FeatureFlag",
 ]
