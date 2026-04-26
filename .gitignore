@@ -82,3 +82,4 @@ deploy/*.key
 .coverage.*
 htmlcov/
 coverage.xml
+web/tsconfig.tsbuildinfo

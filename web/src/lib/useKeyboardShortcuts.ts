@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const SHORTCUT_HELP = [
+  { keys: '⌘K / Ctrl+K', description: 'Open command palette' },
   { keys: 'N', description: 'New estimate' },
   { keys: 'G H', description: 'Go to Home' },
   { keys: 'G E', description: 'Go to Estimates' },
@@ -26,6 +27,13 @@ export function useKeyboardShortcuts() {
     }
 
     function handleKeyDown(event: KeyboardEvent) {
+      // Cmd/Ctrl+K opens the command palette regardless of focus context.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        window.dispatchEvent(new CustomEvent('show-command-palette'))
+        return
+      }
+
       // Ignore when typing in an input/textarea/select
       const tag = (event.target as HTMLElement)?.tagName?.toLowerCase()
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return
