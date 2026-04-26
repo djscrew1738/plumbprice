@@ -19,6 +19,7 @@ import { Camera, MapPin, Trash2, Loader2, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { preprocessImage } from '@/lib/imageProcessing'
 import { getGeolocation, type GeoFix } from '@/lib/getGeolocation'
+import { haptic } from '@/lib/haptics'
 
 const MAX_PHOTOS = 5
 
@@ -76,6 +77,7 @@ export default function CaptureRoute() {
     if (!f) return
     if (slots.length >= MAX_PHOTOS) {
       setError(`Limit ${MAX_PHOTOS} photos per submission.`)
+      haptic('warning')
       return
     }
     setError(null)
@@ -97,8 +99,10 @@ export default function CaptureRoute() {
           bytes: processed.bytes,
         },
       ])
+      haptic('selection')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not process photo')
+      haptic('error')
     } finally {
       setBusy(null)
       // Clear the <input> so the same file can be re-picked.
@@ -112,6 +116,7 @@ export default function CaptureRoute() {
       if (removed) URL.revokeObjectURL(removed.previewUrl)
       return s.filter((x) => x.id !== id)
     })
+    haptic('tap')
   }
 
   async function attachLocation() {
@@ -120,8 +125,10 @@ export default function CaptureRoute() {
     try {
       const fix = await getGeolocation()
       setGeo(fix)
+      haptic('success')
     } catch (e) {
       setGeoError(e instanceof Error ? e.message : 'Could not get location')
+      haptic('error')
     } finally {
       setGeoBusy(false)
     }
@@ -164,6 +171,8 @@ export default function CaptureRoute() {
       setResults([...out])
     }
     setBusy(null)
+    if (out.some((r) => !r.ok)) haptic('warning')
+    else if (out.length > 0) haptic('success')
   }
 
   const successQuotes = results.filter((r) => r.ok && r.quote).map((r) => r.quote!)

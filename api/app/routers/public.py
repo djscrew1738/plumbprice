@@ -21,6 +21,7 @@ from app.models.projects import Project
 from app.services.proposal_service import proposal_status, send_notification_email
 from app.services import activity_service
 from app.services.notifications_service import notify as _notify
+from app.core.limiter import limiter
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -141,7 +142,9 @@ async def _serialize(proposal: Proposal, estimate_id: int, db: AsyncSession) -> 
 
 
 @router.get("/proposals/{token}")
+@limiter.limit("60/minute")
 async def get_public_proposal(
+    request: Request,
     token: str,
     db: AsyncSession = Depends(get_db),
 ):
@@ -187,10 +190,11 @@ async def _notify_sender(proposal: Proposal, estimate_title: str, estimate_id: i
 
 
 @router.post("/proposals/{token}/accept")
+@limiter.limit("10/minute")
 async def accept_public_proposal(
+    request: Request,
     token: str,
     body: AcceptRequest,
-    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     proposal = await _load_proposal(db, token)
@@ -259,10 +263,11 @@ async def accept_public_proposal(
 
 
 @router.post("/proposals/{token}/decline")
+@limiter.limit("10/minute")
 async def decline_public_proposal(
+    request: Request,
     token: str,
     body: DeclineRequest,
-    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     proposal = await _load_proposal(db, token)
