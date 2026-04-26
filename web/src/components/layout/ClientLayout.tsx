@@ -14,6 +14,7 @@ import { ErrorFallback } from '@/components/ui/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ShortcutsDialog } from '@/components/ui/ShortcutsDialog'
 import { CommandPalette } from '@/components/ui/CommandPalette'
+import { WhatsNewBanner } from '@/components/ui/WhatsNewBanner'
 import { RouteAnnouncer } from '@/components/layout/RouteAnnouncer'
 import { OfflineBanner } from '@/components/layout/OfflineBanner'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
@@ -152,6 +153,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
         </ToastProvider>
         <ShortcutsDialog />
         <CommandPalette />
+        {!isPublicSurface && <WhatsNewBanner />}
         <RouteAnnouncer />
         </AuthProvider>
         )}
