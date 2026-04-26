@@ -135,3 +135,101 @@ async def extract_memories(
             )
     background_tasks.add_task(_run)
     return {"ok": True, "scheduled": True}
+
+
+# ── Per-customer / per-address scoped memory (Track D4) ────────────────────
+
+
+from app.services.scoped_memory import (  # noqa: E402
+    memory_to_dict,
+    recall_for_address,
+    recall_for_customer,
+    store_for_address,
+    store_for_customer,
+)
+
+
+class CustomerMemoryBody(BaseModel):
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    content: str = Field(..., min_length=2)
+    importance: float = Field(default=0.6, ge=0.0, le=1.0)
+
+
+class AddressMemoryBody(BaseModel):
+    street: str = Field(..., min_length=2)
+    zip_code: Optional[str] = None
+    content: str = Field(..., min_length=2)
+    importance: float = Field(default=0.55, ge=0.0, le=1.0)
+
+
+@router.post("/customer")
+async def store_customer_memory(
+    body: CustomerMemoryBody,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not body.customer_email and not body.customer_phone:
+        raise HTTPException(status_code=400, detail="customer_email or customer_phone required")
+    row = await store_for_customer(
+        db,
+        user_id=current_user.id,
+        organization_id=getattr(current_user, "organization_id", None),
+        customer_email=body.customer_email,
+        customer_phone=body.customer_phone,
+        content=body.content,
+        importance=body.importance,
+    )
+    if row is None:
+        raise HTTPException(status_code=400, detail="invalid customer key")
+    return memory_to_dict(row)
+
+
+@router.post("/address")
+async def store_address_memory(
+    body: AddressMemoryBody,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    row = await store_for_address(
+        db,
+        user_id=current_user.id,
+        organization_id=getattr(current_user, "organization_id", None),
+        street=body.street,
+        zip_code=body.zip_code,
+        content=body.content,
+        importance=body.importance,
+    )
+    if row is None:
+        raise HTTPException(status_code=400, detail="invalid address")
+    return memory_to_dict(row)
+
+
+@router.get("/customer")
+async def recall_customer_memory(
+    customer_email: Optional[str] = Query(None),
+    customer_phone: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = await recall_for_customer(
+        db, user_id=current_user.id,
+        customer_email=customer_email, customer_phone=customer_phone, limit=limit,
+    )
+    return [memory_to_dict(r) for r in rows]
+
+
+@router.get("/address")
+async def recall_address_memory(
+    street: str = Query(..., min_length=2),
+    zip_code: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = await recall_for_address(
+        db, user_id=current_user.id,
+        street=street, zip_code=zip_code, limit=limit,
+    )
+    return [memory_to_dict(r) for r in rows]

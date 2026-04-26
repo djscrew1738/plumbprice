@@ -819,6 +819,22 @@ export const memoriesApi = {
   },
   extractFromSession: async (session_id: number) =>
     (await api.post('/memories/extract', { session_id })).data,
+  storeForCustomer: async (body: {
+    customer_email?: string
+    customer_phone?: string
+    content: string
+    importance?: number
+  }) => (await api.post('/memories/customer', body)).data,
+  storeForAddress: async (body: {
+    street: string
+    zip_code?: string
+    content: string
+    importance?: number
+  }) => (await api.post('/memories/address', body)).data,
+  recallForCustomer: async (params: { customer_email?: string; customer_phone?: string; limit?: number }) =>
+    (await api.get('/memories/customer', { params })).data,
+  recallForAddress: async (params: { street: string; zip_code?: string; limit?: number }) =>
+    (await api.get('/memories/address', { params })).data,
 }
 
 // ─── User / Profile ─────────────────────────────────────────────────────────
