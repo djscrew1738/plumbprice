@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { ArrowRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -12,7 +13,7 @@ interface PrimaryActionCardProps {
   className?: string
 }
 
-export function PrimaryActionCard({ href, title, description, icon: Icon, className }: PrimaryActionCardProps) {
+export const PrimaryActionCard = memo(function PrimaryActionCard({ href, title, description, icon: Icon, className }: PrimaryActionCardProps) {
   return (
     <Link
       href={href}
@@ -32,4 +33,4 @@ export function PrimaryActionCard({ href, title, description, icon: Icon, classN
       <ArrowRight size={18} className="relative z-10 text-[color:var(--accent)] opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
     </Link>
   )
-}
+})

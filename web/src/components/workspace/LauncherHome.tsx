@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import { useQueries } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -50,7 +51,7 @@ function computeDailyActivity(jobs: EstimateListItem[]) {
   return DAY_LABELS.map((label, i) => ({ label, value: counts[i] }))
 }
 
-function StatCard({ icon: Icon, label, value, subText }: { icon: React.ElementType; label: string; value: string; subText?: string }) {
+const StatCard = memo(function StatCard({ icon: Icon, label, value, subText }: { icon: React.ElementType; label: string; value: string; subText?: string }) {
   return (
     <motion.div
       variants={fadeUp}
@@ -66,7 +67,7 @@ function StatCard({ icon: Icon, label, value, subText }: { icon: React.ElementTy
       </div>
     </motion.div>
   )
-}
+})
 
 export function LauncherHome() {
   const [estimatesQuery, sessionsQuery, outcomeStatsQuery] = useQueries({
