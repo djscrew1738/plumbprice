@@ -1,11 +1,12 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { MOBILE_TABS, matchesPathname } from './nav'
 
-export function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
+export const MobileNav = memo(function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
   const pathname = usePathname()
 
   return (
@@ -60,4 +61,4 @@ export function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
       </div>
     </nav>
   )
-}
+})

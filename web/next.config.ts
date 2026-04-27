@@ -17,6 +17,13 @@ const nextConfig: NextConfig = {
       'date-fns',
       '@tanstack/react-query',
     ],
+    // Keep the Next.js client router cache warm so back/forward and
+    // re-visiting tabs feels instant. Without this, dynamic routes
+    // refetch on every navigation.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   webpack(config, { isServer }) {
     if (!isServer) {

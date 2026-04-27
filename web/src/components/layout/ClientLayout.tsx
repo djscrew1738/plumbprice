@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -47,6 +47,11 @@ export function ClientLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerServiceWorker()
   }, [])
+
+  const openMoreSheet = useCallback(() => setMoreOpen(true), [])
+  const closeMoreSheet = useCallback(() => setMoreOpen(false), [])
+  const openSidebar = useCallback(() => setSidebarOpen(true), [])
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
 
   const handleSkipToMain = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -103,7 +108,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
         <AuthProvider>
         <ToastProvider>
           <div className="flex min-h-dvh">
-            <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <Sidebar open={sidebarOpen} onClose={closeSidebar} />
 
             {/* Mobile overlay */}
             <AnimatePresence>
@@ -114,7 +119,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}
                   className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 lg:hidden"
-                  onClick={() => setSidebarOpen(false)}
+                  onClick={closeSidebar}
                   aria-hidden={sidebarOpen ? "false" : "true"}
                 />
               )}
@@ -122,15 +127,14 @@ export function ClientLayout({ children }: { children: ReactNode }) {
 
             {/* Main */}
             <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-h-0 min-w-0 lg:ml-[248px] outline-none">
-              <Header onMenuClick={() => setSidebarOpen(true)} />
+              <Header onMenuClick={openSidebar} />
               <main className="app-scroll flex-1 overflow-y-auto overflow-x-hidden">
-                <AnimatePresence mode="wait" initial={false}>
+                <AnimatePresence initial={false}>
                   <motion.div
                     key={pathname}
-                    initial={{ opacity: 0, y: 4 }}
+                    initial={{ opacity: 0, y: 2 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    transition={{ duration: 0.12, ease: 'easeOut' }}
                   >
                     <ErrorBoundary
                       key={pathname}
@@ -146,8 +150,8 @@ export function ClientLayout({ children }: { children: ReactNode }) {
               </main>
             </div>
 
-            <MobileNav onOpenMore={() => setMoreOpen(true)} />
-            <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+            <MobileNav onOpenMore={openMoreSheet} />
+            <MoreSheet open={moreOpen} onClose={closeMoreSheet} />
           </div>
         </ToastProvider>
         <ShortcutsDialog />
