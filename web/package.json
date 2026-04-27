@@ -10,7 +10,9 @@
     "build:prod": "API_URL=https://app.ctlplumbingllc.com NEXT_PUBLIC_API_URL=https://app.ctlplumbingllc.com next build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lhci": "lhci autorun --config=./lighthouserc.json",
+    "perf:budget": "node scripts/check-bundle-budget.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^8",
