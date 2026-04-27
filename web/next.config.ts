@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
       'lucide-react',
       'framer-motion',
       'date-fns',
-      'recharts',
       '@tanstack/react-query',
     ],
   },
