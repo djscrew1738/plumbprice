@@ -1,6 +1,8 @@
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Add the repo root (one above api/) so tests can import the `worker` package.
+pythonpath = [".", ".."]
 # Skip the eval harness by default — opt-in via RUN_EVAL=1 env var.
 # (See tests/eval/conftest.py for the gating logic.)
 addopts = "-ra"

@@ -123,7 +123,7 @@ async def test_accept_flow_notifies_sender(test_client: AsyncClient, db_session)
             select(Notification).where(
                 Notification.user_id == 1,
                 Notification.kind == "proposal_accepted",
-            )
+            ).order_by(Notification.id.desc())
         )
     ).scalars().all()
     assert len(rows) >= 1

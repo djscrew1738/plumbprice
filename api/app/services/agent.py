@@ -1039,6 +1039,10 @@ def classify_request(message: str) -> dict:
     )
     _is_angle_stop = bool(_angle_stop_signals.search(msg_lower))
 
+    # Pre-extract quantity so disambiguation branches that need it (angle-stop
+    # pair detection, etc.) can read it before the final assignment below.
+    quantity = _extract_quantity(msg_lower)
+
     # "sewer" + repair/excavate signal → SEWER_SPOT_REPAIR, not MAIN_LINE_CLEAN
     _sewer_repair_signals = re.compile(r'\b(repair|broken|cracked|collapse|excavat|dig|spot)\b')
     _is_sewer_repair = bool(_sewer_repair_signals.search(msg_lower)) and \
@@ -1167,7 +1171,7 @@ def classify_request(message: str) -> dict:
             preferred_supplier = sup.replace(" ", "_")
             break
 
-    quantity = _extract_quantity(msg_lower)
+    # quantity already extracted above (before disambiguation branches).
 
     return {
         "task_code":          task_code,
