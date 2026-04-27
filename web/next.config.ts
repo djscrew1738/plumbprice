@@ -46,10 +46,12 @@ const nextConfig: NextConfig = {
         source: '/((?!_next/static|_next/image|favicon.ico|icon|manifest|sw\\.js).*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=30, stale-while-revalidate=300' },
-          // Cloudflare: cache at edge for 60s, serve stale up to 1h while
+          // Cloudflare: cache at edge for 1 day, serve stale up to 7 days while
           // revalidating in background. s-maxage applies to shared caches only.
-          { key: 'CDN-Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=3600' },
-          { key: 'Cloudflare-CDN-Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=3600' },
+          // Stale HTML is safe because layout.tsx auto-reloads on chunk errors,
+          // and deploy-web.sh purges Cloudflare cache after each release.
+          { key: 'CDN-Cache-Control', value: 'public, s-maxage=86400, stale-while-revalidate=604800' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'public, s-maxage=86400, stale-while-revalidate=604800' },
         ],
       },
     ]
