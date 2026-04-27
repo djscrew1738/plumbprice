@@ -91,6 +91,51 @@ async def record_outcome(
     }
 
 
+@router.get("/list", response_model=list)
+async def list_outcomes(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all recorded outcomes for the org, joined with estimate data."""
+    result = await db.execute(
+        select(
+            EstimateOutcome.id,
+            EstimateOutcome.estimate_id,
+            EstimateOutcome.outcome,
+            EstimateOutcome.final_price,
+            EstimateOutcome.notes,
+            EstimateOutcome.created_at,
+            EstimateOutcome.updated_at,
+            Estimate.title.label("estimate_title"),
+            Estimate.grand_total.label("estimate_grand_total"),
+            Estimate.job_type,
+            Estimate.confidence_score,
+            Estimate.county,
+        )
+        .join(Estimate, EstimateOutcome.estimate_id == Estimate.id)
+        .where(EstimateOutcome.organization_id == current_user.organization_id)
+        .order_by(EstimateOutcome.updated_at.desc())
+    )
+    rows = result.all()
+    return [
+        {
+            "id": r.id,
+            "estimate_id": r.estimate_id,
+            "outcome": r.outcome,
+            "final_price": r.final_price,
+            "notes": r.notes,
+            "created_at": r.created_at,
+            "updated_at": r.updated_at,
+            "estimate_title": r.estimate_title,
+            "estimate_grand_total": r.estimate_grand_total,
+            "job_type": r.job_type,
+            "confidence_score": r.confidence_score,
+            "county": r.county,
+        }
+        for r in rows
+    ]
+
+
 @router.get("/stats", response_model=dict)
 async def outcome_stats(
     current_user: User = Depends(get_current_user),
