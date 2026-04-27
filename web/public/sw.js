@@ -88,6 +88,7 @@ async function cacheFirst(request, cacheName) {
   return resp;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {

@@ -74,8 +74,9 @@ export default function VoiceRoute() {
       rec.start()
       setRecording(true)
       tickRef.current = window.setInterval(() => setElapsed((s) => s + 1), 1000) as unknown as number
-    } catch (e: any) {
-      setError(e?.message ?? 'Microphone access denied')
+    } catch (e: unknown) {
+      const err = e as { message?: string }
+      setError(err?.message ?? 'Microphone access denied')
     }
   }
 
@@ -104,8 +105,9 @@ export default function VoiceRoute() {
         timeout: 90_000,
       })
       setQuote(res.data)
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? e?.message ?? 'Voice quote failed')
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string }
+      setError(err?.response?.data?.detail ?? err?.message ?? 'Voice quote failed')
     } finally {
       setBusy(false)
     }

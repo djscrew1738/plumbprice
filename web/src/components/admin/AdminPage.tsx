@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Plus, Eye, Flag } from 'lucide-react'
+import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Eye, Flag } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'

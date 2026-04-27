@@ -416,7 +416,7 @@ export function BlueprintsPage() {
     toast.info('Retrying…', `Rechecking status for job ${id.slice(0, 8)}…`)
   }, [queryClient, toast])
 
-  const handleCreateEstimate = useCallback(async (jobId: string, _fixtures: TakeoffFixture[]) => {
+  const handleCreateEstimate = useCallback(async (jobId: string, _fixtures: TakeoffFixture[]) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     try {
       const res = await blueprintsApi.toEstimate(jobId)
       const { estimate_id } = res.data as { estimate_id: number }

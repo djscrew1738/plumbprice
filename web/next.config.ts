@@ -8,12 +8,22 @@ const apiOrigin =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: {},
+  experimental: {
+    // Tree-shake these heavy libraries by importing only what we use.
+    // Without this, e.g. `import { X } from 'lucide-react'` pulls in 1k+ icons.
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      'date-fns',
+      'recharts',
+      '@tanstack/react-query',
+    ],
+  },
   webpack(config, { isServer }) {
     if (!isServer) {
       // Rename the polyfills chunk to avoid Cloudflare WAF false-positive that
       // blocks any URL containing "polyfills" (anti-polyfill.io supply-chain rule).
-      const splitChunks = config.optimization?.splitChunks as Record<string, any> | undefined
+      const splitChunks = config.optimization?.splitChunks as Record<string, unknown> & { cacheGroups?: Record<string, { name?: string }> } | undefined
       if (splitChunks?.cacheGroups?.polyfills) {
         splitChunks.cacheGroups.polyfills.name = 'pf'
       }
@@ -29,14 +39,18 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // HTML pages: force CDN revalidation on every request
+        // HTML pages: short browser-side TTL but allow Cloudflare to cache &
+        // revalidate so most page loads are served from the edge instead of
+        // round-tripping to the Node origin (which is on a tunnel, not local
+        // to most visitors). The chunk-error auto-reload script in layout.tsx
+        // handles the rare stale-HTML / fresh-chunks mismatch.
         source: '/((?!_next/static|_next/image|favicon.ico|icon|manifest|sw\\.js).*)',
         headers: [
-          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
-          { key: 'Pragma', value: 'no-cache' },
-          { key: 'Expires', value: '0' },
-          { key: 'CDN-Cache-Control', value: 'no-cache, no-store' },
-          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-cache, no-store' },
+          { key: 'Cache-Control', value: 'public, max-age=30, stale-while-revalidate=300' },
+          // Cloudflare: cache at edge for 60s, serve stale up to 1h while
+          // revalidating in background. s-maxage applies to shared caches only.
+          { key: 'CDN-Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=3600' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=3600' },
         ],
       },
     ]

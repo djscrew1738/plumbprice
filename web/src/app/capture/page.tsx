@@ -160,11 +160,12 @@ export default function CaptureRoute() {
           timeout: 90_000,
         })
         out.push({ slotId: slot.id, ok: res.data.status !== 'vision_error', quote: res.data })
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const err = e as { response?: { data?: { detail?: string } }; message?: string }
         out.push({
           slotId: slot.id,
           ok: false,
-          error: e?.response?.data?.detail ?? e?.message ?? 'Upload failed',
+          error: err?.response?.data?.detail ?? err?.message ?? 'Upload failed',
         })
       }
       // Update incrementally so the user sees progress.

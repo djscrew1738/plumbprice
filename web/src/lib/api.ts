@@ -162,7 +162,6 @@ export const chatApi = {
           } catch (parseErr) {
             // Malformed SSE payload — log + surface to caller instead of silently dropping.
             // Pricing stream is critical; consumers should be able to show an error toast.
-            // eslint-disable-next-line no-console
             console.warn('[SSE] failed to parse event', { event: currentEvent, raw, error: parseErr })
             if (currentEvent === 'pricing' || currentEvent === 'error') {
               yield { type: 'error', error: 'Malformed server event' }
