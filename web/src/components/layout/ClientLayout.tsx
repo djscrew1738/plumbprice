@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -12,12 +13,25 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { ErrorFallback } from '@/components/ui/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { ShortcutsDialog } from '@/components/ui/ShortcutsDialog'
-import { CommandPalette } from '@/components/ui/CommandPalette'
-import { WhatsNewBanner } from '@/components/ui/WhatsNewBanner'
 import { RouteAnnouncer } from '@/components/layout/RouteAnnouncer'
 import { OfflineBanner } from '@/components/layout/OfflineBanner'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
+
+// Lazy-load dialogs/banners that are off-screen until activated by a
+// keyboard shortcut or first-paint logic — keeps them out of the initial
+// JS bundle for faster Time-to-Interactive.
+const ShortcutsDialog = dynamic(
+  () => import('@/components/ui/ShortcutsDialog').then(m => ({ default: m.ShortcutsDialog })),
+  { ssr: false }
+)
+const CommandPalette = dynamic(
+  () => import('@/components/ui/CommandPalette').then(m => ({ default: m.CommandPalette })),
+  { ssr: false }
+)
+const WhatsNewBanner = dynamic(
+  () => import('@/components/ui/WhatsNewBanner').then(m => ({ default: m.WhatsNewBanner })),
+  { ssr: false }
+)
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import { registerServiceWorker } from '@/lib/registerSW'
