@@ -718,7 +718,7 @@ export interface RepPerformance {
 
 export const analyticsApi = {
   getEstimateStats: async () => (await api.get<OutcomeStats>('/estimates/stats')).data,
-  getOutcomes: async () => (await api.get<OutcomeListItem[]>('/outcomes/list')).data,
+  getOutcomes: async () => (await api.get<OutcomeListItem[]>('/estimates/list')).data,
   getRevenue: async (period = 'all') => (await api.get<RevenueData>(`/analytics/revenue?period=${period}`)).data,
   getPipelineAnalytics: async () => (await api.get<PipelineAnalytics>('/analytics/pipeline')).data,
   getRepPerformance: async (period = 'all') => (await api.get<{ period: string; reps: RepPerformance[] }>(`/analytics/rep-performance?period=${period}`)).data,
