@@ -86,11 +86,11 @@ describe('LauncherHome', () => {
     expect(screen.getByText('Estimate ready')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /main line cleanout/i })).toHaveAttribute(
       'href',
-      '/estimator?estimateId=321',
+      '/estimates/321',
     )
     expect(screen.getByRole('link', { name: /water heater replacement/i })).toHaveAttribute(
       'href',
-      '/estimator?estimateId=322',
+      '/estimates/322',
     )
   })
 })
