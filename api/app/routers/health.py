@@ -140,3 +140,35 @@ async def dependencies_check(db: AsyncSession = Depends(get_db)):
         "redis": await _ping_redis(),
         "version": "1.0.0",
     }
+
+
+# ── External provider health probes (e1/e2/e3/e4/e5) ────────────────────────
+
+@router.get("/esign")
+async def esign_health():
+    from app.services.external.esign import get_esign_provider
+    return (await get_esign_provider().health()).as_dict()
+
+
+@router.get("/comms")
+async def comms_health():
+    from app.services.external.comms import get_comms_provider
+    return (await get_comms_provider().health()).as_dict()
+
+
+@router.get("/billing")
+async def billing_health():
+    from app.services.external.billing import get_billing_provider
+    return (await get_billing_provider().health()).as_dict()
+
+
+@router.get("/calendar")
+async def calendar_health():
+    from app.services.external.calendar import get_calendar_provider
+    return (await get_calendar_provider().health()).as_dict()
+
+
+@router.get("/permits")
+async def permits_health():
+    from app.services.external.permits import get_permits_provider
+    return (await get_permits_provider().health()).as_dict()

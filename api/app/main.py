@@ -307,6 +307,11 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Optional observability — Sentry + OTel are no-ops without DSN/endpoint.
+from app.observability import init_sentry, init_otel
+init_sentry()
+init_otel(app)
+
 # Compress responses larger than 500 bytes — saves significant bandwidth on estimate payloads
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
