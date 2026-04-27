@@ -47,7 +47,21 @@ class FergusonScraper(SupplierScraper):
     async def fetch_prices(self, canonical_items: List[str]) -> List[ScrapedProduct]:
         if self.simulation_mode:
             return self._simulate_fetch(canonical_items)
-        return await self._live_fetch(canonical_items)
+        # Live API path is wrapped in a process-local circuit breaker so
+        # repeated upstream failures don't cascade into estimator latency.
+        from .circuit_breaker import supplier_breaker, CircuitOpenError
+        try:
+            return await supplier_breaker.call(
+                self.supplier_slug,
+                lambda: self._live_fetch(canonical_items),
+            )
+        except CircuitOpenError as e:
+            logger.warning(
+                "ferguson.circuit_open_fallback_to_simulation",
+                error=str(e),
+                items=len(canonical_items),
+            )
+            return self._simulate_fetch(canonical_items)
 
     # ── Live API ──────────────────────────────────────────────────────────────
 
