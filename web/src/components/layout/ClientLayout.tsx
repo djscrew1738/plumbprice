@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { MobileNav } from '@/components/layout/MobileNav'
-import { MoreSheet } from '@/components/layout/MoreSheet'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { ErrorFallback } from '@/components/ui/ErrorBoundary'
@@ -26,6 +25,10 @@ const ShortcutsDialog = dynamic(
 )
 const CommandPalette = dynamic(
   () => import('@/components/ui/CommandPalette').then(m => ({ default: m.CommandPalette })),
+  { ssr: false }
+)
+const MoreSheet = dynamic(
+  () => import('@/components/layout/MoreSheet').then(m => ({ default: m.MoreSheet })),
   { ssr: false }
 )
 const WhatsNewBanner = dynamic(

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { cn, getConfidenceColor } from '@/lib/utils'
 import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react'
 
@@ -7,7 +8,7 @@ interface Props {
   size?: 'sm' | 'md'
 }
 
-export function ConfidenceBadge({ label, score, size = 'sm' }: Props) {
+export const ConfidenceBadge = memo(function ConfidenceBadge({ label, score, size = 'sm' }: Props) {
   const normalizedLabel = label?.toUpperCase()
   const safeLabel = normalizedLabel === 'HIGH' || normalizedLabel === 'MEDIUM' || normalizedLabel === 'LOW'
     ? normalizedLabel
@@ -25,4 +26,4 @@ export function ConfidenceBadge({ label, score, size = 'sm' }: Props) {
       {safeLabel} · {scorePercent}%
     </span>
   )
-}
+})

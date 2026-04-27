@@ -1,5 +1,5 @@
 """
-External provider scaffolding for PlumbPrice 2.1.1 integrations.
+External provider scaffolding for PlumbPrice 2.5.1 integrations.
 
 Each integration (e-sign, comms, billing, calendar, permits) follows the same
 pattern:
