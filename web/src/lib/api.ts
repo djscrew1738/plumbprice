@@ -346,6 +346,16 @@ export const adminApi = {
   upsertFlag: (body: { key: string; enabled: boolean; description?: string | null }) =>
     api.post<{ key: string; enabled: boolean; description?: string | null }>('/admin/flags', body),
   deleteFlag: (key: string) => api.delete(`/admin/flags/${encodeURIComponent(key)}`),
+  listPriceDrifts: (params?: { lookback_days?: number; threshold_pct?: number; limit?: number }) =>
+    api.get<{ drifts: Array<{ product_id: number; canonical_item: string; supplier_id: number; supplier_name: string; sku: string | null; current_cost: number; baseline_cost: number; baseline_at: string; delta_pct: number; direction: 'up' | 'down' }> }>(
+      '/admin/supplier-prices/drift',
+      { params },
+    ),
+  getPriceHistory: (productId: number, lookback_days = 90) =>
+    api.get<{ series: Array<{ cost: number; recorded_at: string; source: string | null }> }>(
+      `/admin/supplier-prices/${productId}/history`,
+      { params: { lookback_days } },
+    ),
 }
 
 export interface FlagRow {
