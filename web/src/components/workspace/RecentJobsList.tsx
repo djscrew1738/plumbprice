@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Sparkles } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import type { EstimateListItem } from '@/lib/api'
 import { estimatesApi } from '@/lib/api'
@@ -111,7 +111,13 @@ export function RecentJobsList({ compact = false, heading = 'Recent jobs', limit
         <EmptyState
           icon={<Inbox size={22} />}
           title="No estimates yet"
-          description="No estimates yet — start with a pricing question or upload a blueprint."
+          description="Start with a pricing question or upload a blueprint."
+          action={
+            <Link href="/estimator" className="btn-primary">
+              <Sparkles size={14} />
+              Start an estimate
+            </Link>
+          }
           className={compact ? 'py-4' : 'py-6'}
         />
       )}

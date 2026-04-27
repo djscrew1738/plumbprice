@@ -207,7 +207,7 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
     background: linear-gradient(135deg, hsl(var(--accent-hsl)) 0%, color-mix(in hsl, hsl(var(--accent-hsl)), hsl(24 66% 33%) 30%) 100%);
     box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.12) inset, 0 4px 12px hsl(var(--accent-hsl) / 0.28);
   }
@@ -222,11 +222,11 @@ body {
   }
 
   .btn-secondary {
-    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink)] transition-all duration-150 hover:bg-[color:var(--panel-strong)] active:bg-[color:var(--panel-strong)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink)] transition-all duration-150 hover:bg-[color:var(--panel-strong)] active:bg-[color:var(--panel-strong)] active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-[color:var(--muted-ink)] transition-all duration-150 hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] active:bg-[color:var(--panel-strong)];
+    @apply inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-[color:var(--muted-ink)] transition-all duration-150 hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] active:bg-[color:var(--panel-strong)] active:scale-[0.98];
   }
 
   .btn-danger {

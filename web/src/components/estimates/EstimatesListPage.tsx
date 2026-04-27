@@ -367,11 +367,11 @@ export function EstimatesListPage() {
                   className={cn(
                     'px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all border',
                     isActive
-                      ? s.value === 'draft'    ? 'bg-zinc-700 text-white border-zinc-600'
-                        : s.value === 'sent'   ? 'bg-blue-600 text-white border-blue-500'
-                        : s.value === 'accepted' ? 'bg-emerald-600 text-white border-emerald-500'
-                        : s.value === 'rejected' ? 'bg-red-600 text-white border-red-500'
-                        : s.value === 'expired' ? 'bg-amber-600 text-white border-amber-500'
+                      ? s.value === 'draft'    ? 'bg-[color:var(--ink)] text-[color:var(--background)] border-[color:var(--ink)]'
+                        : s.value === 'sent'   ? 'bg-[hsl(var(--info))] text-[hsl(var(--info-foreground))] border-[hsl(var(--info))]'
+                        : s.value === 'accepted' ? 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-[hsl(var(--success))]'
+                        : s.value === 'rejected' ? 'bg-[hsl(var(--danger))] text-[hsl(var(--danger-foreground))] border-[hsl(var(--danger))]'
+                        : s.value === 'expired' ? 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] border-[hsl(var(--warning))]'
                         : 'bg-[color:var(--accent)] text-white border-[color:var(--accent)]'
                       : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] border-[color:var(--line)]',
                   )}
@@ -504,10 +504,10 @@ export function EstimatesListPage() {
     <span
       className={cn(
         'ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold border',
-        est.outcome === 'won' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        est.outcome === 'lost' && 'bg-red-50 text-red-700 border-red-200',
-        est.outcome === 'no_bid' && 'bg-zinc-50 text-zinc-600 border-zinc-200',
-        est.outcome === 'pending' && 'bg-yellow-50 text-yellow-700 border-yellow-200',
+        est.outcome === 'won' && 'bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]',
+        est.outcome === 'lost' && 'bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.25)]',
+        est.outcome === 'no_bid' && 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border-[color:var(--line)]',
+        est.outcome === 'pending' && 'bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]',
       )}
       role="status"
     >
@@ -610,10 +610,10 @@ export function EstimatesListPage() {
     <span
       className={cn(
         'ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold border',
-        est.outcome === 'won' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        est.outcome === 'lost' && 'bg-red-50 text-red-700 border-red-200',
-        est.outcome === 'no_bid' && 'bg-zinc-50 text-zinc-600 border-zinc-200',
-        est.outcome === 'pending' && 'bg-yellow-50 text-yellow-700 border-yellow-200',
+        est.outcome === 'won' && 'bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]',
+        est.outcome === 'lost' && 'bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.25)]',
+        est.outcome === 'no_bid' && 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border-[color:var(--line)]',
+        est.outcome === 'pending' && 'bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]',
       )}
       role="status"
     >

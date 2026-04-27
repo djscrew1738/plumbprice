@@ -127,9 +127,9 @@ export const PipelineCard = memo(function PipelineCard({ project, delay, stageKe
           transition={{ duration: 0.18, delay }}
           className={cn(
             'rounded-2xl border bg-[color:var(--panel)] p-3.5 space-y-3 transition-all hover:-translate-y-0.5 hover:shadow-lg',
-            project.status === 'won' && 'border-emerald-500/20 bg-emerald-500/[0.04]',
-            project.status === 'lost' && 'border-red-500/20 bg-red-500/[0.03]',
-            project.status === 'estimate_sent' && 'border-blue-500/20 bg-blue-500/[0.03]',
+            project.status === 'won' && 'border-[hsl(var(--success)/0.2)] bg-[hsl(var(--success)/0.04)]',
+            project.status === 'lost' && 'border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.03)]',
+            project.status === 'estimate_sent' && 'border-[hsl(var(--info)/0.2)] bg-[hsl(var(--info)/0.03)]',
             project.status === 'lead' && 'border-[color:var(--line)]',
             isDragging && 'shadow-2xl ring-2 ring-[color:var(--accent)]/40',
           )}

@@ -11,6 +11,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { PageIntro } from '@/components/layout/PageIntro'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Select, type SelectOption } from '@/components/ui/Select'
 import { PipelineColumn } from './PipelineColumn'
@@ -18,9 +19,9 @@ import { CreateProjectModal } from './CreateProjectModal'
 
 const STAGES = [
   { key: 'lead', label: 'Lead', colClass: 'stage-lead', countColor: 'text-[color:var(--muted-ink)]', emptyColor: 'border-[color:var(--line)]' },
-  { key: 'estimate_sent', label: 'Estimate Sent', colClass: 'stage-sent', countColor: 'text-blue-700', emptyColor: 'border-blue-500/20' },
-  { key: 'won', label: 'Won', colClass: 'stage-won', countColor: 'text-emerald-700', emptyColor: 'border-emerald-500/20' },
-  { key: 'lost', label: 'Lost', colClass: 'stage-lost', countColor: 'text-red-700', emptyColor: 'border-red-500/20' },
+  { key: 'estimate_sent', label: 'Estimate Sent', colClass: 'stage-sent', countColor: 'text-[color:var(--accent-strong)]', emptyColor: 'border-[color:var(--accent)]/20' },
+  { key: 'won', label: 'Won', colClass: 'stage-won', countColor: 'text-[hsl(var(--success))]', emptyColor: 'border-[hsl(var(--success)/0.2)]' },
+  { key: 'lost', label: 'Lost', colClass: 'stage-lost', countColor: 'text-[hsl(var(--danger))]', emptyColor: 'border-[hsl(var(--danger)/0.2)]' },
 ] as const
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
@@ -165,13 +166,13 @@ export function PipelinePage() {
             ))}
             {winRate !== null && (
               <span className="shell-chip">
-                <TrendingUp size={13} className="text-emerald-700" />
-                <span className="text-emerald-700 font-semibold">{winRate}% win rate</span>
+                <TrendingUp size={13} className="text-[hsl(var(--success))]" />
+                <span className="text-[hsl(var(--success))] font-semibold">{winRate}% win rate</span>
               </span>
             )}
             {totalPipelineValue > 0 && (
               <span className="shell-chip">
-                <CircleDollarSign size={13} className="text-blue-700" />
+                <CircleDollarSign size={13} className="text-[color:var(--accent-strong)]" />
                 <span className="font-semibold text-[color:var(--ink)]">{formatCurrency(totalPipelineValue)}</span>
                 <span>open pipeline</span>
               </span>
@@ -221,20 +222,24 @@ export function PipelinePage() {
         {/* Loading */}
         {loading && (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-            {STAGES.map(stage => (
-              <div key={stage.key} className={cn('card p-4 space-y-3', stage.colClass)}>
-                <div className="skeleton h-3.5 w-1/2 rounded-lg" />
-                {[1,2].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}
-              </div>
-            ))}
+            {STAGES.map((stage, sIdx) => {
+              const skeletonCount = (sIdx % 3) + 1
+              return (
+                <div key={stage.key} className={cn('card p-4 space-y-3', stage.colClass)}>
+                  <div className="skeleton h-3.5 w-1/2 rounded-lg" />
+                  {Array.from({ length: skeletonCount }).map((_, i) => (
+                    <div key={i} className="skeleton h-28 rounded-2xl" />
+                  ))}
+                </div>
+              )
+            })}
           </div>
         )}
 
         {/* Error */}
         {error && !loading && (
-          <div className="card p-10 text-center">
-            <p className="text-red-700 font-medium text-sm mb-3">{error}</p>
-            <button onClick={() => void load()} className="btn-primary mx-auto">Retry</button>
+          <div className="card">
+            <ErrorState message={error} onRetry={() => void load()} />
           </div>
         )}
 
@@ -269,7 +274,7 @@ export function PipelinePage() {
                 </p>
                 <button
                   onClick={dismissDragHint}
-                  className="min-h-[32px] min-w-[32px] flex items-center justify-center rounded-lg text-[color:var(--accent-strong)] hover:bg-[color:var(--accent)]/10 transition-colors"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[color:var(--accent-strong)] hover:bg-[color:var(--accent)]/10 transition-colors"
                   aria-label="Dismiss hint"
                 >
                   <X size={13} />
