@@ -302,3 +302,103 @@ async def decline_public_proposal(
     await _notify_sender(proposal, estimate_title, estimate_id, event="declined")
 
     return await _serialize(proposal, estimate_id, db)
+
+
+# ---------------------------------------------------------------------------
+# Customer status portal (f2-customer-status-portal)
+#
+# After a proposal is accepted, the same public_token unlocks a read-only
+# status portal so the customer can check on schedule + progress without
+# logging in. We deliberately ignore token_expires_at on accepted proposals
+# (otherwise an accepted job would 404 the customer two weeks later).
+#
+# We surface only customer-safe data: project status, schedule date if
+# present in activities, and a curated list of milestone activities. We
+# never expose internal pricing breakdowns, supplier names, profit, or
+# margin.
+# ---------------------------------------------------------------------------
+
+CUSTOMER_VISIBLE_ACTIVITY_KINDS = {
+    "schedule_set",
+    "schedule_changed",
+    "work_started",
+    "rough_in_complete",
+    "inspection_passed",
+    "inspection_failed",
+    "work_completed",
+    "payment_received",
+    "invoice_sent",
+    "note_to_customer",
+}
+
+
+@router.get("/proposals/{token}/status")
+@limiter.limit("60/minute")
+async def get_public_proposal_status(
+    request: Request,
+    token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Read-only post-accept status portal for the customer.
+
+    Returns minimal, customer-safe project status. Available once the
+    proposal is accepted; ignores token expiry past acceptance.
+    """
+    proposal = await _load_proposal(db, token)
+    if proposal.accepted_at is None:
+        # Status portal is only meaningful post-accept; pre-accept they
+        # should be at the proposal viewer. Don't leak existence either.
+        raise HTTPException(status_code=404, detail="Status not available")
+
+    estimate_res = await db.execute(
+        select(Estimate).where(Estimate.id == proposal.estimate_id)
+    )
+    estimate = estimate_res.scalar_one_or_none()
+    if estimate is None:
+        raise HTTPException(status_code=404, detail="Status not available")
+
+    project = None
+    if estimate.project_id is not None:
+        proj_res = await db.execute(
+            select(Project).where(Project.id == estimate.project_id)
+        )
+        project = proj_res.scalar_one_or_none()
+
+    activities: list[dict] = []
+    scheduled_for: Optional[str] = None
+    if project is not None:
+        from app.models.projects import ProjectActivity
+        act_res = await db.execute(
+            select(ProjectActivity)
+            .where(ProjectActivity.project_id == project.id)
+            .order_by(ProjectActivity.created_at.desc())
+            .limit(50)
+        )
+        rows = list(act_res.scalars().all())
+        for row in rows:
+            if row.kind not in CUSTOMER_VISIBLE_ACTIVITY_KINDS:
+                continue
+            payload = row.payload or {}
+            activities.append(
+                {
+                    "kind": row.kind,
+                    "at": row.created_at.isoformat() if row.created_at else None,
+                    "note": payload.get("customer_note") or payload.get("note"),
+                }
+            )
+            if scheduled_for is None and row.kind in ("schedule_set", "schedule_changed"):
+                sched = payload.get("scheduled_for") or payload.get("scheduled_at")
+                if sched:
+                    scheduled_for = sched
+
+    return {
+        "token": proposal.public_token,
+        "project_status": (project.status if project else "accepted"),
+        "project_name": (project.name if project else estimate.title),
+        "customer_name": (project.customer_name if project else None),
+        "city": (project.city if project else None),
+        "state": (project.state if project else None),
+        "accepted_at": proposal.accepted_at.isoformat() if proposal.accepted_at else None,
+        "scheduled_for": scheduled_for,
+        "milestones": activities,
+    }
