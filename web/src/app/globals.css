@@ -131,6 +131,21 @@ body {
   overscroll-behavior: none;
 }
 
+/* Inner-scroll container used by the app shell. Critical for smooth
+   mobile scrolling: enables iOS momentum, contains overscroll so the
+   page doesn't bounce-then-stick, and forces vertical pan touch action
+   so child elements (motion.div, links, charts) can't accidentally
+   swallow scroll gestures. */
+.app-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-scroll { scroll-behavior: auto; }
+}
+
 ::selection {
   background: hsl(var(--accent-hsl) / 0.18);
   color: hsl(var(--foreground));

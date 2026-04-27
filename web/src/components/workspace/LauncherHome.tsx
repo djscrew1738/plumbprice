@@ -54,15 +54,15 @@ function StatCard({ icon: Icon, label, value, subText }: { icon: React.ElementTy
   return (
     <motion.div
       variants={fadeUp}
-      className="flex items-center gap-3 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3"
+      className="flex items-center gap-2.5 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
-        <Icon size={16} />
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] sm:size-9">
+        <Icon size={15} />
       </span>
       <div className="min-w-0">
-        <p className="text-[11px] font-medium text-[color:var(--muted-ink)]">{label}</p>
+        <p className="truncate text-[10px] font-medium text-[color:var(--muted-ink)] sm:text-[11px]">{label}</p>
         <p className="truncate text-sm font-semibold text-[color:var(--ink)]">{value}</p>
-        {subText && <p className="text-xs text-gray-500">{subText}</p>}
+        {subText && <p className="truncate text-[10px] text-gray-500 sm:text-xs">{subText}</p>}
       </div>
     </motion.div>
   )
@@ -119,13 +119,13 @@ export function LauncherHome() {
   ]
 
   return (
-    <div className="content-container py-5">
+    <div className="content-container py-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:py-5">
       {/* Hero panel */}
-      <section className="shell-panel p-5 sm:p-6">
+      <section className="shell-panel p-4 sm:p-6">
         <p className="text-[11px] font-bold text-[color:var(--accent-strong)]">
           Estimator Dashboard
         </p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-3xl">
+        <h2 className="mt-2 text-xl font-bold leading-tight tracking-tight text-[color:var(--ink)] sm:text-3xl">
           {greeting}. Ready to price a job?
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--muted-ink)] sm:text-base">
@@ -171,7 +171,7 @@ export function LauncherHome() {
       )}
 
       {/* This-week stats */}
-      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="This week's activity">
+      <section className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5" aria-label="This week's activity">
         {stats === null ? (
           <>
             <Skeleton variant="stat-card" />
@@ -182,7 +182,7 @@ export function LauncherHome() {
           </>
         ) : (
           <motion.div
-            className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+            className="col-span-full grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5"
             variants={staggerContainer}
             initial="hidden"
             animate="show"
@@ -346,7 +346,7 @@ export function LauncherHomeSkeleton() {
         <Skeleton variant="text" className="h-4 w-3/4" />
       </div>
 
-      <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <section className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
         <Skeleton variant="stat-card" count={5} />
       </section>
 

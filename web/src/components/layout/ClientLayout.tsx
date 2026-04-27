@@ -121,17 +121,16 @@ export function ClientLayout({ children }: { children: ReactNode }) {
             </AnimatePresence>
 
             {/* Main */}
-            <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-w-0 lg:ml-[248px] outline-none">
+            <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-h-0 min-w-0 lg:ml-[248px] outline-none">
               <Header onMenuClick={() => setSidebarOpen(true)} />
-              <main className="flex-1 overflow-y-auto overflow-x-hidden">
-                <AnimatePresence mode="wait">
+              <main className="app-scroll flex-1 overflow-y-auto overflow-x-hidden">
+                <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={pathname}
-                    initial={{ opacity: 0, y: 5 }}
+                    initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="h-full"
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
                   >
                     <ErrorBoundary
                       key={pathname}
@@ -143,7 +142,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
                     </ErrorBoundary>
                   </motion.div>
                 </AnimatePresence>
-                <div className="h-[var(--mobile-nav-height)] lg:hidden" />
+                <div className="h-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom))] lg:hidden" aria-hidden="true" />
               </main>
             </div>
 
