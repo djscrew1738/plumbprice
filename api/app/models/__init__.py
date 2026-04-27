@@ -8,7 +8,7 @@ from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetectio
 from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
 from app.models.pricing_template import PricingTemplate
-from app.models.sessions import ChatSession, ChatMessage
+from app.models.sessions import ChatSession, ChatMessage, ChatAttachment
 from app.models.outcomes import EstimateOutcome
 from app.models.auth_tokens import PasswordResetToken
 from app.models.notifications import Notification
@@ -30,7 +30,7 @@ __all__ = [
     "AuditLog", "AssumptionLog",
     "TaxRate",
     "PricingTemplate",
-    "ChatSession", "ChatMessage",
+    "ChatSession", "ChatMessage", "ChatAttachment",
     "EstimateOutcome",
     "PasswordResetToken",
     "Notification",
