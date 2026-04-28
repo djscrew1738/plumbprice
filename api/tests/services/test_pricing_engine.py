@@ -14,9 +14,11 @@ from app.services.pricing_engine import (
     get_city_multiplier,
     get_permit_cost,
     get_trip_charge,
+    _PERMIT_REQUIRED,
+)
+from app.services.pricing_defaults import (
     TAX_RATES,
     CITY_ZONE_MULTIPLIERS,
-    _PERMIT_REQUIRED,
 )
 from app.services.labor_engine import (
     LaborTemplateData,

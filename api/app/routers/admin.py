@@ -84,7 +84,7 @@ async def get_markup_rules(db: AsyncSession = Depends(get_db)):
     if cached is not None:
         return cached
 
-    from app.services.pricing_engine import MARKUP_RULES
+    from app.services.pricing_defaults import MARKUP_RULES
     result = await db.execute(select(MarkupRule).where(MarkupRule.is_active == True))
     db_rules = result.scalars().all()
 
@@ -152,7 +152,7 @@ async def update_markup_rules(
     await cache_invalidate("admin:markup-rules")
 
     # Immediately reflect change in the in-memory pricing dict
-    from app.services.pricing_engine import MARKUP_RULES
+    from app.services.pricing_defaults import MARKUP_RULES
     MARKUP_RULES[job_type] = {
         "labor_markup_pct":     getattr(rule, "labor_markup_pct", 0.0),
         "materials_markup_pct": materials_markup_pct,

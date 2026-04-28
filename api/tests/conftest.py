@@ -17,6 +17,10 @@ from app.main import app
 from app.config import settings
 from app.models.users import User
 from app.core.auth import get_current_user
+from app.core.limiter import limiter
+
+# Disable rate limiting for all tests
+limiter.enabled = False
 
 # Use an in-memory SQLite database for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

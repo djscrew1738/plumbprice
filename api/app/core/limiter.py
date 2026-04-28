@@ -11,6 +11,9 @@ from app.config import settings
 # Disable per-IP slowapi limits during tests so suites that exercise auth
 # flows back-to-back from the same loopback IP don't bleed into each other.
 # Per-account brute-force counters in app.core.rate_limit still apply.
-_enabled = settings.environment.lower() not in {"test", "testing"}
+_env = settings.environment.lower()
+_enabled = _env not in {"test", "testing"}
+
+# print(f"DEBUG: limiter environment={_env}, enabled={_enabled}")
 
 limiter = Limiter(key_func=get_remote_address, enabled=_enabled)

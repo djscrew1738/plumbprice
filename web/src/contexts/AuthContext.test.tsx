@@ -1,9 +1,19 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { api } from '@/lib/api'
+
+// Mock the api module
+vi.mock('@/lib/api', () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
+}))
 
 const TestComponent = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
+  if (loading) return <div>Loading...</div>
   return (
     <div>
       <div data-testid="auth-status">
@@ -15,30 +25,56 @@ const TestComponent = () => {
 }
 
 describe('AuthContext', () => {
-  it('provides auth context with default values', () => {
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>,
-    )
-    expect(screen.getByTestId('auth-status').textContent).toBe('Not logged in')
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Default mock response for hydration
+    ;(api.get as any).mockResolvedValue({ data: null })
   })
 
-  it('renders logout button', () => {
+  it('provides auth context with default values after loading', async () => {
     render(
       <AuthProvider>
         <TestComponent />
       </AuthProvider>,
     )
-    expect(screen.getByTestId('logout-btn')).toBeInTheDocument()
+    
+    // Initially shows loading
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+
+    // Wait for hydration to finish
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
+    })
+    
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-status').textContent).toBe('Not logged in')
+    })
   })
 
-  it('handles logout action without throwing', () => {
+  it('renders logout button', async () => {
     render(
       <AuthProvider>
         <TestComponent />
       </AuthProvider>,
     )
-    expect(() => screen.getByTestId('logout-btn').click()).not.toThrow()
+    await waitFor(() => {
+      expect(screen.getByTestId('logout-btn')).toBeInTheDocument()
+    })
+  })
+
+  it('handles logout action without throwing', async () => {
+    (api.post as any).mockResolvedValue({ data: {} })
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    )
+    
+    await waitFor(() => {
+      const btn = screen.getByTestId('logout-btn')
+      btn.click()
+    })
+    
+    expect(api.post).toHaveBeenCalledWith('/auth/logout')
   })
 })

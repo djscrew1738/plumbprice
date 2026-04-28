@@ -156,7 +156,7 @@ async def seed():
 
         # -- Markup Rules ------------------------------------------------------
         print("\nSeeding/Updating markup rules...")
-        from app.services.pricing_engine import MARKUP_RULES
+        from app.services.pricing_defaults import MARKUP_RULES
         for job_type, rules in MARKUP_RULES.items():
             result = await session.execute(select(MarkupRule).where(MarkupRule.job_type == job_type))
             existing = result.scalar_one_or_none()

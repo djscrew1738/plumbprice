@@ -341,7 +341,7 @@ class LLMService:
             if county not in {"Dallas", "Tarrant", "Collin", "Denton", "Rockwall", "Parker", "Kaufman"}:
                 county = "Dallas"
 
-            from app.services.pricing_engine import CITY_ZONE_MULTIPLIERS
+            from app.services.pricing_defaults import CITY_ZONE_MULTIPLIERS
             raw_city = (data.get("city") or "").strip().lower()
             city = raw_city if raw_city in CITY_ZONE_MULTIPLIERS else None
             raw_task_code = str(data.get("task_code") or "").strip().upper()

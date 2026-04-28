@@ -12,6 +12,7 @@ from app.services.labor_engine import (
     LABOR_TEMPLATES, LaborTemplateData, get_template,
     AccessType, UrgencyType
 )
+from app.services.pricing_config_service import pricing_config_service
 
 logger = structlog.get_logger()
 
@@ -30,43 +31,10 @@ class County(str, Enum):
 
 # Texas combined sales tax rates (state 6.25% + max local 2%).
 # Source: Texas Comptroller of Public Accounts, 2025 Q1.
-_DEFAULT_TAX_RATES: dict[str, float] = {
-    "dallas":   0.0825,
-    "tarrant":  0.0825,
-    "collin":   0.0825,
-    "denton":   0.0825,
-    "rockwall": 0.0825,
-    "parker":   0.0825,
-    "kaufman":  0.0825,
-    "ellis":    0.0825,
-    "johnson":  0.0825,
-}
-TAX_RATES: dict[str, float] = dict(_DEFAULT_TAX_RATES)
+# Managed by pricing_config_service.
 
 # ─── Permit cost schedule ─────────────────────────────────────────────────────
-# Source: DFW municipal permit offices 2025 Q1. Fees vary by inspection count.
-# Keys: county (lower) → job category → permit cost in USD.
-# "default" catches any unspecified job category.
-_PERMIT_COSTS: dict[str, dict[str, float]] = {
-    "dallas":   {"water_heater": 115.0, "gas": 135.0, "repipe": 185.0,
-                 "sewer": 145.0, "backflow": 95.0, "default": 85.0},
-    "tarrant":  {"water_heater":  95.0, "gas": 110.0, "repipe": 155.0,
-                 "sewer": 120.0, "backflow": 80.0, "default": 70.0},
-    "collin":   {"water_heater":  85.0, "gas":  95.0, "repipe": 135.0,
-                 "sewer": 110.0, "backflow": 75.0, "default": 65.0},
-    "denton":   {"water_heater":  85.0, "gas":  95.0, "repipe": 135.0,
-                 "sewer": 105.0, "backflow": 70.0, "default": 60.0},
-    "rockwall": {"water_heater":  80.0, "gas":  90.0, "repipe": 125.0,
-                 "sewer": 100.0, "backflow": 65.0, "default": 55.0},
-    "parker":   {"water_heater":  80.0, "gas":  90.0, "repipe": 120.0,
-                 "sewer": 100.0, "backflow": 65.0, "default": 55.0},
-    "kaufman":  {"water_heater":  75.0, "gas":  85.0, "repipe": 115.0,
-                 "sewer":  95.0, "backflow": 60.0, "default": 50.0},
-    "ellis":    {"water_heater":  75.0, "gas":  85.0, "repipe": 115.0,
-                 "sewer":  95.0, "backflow": 60.0, "default": 50.0},
-    "johnson":  {"water_heater":  70.0, "gas":  80.0, "repipe": 110.0,
-                 "sewer":  90.0, "backflow": 55.0, "default": 48.0},
-}
+# Managed by pricing_config_service.
 
 # Labor templates that require a permit (mapped to permit category key)
 _PERMIT_REQUIRED: dict[str, str] = {
@@ -171,127 +139,28 @@ _TRIP_CHARGES: dict[str, float] = {
 # ─── DFW City / Zone Premium Multipliers ─────────────────────────────────────
 # Applied to grand total when a specific high-demand city is specified.
 # Source: DFW plumbing contractor market analysis Q1 2026.
-CITY_ZONE_MULTIPLIERS: dict[str, float] = {
-    # Highland Park / University Park — premium enclave, tight access, high expectations
-    "highland park":    1.25,
-    "university park":  1.25,
-    # Southlake, Westlake, Colleyville — luxury market
-    "southlake":        1.20,
-    "westlake":         1.20,
-    "colleyville":      1.18,
-    # North DFW growth corridor — high demand, premium pricing
-    "frisco":           1.15,
-    "prosper":          1.15,
-    "celina":           1.12,
-    "allen":            1.10,
-    "mckinney":         1.10,
-    "plano":            1.10,
-    "flower mound":     1.10,
-    "trophy club":      1.12,
-    "keller":           1.08,
-    "grapevine":        1.08,
-    "coppell":          1.10,
-    # Standard DFW metro
-    "dallas":           1.00,
-    "fort worth":       1.00,
-    "arlington":        1.00,
-    "irving":           1.00,
-    "garland":          0.98,
-    "mesquite":         0.97,
-    "richardson":       1.02,
-    "carrollton":       1.02,
-    "lewisville":       1.00,
-    "denton":           0.98,
-    "grand prairie":    0.97,
-    # South / west — slightly lower market rates
-    "duncanville":      0.95,
-    "desoto":           0.95,
-    "cedar hill":       0.95,
-    "mansfield":        1.00,
-    "burleson":         0.97,
-    "cleburne":         0.93,
-    "weatherford":      0.95,
-    "forney":           0.97,
-    "rowlett":          1.00,
-    "rockwall":         1.02,
-    # ─── Collin County additions ──────────────────────────────────────────────
-    "wylie":            1.05,
-    "murphy":           1.08,
-    "sachse":           1.02,
-    "lavon":            0.97,
-    "melissa":          1.00,
-    "anna":             0.97,
-    "princeton":        0.95,
-    # ─── Tarrant County additions ─────────────────────────────────────────────
-    "north richland hills": 1.00,
-    "hurst":            0.97,
-    "euless":           0.97,
-    "bedford":          0.98,
-    "haltom city":      0.93,
-    "watauga":          0.95,
-    "benbrook":         0.97,
-    "saginaw":          0.97,
-    "crowley":          0.97,
-    "forest hill":      0.93,
-    "kennedale":        0.97,
-    "white settlement": 0.95,
-    "everman":          0.92,
-    "azle":             0.93,
-    # ─── Denton County additions ──────────────────────────────────────────────
-    "the colony":       1.02,
-    "little elm":       1.05,
-    "lake dallas":      0.95,
-    "corinth":          1.00,
-    "highland village": 1.10,
-    "aubrey":           0.98,
-    "argyle":           1.05,
-    # ─── Rockwall County additions ────────────────────────────────────────────
-    "heath":            1.08,
-    "fate":             1.00,
-    "royse city":       0.97,
-    # ─── Ellis County ─────────────────────────────────────────────────────────
-    "midlothian":       0.95,
-    "waxahachie":       0.92,
-    "red oak":          0.93,
-    "ennis":            0.90,
-    "glenn heights":    0.95,
-    # ─── Johnson County ───────────────────────────────────────────────────────
-    "alvarado":         0.92,
-    "joshua":           0.92,
-    # NOTE: burleson already defined above (South/west section) at 0.97
-    # ─── SE Dallas additions ───────────────────────────────────────────────────
-    "balch springs":    0.92,
-    "seagoville":       0.93,
-    "hutchins":         0.90,
-    "lancaster":        0.93,
-}
+# Managed by pricing_config_service.
 
 def get_city_multiplier(city: Optional[str]) -> float:
     """Return the pricing zone multiplier for a DFW city (case-insensitive)."""
-    if not city:
-        return 1.0
-    return CITY_ZONE_MULTIPLIERS.get(city.strip().lower(), 1.0)
+    return pricing_config_service.get_city_multiplier(city)
 
 def get_permit_cost(task_code: str, county: str) -> float:
     """Return permit cost for a job in a given county, or 0 if no permit required."""
     permit_cat = _PERMIT_REQUIRED.get(task_code)
     if not permit_cat:
         return 0.0
-    county_permits = _PERMIT_COSTS.get(county.lower(), _PERMIT_COSTS["dallas"])
-    return county_permits.get(permit_cat, county_permits["default"])
+    return pricing_config_service.get_permit_cost(county, permit_cat)
 
 def get_trip_charge(county: str) -> float:
     """Return the minimum trip/service charge for a county."""
-    return _TRIP_CHARGES.get(county.lower(), 105.0)
+    return pricing_config_service.get_trip_charge(county)
 
 
-# Markup rules by job type — loaded from DB on startup; hardcoded values are fallback.
-_DEFAULT_MARKUP_RULES: dict[str, dict] = {
-    "service":      {"labor_markup_pct": 0.0, "materials_markup_pct": 0.30, "misc_flat": 45.0},
-    "construction": {"labor_markup_pct": 0.0, "materials_markup_pct": 0.25, "misc_flat": 65.0},
-    "commercial":   {"labor_markup_pct": 0.0, "materials_markup_pct": 0.20, "misc_flat": 85.0},
-}
-MARKUP_RULES: dict[str, dict] = {k: dict(v) for k, v in _DEFAULT_MARKUP_RULES.items()}
+# Local copies maintained for sync with main.py _sync_runtime_config
+# which has been updated to use pricing_config_service.
+TAX_RATES: dict[str, float] = {}
+MARKUP_RULES: dict[str, dict] = {}
 
 
 @dataclass
@@ -378,7 +247,7 @@ class PricingEngine:
         if not template:
             raise ValueError(f"Unknown labor template: {task_code}")
 
-        job_type = template.category if template.category in MARKUP_RULES else "service"
+        job_type = template.category
 
         # 1. Labor calculation
         labor_data = template.calculate_labor_cost(access=access, urgency=urgency)
@@ -388,11 +257,11 @@ class PricingEngine:
         materials_cost = sum(m.total_cost for m in materials)
 
         # 3. Tax (materials only in TX)
-        tax_rate = self._get_tax_rate(county)
+        tax_rate = pricing_config_service.get_tax_rate(county)
         tax_amount = round(materials_cost * tax_rate, 2)
 
         # 4. Markup
-        markup_rules = MARKUP_RULES.get(job_type, _DEFAULT_MARKUP_RULES["service"])
+        markup_rules = pricing_config_service.get_markup_rule(job_type)
         materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
         misc_flat = markup_rules["misc_flat"]
 
@@ -686,9 +555,9 @@ class PricingEngine:
 
         # Materials placeholder (no assembly lookup for construction default)
         materials_cost = 0.0
-        tax_rate = self._get_tax_rate(county)
+        tax_rate = pricing_config_service.get_tax_rate(county)
         tax_amount = round(materials_cost * tax_rate, 2)
-        markup_rules = MARKUP_RULES.get("construction", _DEFAULT_MARKUP_RULES["construction"])
+        markup_rules = pricing_config_service.get_markup_rule("construction")
         materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
         misc_flat = markup_rules["misc_flat"]
 
@@ -949,11 +818,7 @@ class PricingEngine:
         )
 
     def _get_tax_rate(self, county: str) -> float:
-        rate = TAX_RATES.get(county.lower())
-        if rate is None:
-            logger.warning("Unknown county, using DFW default tax rate", county=county)
-            return 0.0825
-        return rate
+        return pricing_config_service.get_tax_rate(county)
 
     def _calculate_confidence(
         self, template: LaborTemplateData, materials: list[MaterialItem], access: str

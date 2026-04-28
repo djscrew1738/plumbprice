@@ -24,8 +24,9 @@ if settings.sentry_dsn:
         release=settings.version,
         send_default_pii=False,
     )
-from app.database import init_db, AsyncSessionLocal
-from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import init_db, AsyncSessionLocal, get_db
+from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, admin_pricing, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -100,9 +101,16 @@ async def _ensure_seeded():
     from app.models.suppliers import Supplier, SupplierProduct
     from app.models.labor import LaborTemplate, MaterialAssembly, MarkupRule
     from app.models.tax import TaxRate
+    from app.models.pricing_rules import PermitCostRule, CityZoneMultiplier, TripChargeRule
     from app.services.supplier_service import CANONICAL_MAP, MATERIAL_ASSEMBLIES
     from app.services.labor_engine import LABOR_TEMPLATES
-    from app.services.pricing_engine import _DEFAULT_MARKUP_RULES, _DEFAULT_TAX_RATES
+    from app.services.pricing_defaults import (
+        MARKUP_RULES as _DEFAULT_MARKUP_RULES,
+        TAX_RATES as _DEFAULT_TAX_RATES,
+        PERMIT_COSTS as _PERMIT_COSTS,
+        TRIP_CHARGES as _TRIP_CHARGES,
+        CITY_ZONE_MULTIPLIERS
+    )
 
     async with AsyncSessionLocal() as db:
         count = (await db.execute(select(func.count(Supplier.id)))).scalar()
@@ -192,39 +200,33 @@ async def _ensure_seeded():
         for county, rate in _DEFAULT_TAX_RATES.items():
             db.add(TaxRate(county=county, rate=rate, is_active=True))
 
+        # Permit costs
+        for county, categories in _PERMIT_COSTS.items():
+            for category, cost in categories.items():
+                db.add(PermitCostRule(county=county, job_category=category, cost=cost, is_active=True))
+
+        # City zone multipliers
+        for city, multiplier in CITY_ZONE_MULTIPLIERS.items():
+            db.add(CityZoneMultiplier(city=city, multiplier=multiplier, is_active=True))
+
+        # Trip charges
+        for county, charge in _TRIP_CHARGES.items():
+            db.add(TripChargeRule(county=county, charge=charge, is_active=True))
+
         await db.commit()
         logger.info("Database seeded",
                     suppliers=len(supplier_ids),
                     products=product_count,
                     templates=len(LABOR_TEMPLATES),
-                    assemblies=len(MATERIAL_ASSEMBLIES))
+                    assemblies=len(MATERIAL_ASSEMBLIES),
+                    permit_rules=sum(len(v) for v in _PERMIT_COSTS.values()),
+                    zone_multipliers=len(CITY_ZONE_MULTIPLIERS))
 
 
 async def _sync_runtime_config():
-    """Load markup rules and tax rates from DB into in-memory dicts used by PricingEngine."""
-    from sqlalchemy import select
-    from app.models.labor import MarkupRule
-    from app.models.tax import TaxRate
-    from app.services.pricing_engine import MARKUP_RULES, TAX_RATES
-
-    try:
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(select(MarkupRule).where(MarkupRule.is_active == True))
-            for rule in result.scalars().all():
-                MARKUP_RULES[rule.job_type] = {
-                    "labor_markup_pct":    rule.labor_markup_pct,
-                    "materials_markup_pct": rule.materials_markup_pct,
-                    "misc_flat":           rule.misc_flat,
-                }
-
-            result = await db.execute(select(TaxRate).where(TaxRate.is_active == True))
-            for rate in result.scalars().all():
-                TAX_RATES[rate.county.lower()] = rate.rate
-
-            logger.info("Runtime config synced",
-                        markup_rules=len(MARKUP_RULES), tax_rates=len(TAX_RATES))
-    except Exception as e:
-        logger.warning("Runtime config sync failed — using defaults", error=str(e))
+    """Load pricing rules from DB into the pricing config service cache."""
+    from app.services.pricing_config_service import pricing_config_service
+    await pricing_config_service.refresh_cache()
 
 
 @asynccontextmanager
@@ -398,6 +400,7 @@ app.include_router(proposals.router, prefix="/api/v1/proposals",   tags=["propos
 app.include_router(documents.router, prefix="/api/v1/documents",   tags=["documents"])
 app.include_router(sessions.router,  prefix="/api/v1/sessions",    tags=["sessions"])
 app.include_router(admin.router,     prefix="/api/v1/admin",       tags=["admin"])
+app.include_router(admin_pricing.router, prefix="/api/v1/admin/pricing", tags=["admin"])
 app.include_router(templates.router,  prefix="/api/v1/templates", tags=["templates"])
 app.include_router(public.router,    prefix="/api/v1/public",     tags=["public"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
@@ -416,7 +419,7 @@ app.include_router(health.router,    tags=["health"])
 
 
 @app.get("/health")
-async def health_check():
+async def health_check(db: AsyncSession = Depends(get_db)):
     import time as _time
     from sqlalchemy import text
     from app.services.llm_service import llm_service
@@ -428,10 +431,10 @@ async def health_check():
     # Database check
     try:
         t0 = _time.monotonic()
-        async with AsyncSessionLocal() as db:
-            await db.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1"))
         checks["database"] = {"status": "ok", "latency_ms": round((_time.monotonic() - t0) * 1000, 1)}
     except Exception as e:
+        logger.error("health_check.database_error", error=str(e))
         checks["database"] = {"status": "error", "detail": str(e)[:200]}
         overall = "degraded"
 
@@ -446,6 +449,7 @@ async def health_check():
         "available": llm_ok,
     }
     if not llm_ok:
+        logger.warning("health_check.llm_unavailable")
         overall = "degraded"
 
     # Price cache check

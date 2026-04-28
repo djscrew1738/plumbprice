@@ -23,11 +23,7 @@ from app.models.users import User
 from app.services.audit_service import audit_service
 from app.services.estimate_service import build_estimate_snapshot
 from app.services.labor_engine import get_template
-from app.services.pricing_engine import (
-    MARKUP_RULES,
-    _DEFAULT_MARKUP_RULES,
-    _DEFAULT_TAX_RATES,
-)
+from app.services.pricing_config_service import pricing_config_service
 from app.services.supplier_service import MATERIAL_ASSEMBLIES, supplier_service
 
 logger = structlog.get_logger()
@@ -198,8 +194,8 @@ async def create_estimate_from_blueprint(
         )
 
     # Totals — mirror pricing_engine.calculate_construction_estimate
-    tax_rate = _DEFAULT_TAX_RATES.get(county.lower(), 0.0825)
-    rules = MARKUP_RULES.get("construction", _DEFAULT_MARKUP_RULES["construction"])
+    tax_rate = pricing_config_service.get_tax_rate(county)
+    rules = pricing_config_service.get_markup_rule("construction")
     materials_markup = round(materials_total * rules["materials_markup_pct"], 2)
     misc_flat = float(rules["misc_flat"])
     tax_amount = round(materials_total * tax_rate, 2)

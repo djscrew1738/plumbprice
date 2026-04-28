@@ -991,7 +991,7 @@ def classify_request(message: str) -> dict:
 
     # ── 3. County + City ──────────────────────────────────────────────────────
     # City detected from CITY_ZONE_MULTIPLIERS first (more specific)
-    from app.services.pricing_engine import CITY_ZONE_MULTIPLIERS
+    from app.services.pricing_defaults import CITY_ZONE_MULTIPLIERS
     city: Optional[str] = None
     county = "Dallas"   # default
 

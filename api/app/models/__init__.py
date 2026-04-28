@@ -7,6 +7,7 @@ from app.models.documents import UploadedDocument, DocumentChunk
 from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection, BlueprintDetectionFeedback
 from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
+from app.models.pricing_rules import PermitCostRule, CityZoneMultiplier, TripChargeRule
 from app.models.pricing_template import PricingTemplate
 from app.models.sessions import ChatSession, ChatMessage, ChatAttachment
 from app.models.outcomes import EstimateOutcome
@@ -29,6 +30,7 @@ __all__ = [
     "BlueprintJob", "BlueprintPage", "BlueprintDetection", "BlueprintDetectionFeedback",
     "AuditLog", "AssumptionLog",
     "TaxRate",
+    "PermitCostRule", "CityZoneMultiplier", "TripChargeRule",
     "PricingTemplate",
     "ChatSession", "ChatMessage", "ChatAttachment",
     "EstimateOutcome",
