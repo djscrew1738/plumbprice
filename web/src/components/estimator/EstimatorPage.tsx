@@ -18,6 +18,7 @@ import { ChatMessageList } from './ChatMessageList'
 import { ChatInputBar } from './ChatInputBar'
 import { TemplateBrowser } from './TemplateBrowser'
 import { BlueprintUploadFlow } from './BlueprintUploadFlow'
+import { MAX_CHAT_INPUT_LENGTH, COPY_FEEDBACK_MS } from '@/lib/constants'
 
 const SUGGESTIONS = [
   { short: 'Toilet replace', full: 'How much to replace a toilet first floor Dallas?', hint: '$285–$485' },
@@ -116,13 +117,13 @@ export function EstimatorPage() {
   const [customerAddress, setCustomerAddress] = useState('')
   const [customerOpen, setCustomerOpen] = useState(!projectId)
 
-  const MAX_INPUT = 2000
-
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const resumeErrorRef = useRef(error)
   const abortRef = useRef<AbortController | null>(null)
   const lastUserMessageRef = useRef<string>('')
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
 
   const uploadMode = entryMode === 'upload-job-files'
 
@@ -154,7 +155,11 @@ export function EstimatorPage() {
     let active = true
     templatesApi.list().then(res => {
       if (active) setPricingTemplates(res.data)
-    }).catch(() => {})
+    }).catch((err) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to load pricing templates', err)
+      }
+    })
     return () => { active = false }
   }, [])
 
@@ -317,7 +322,7 @@ export function EstimatorPage() {
     navigator.clipboard.writeText(content).then(() => {
       setCopiedId(id)
       success('Copied to clipboard')
-      setTimeout(() => setCopiedId(null), 2000)
+      setTimeout(() => setCopiedId(null), COPY_FEEDBACK_MS)
     }).catch(() => {
       error('Failed to copy — try selecting the text manually')
     })
@@ -395,7 +400,7 @@ export function EstimatorPage() {
     if (!message || loading || (uploadMode && !uploadedFile)) {
       return
     }
-    if (message.length > MAX_INPUT) {
+    if (message.length > MAX_CHAT_INPUT_LENGTH) {
       return
     }
 
@@ -419,7 +424,7 @@ export function EstimatorPage() {
     setLoading(true)
 
     // Build history from current messages (before this new user turn)
-    const history = messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+    const history = messagesRef.current.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
     // Placeholder assistant message for streaming
     const streamId = crypto.randomUUID()
@@ -448,7 +453,7 @@ export function EstimatorPage() {
               address: customerAddress.trim() || undefined,
             }
           : null,
-      })) {
+      }, abortRef.current?.signal)) {
         if (event.type === 'pricing') {
           if (event.session_id != null) setSessionId(event.session_id)
           pricingData = {
@@ -517,7 +522,7 @@ export function EstimatorPage() {
     } finally {
       setLoading(false)
     }
-  }, [input, loading, county, uploadMode, uploadedFile, messages, sessionId, projectId, customerName, customerEmail, customerPhone, customerAddress])
+  }, [input, loading, county, uploadMode, uploadedFile, sessionId, projectId, customerName, customerEmail, customerPhone, customerAddress])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -654,7 +659,7 @@ export function EstimatorPage() {
                 uploadMode={uploadMode}
                 uploadedFile={uploadedFile}
                 hasMessages={messages.length > 0}
-                maxInput={MAX_INPUT}
+                maxInput={MAX_CHAT_INPUT_LENGTH}
                 onInputChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 onSend={() => void sendMessage()}

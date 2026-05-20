@@ -17,7 +17,9 @@ const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { blueprintsApi } from '@/lib/api'
+import { blueprintApiV3, type BlueprintTakeoffV3 } from '@/lib/api-v3'
 import { useBlueprints, useUploadBlueprint, useDeleteBlueprint, type JobStatus, type BlueprintJob } from '@/lib/hooks'
+import { BLUEPRINT_POLL_INTERVAL_MS } from '@/lib/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +32,8 @@ interface TakeoffFixture {
 
 interface TakeoffResult {
   fixtures: TakeoffFixture[]
+  rooms: Array<{ type: string; name: string | null; area_sqft: number | null; fixture_count: number | null; confidence: number }>
+  pipe_runs: Array<{ pipe_type: string; length_ft: number; confidence: number }>
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -154,8 +158,18 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
   const { data, isLoading, isError } = useQuery({
     queryKey: ['blueprint-takeoff', jobId],
     queryFn: async () => {
-      const res = await blueprintsApi.getTakeoff(jobId)
-      return res.data as TakeoffResult
+      const res = await blueprintApiV3.getTakeoff(Number(jobId))
+      const v3 = res.data as BlueprintTakeoffV3
+      return {
+        fixtures: v3.fixtures.map(f => ({
+          name: f.type,
+          quantity: f.count,
+          confidence: f.confidence,
+          unit: 'ea',
+        })),
+        rooms: v3.rooms,
+        pipe_runs: v3.pipe_runs,
+      } as TakeoffResult
     },
     staleTime: Infinity,
   })
@@ -177,7 +191,7 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
     return <Skeleton variant="table-row" count={3} className="mt-2" />
   }
 
-  if (isError || !data?.fixtures?.length) {
+  if (isError || !data) {
     return (
       <p className="text-[11px] text-zinc-600 mt-2">
         {isError ? 'Could not load takeoff data.' : 'No fixtures detected.'}
@@ -230,13 +244,47 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
           )
         })}
       </div>
+      {(data.rooms.length > 0 || data.pipe_runs.length > 0) && (
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {data.rooms.length > 0 && (
+            <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] p-2.5">
+              <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">
+                Rooms ({data.rooms.length})
+              </p>
+              <div className="space-y-1">
+                {data.rooms.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 truncate">{r.name || r.type}</span>
+                    <span className="text-zinc-500">{r.area_sqft ? `${r.area_sqft.toFixed(0)} sqft` : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.pipe_runs.length > 0 && (
+            <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] p-2.5">
+              <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">
+                Pipe Runs ({data.pipe_runs.length})
+              </p>
+              <div className="space-y-1">
+                {data.pipe_runs.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 truncate">{p.pipe_type.replace(/_/g, ' ')}</span>
+                    <span className="text-zinc-500">{p.length_ft.toFixed(0)} ft</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap gap-2">
         <button
           onClick={handleCreateEstimate}
           className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:shadow-lg transition-all active:scale-[0.98]"
         >
           <Zap size={13} />
-          Create Estimate
+          Create Estimate (v3)
           <ArrowRight size={12} />
         </button>
         <a
@@ -370,7 +418,7 @@ function useBlueprintPolling(jobs: BlueprintJob[]) {
       return null
     },
     enabled: needsPolling,
-    refetchInterval: needsPolling ? 2000 : false,
+    refetchInterval: needsPolling ? BLUEPRINT_POLL_INTERVAL_MS : false,
   })
 }
 
@@ -418,9 +466,9 @@ export function BlueprintsPage() {
 
   const handleCreateEstimate = useCallback(async (jobId: string, _fixtures: TakeoffFixture[]) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     try {
-      const res = await blueprintsApi.toEstimate(jobId)
+      const res = await blueprintApiV3.toEstimate(Number(jobId))
       const { estimate_id } = res.data as { estimate_id: number }
-      toast.success('Estimate created', 'Navigating to your new estimate…')
+      toast.success('Estimate created (v3)', 'Navigating to your new estimate…')
       router.push(`/estimates/${estimate_id}`)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail

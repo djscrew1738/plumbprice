@@ -88,6 +88,7 @@ export function WorkspaceSummaryRail({
               className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-6 lg:hidden"
               onClick={() => onSheetOpenChange(false)}
             >
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
               <div
                 className="bottom-sheet mx-auto flex w-full max-w-lg flex-col overflow-hidden"
                 style={{ maxHeight: '87dvh' }}

@@ -27,6 +27,7 @@ if settings.sentry_dsn:
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import init_db, AsyncSessionLocal, get_db
 from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, admin_pricing, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift
+from app.routers.v3 import chat as chat_v3, estimates as estimates_v3, market_pricing as market_pricing_v3, suppliers as suppliers_v3, agent_trace as agent_trace_v3, blueprints as blueprints_v3
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -385,6 +386,22 @@ async def logging_middleware(request: Request, call_next):
 
     return response
 
+
+@app.middleware("http")
+async def v1_deprecation_middleware(request: Request, call_next):
+    """Add deprecation headers to v1 API responses.
+
+    v1 is in maintenance mode; new consumers should use /api/v3/*.
+    Sunset date is advisory — v1 will not be removed before 2026-09-01.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/v1/") and not path.startswith("/api/v1/auth"):
+        response.headers["Deprecation"] = 'true'
+        response.headers["Sunset"] = "Sat, 01 Sep 2026 00:00:00 GMT"
+        response.headers["Link"] = f'<{str(request.url).replace("/api/v1/", "/api/v3/", 1)}>; rel="successor-version"'
+    return response
+
 app.add_exception_handler(PricingError, pricing_error_handler)
 app.add_exception_handler(SupplierError, supplier_error_handler)
 app.add_exception_handler(BlueprintError, blueprint_error_handler)
@@ -416,6 +433,14 @@ app.include_router(jobcost.router,           prefix="/api/v1/estimates", tags=["
 app.include_router(doc_generation.router,    prefix="/api/v1/estimates", tags=["docs"])
 app.include_router(price_drift.router,       prefix="/api/v1/admin/supplier-prices", tags=["admin"])
 app.include_router(health.router,    tags=["health"])
+
+# v3 API routers
+app.include_router(chat_v3.router,           prefix="/api/v3/chat",         tags=["chat-v3"])
+app.include_router(estimates_v3.router,      prefix="/api/v3/estimates",    tags=["estimates-v3"])
+app.include_router(market_pricing_v3.router, prefix="/api/v3/market-pricing", tags=["market-pricing-v3"])
+app.include_router(suppliers_v3.router,      prefix="/api/v3/suppliers",    tags=["suppliers-v3"])
+app.include_router(agent_trace_v3.router,    prefix="/api/v3/agent-trace",  tags=["agent-trace-v3"])
+app.include_router(blueprints_v3.router,      prefix="/api/v3/blueprints",   tags=["blueprints-v3"])
 
 
 @app.get("/health")

@@ -70,12 +70,12 @@ describe('LauncherHome', () => {
 
     render(createElement(LauncherHome), { wrapper: makeWrapper() })
 
-    expect(screen.getByText(/estimator dashboard/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /quick quote/i })).toHaveAttribute(
+    expect(screen.getByText(/what would you like to price today/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /new estimate/i })).toHaveAttribute(
       'href',
       '/estimator?entry=quick-quote',
     )
-    expect(screen.getByRole('link', { name: /upload job files/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /upload blueprint/i })).toHaveAttribute(
       'href',
       '/estimator?entry=upload-job-files',
     )

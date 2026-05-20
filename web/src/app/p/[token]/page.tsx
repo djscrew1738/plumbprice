@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { BUILT_BY_LINE } from '@/lib/branding'
+import { PROPOSAL_POLL_INTERVAL_MS } from '@/lib/constants'
 
 interface PublicLineItem {
   description: string
@@ -112,8 +113,15 @@ export default function PublicProposalPage() {
   useEffect(() => {
     if (!proposal) return
     if (proposal.status !== 'sent' && proposal.status !== 'opened') return
-    const id = window.setInterval(() => { void fetchProposal() }, 30_000)
-    return () => window.clearInterval(id)
+    let active = true
+    const id = window.setInterval(() => {
+      if (!active) return
+      void fetchProposal()
+    }, PROPOSAL_POLL_INTERVAL_MS)
+    return () => {
+      active = false
+      window.clearInterval(id)
+    }
   }, [proposal, fetchProposal])
 
   const handleAccept = async () => {

@@ -1,9 +1,10 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TOAST_DURATION_MS } from '@/lib/constants'
 
 type ToastType = 'success' | 'error' | 'info'
 
@@ -38,14 +39,35 @@ const ICONS: Record<ToastType, typeof CheckCircle2> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const add = useCallback((type: ToastType, title: string, message?: string) => {
     const id = crypto.randomUUID()
     setToasts(prev => [...prev, { id, type, title, message }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500)
+    const timer = setTimeout(() => {
+      timersRef.current.delete(id)
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, TOAST_DURATION_MS)
+    timersRef.current.set(id, timer)
   }, [])
 
-  const dismiss = useCallback((id: string) => setToasts(prev => prev.filter(t => t.id !== id)), [])
+  const dismiss = useCallback((id: string) => {
+    const timer = timersRef.current.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      timersRef.current.delete(id)
+    }
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  // Clear all dangling timers on unmount to prevent state updates on dead component.
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(timer => clearTimeout(timer))
+      timers.clear()
+    }
+  }, [])
 
   const value: ToastCtx = {
     success: (title, msg) => add('success', title, msg),

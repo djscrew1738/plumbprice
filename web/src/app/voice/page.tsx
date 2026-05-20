@@ -11,6 +11,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
+import { DFW_COUNTIES, DEFAULT_COUNTY } from '@/lib/constants'
+import { VOICE_TICK_MS, API_TIMEOUT_LONG_MS } from '@/lib/constants'
 
 type EstimateSummary = {
   task_code: string | null
@@ -37,7 +39,7 @@ export default function VoiceRoute() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
-  const [county, setCounty] = useState('Dallas')
+  const [county, setCounty] = useState(DEFAULT_COUNTY)
   const [elapsed, setElapsed] = useState(0)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -73,7 +75,7 @@ export default function VoiceRoute() {
       recorderRef.current = rec
       rec.start()
       setRecording(true)
-      tickRef.current = window.setInterval(() => setElapsed((s) => s + 1), 1000) as unknown as number
+      tickRef.current = window.setInterval(() => setElapsed((s) => s + 1), VOICE_TICK_MS) as unknown as number
     } catch (e: unknown) {
       const err = e as { message?: string }
       setError(err?.message ?? 'Microphone access denied')
@@ -102,7 +104,7 @@ export default function VoiceRoute() {
       if (county) fd.append('county', county)
       const res = await api.post<QuoteResponse>('/voice/quote', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 90_000,
+        timeout: API_TIMEOUT_LONG_MS,
       })
       setQuote(res.data)
     } catch (e: unknown) {
@@ -129,7 +131,7 @@ export default function VoiceRoute() {
           onChange={(e) => setCounty(e.target.value)}
           className="mt-1 w-full rounded-lg border p-2"
         >
-          {['Dallas', 'Tarrant', 'Collin', 'Denton', 'Rockwall', 'Ellis', 'Kaufman'].map((c) => (
+          {DFW_COUNTIES.map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>

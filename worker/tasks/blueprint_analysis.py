@@ -10,8 +10,11 @@ import structlog
 from worker.worker import app
 from app.core.storage import storage_client
 from app.services.vision_service import vision_service
+from app.services.vision_v3 import vision_service_v3
 from app.database import AsyncSessionLocal
 from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection
+from app.models.blueprint_rooms import BlueprintRoom
+from app.models.blueprint_pipe_runs import BlueprintPipeRun
 from app.config import settings
 from sqlalchemy import select
 
@@ -64,6 +67,8 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
             await db.commit()
 
             total_fixture_count = 0
+            total_room_count = 0
+            total_pipe_run_ft = 0.0
             review_threshold = float(getattr(settings, "blueprint_review_threshold", 0.65))
             for i in range(len(pdf)):
                 page = pdf[i]
@@ -124,12 +129,11 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                 bp_page.sheet_number = classification.get("sheet_number")
                 bp_page.title = classification.get("title")
                 
-                # 5. Detect fixtures ONLY if it's a plumbing sheet
+                # 5. Detect fixtures ONLY if it's a plumbing sheet (v2 with bboxes)
                 if bp_page.sheet_type == "plumbing":
-                    detect_result = await vision_service.detect_fixtures(img_data, ocr_hint=page_text)
+                    detect_result = await vision_service_v3.detect_fixtures_v2(img_data, ocr_hint=page_text)
                     detections = detect_result.get("fixtures", [])
-                    if detect_result.get("status") == "error":
-                        # Surface vision failures rather than silently producing 0 fixtures.
+                    if detect_result.get("error"):
                         logger.warning(
                             "vision.detect_failed_for_page",
                             job_id=job_id,
@@ -147,8 +151,49 @@ async def _async_analyze_blueprint(job_id: int, storage_path: str):
                             count=det_count,
                             confidence=det_conf,
                             needs_review=(det_conf < review_threshold),
+                            bounding_box=det.get("bounding_box"),
                         ))
-                
+
+                    # 5b. v3 — Room detection
+                    try:
+                        room_result = await vision_service_v3.detect_rooms(img_data, ocr_hint=page_text)
+                        for room in room_result.get("rooms", []):
+                            room_conf = float(room.get("confidence", 0.0) or 0.0)
+                            db.add(BlueprintRoom(
+                                blueprint_job_id=job_id,
+                                page_number=i + 1,
+                                room_type=room.get("type", "other"),
+                                room_name=room.get("name"),
+                                bounding_box=room.get("bounding_box"),
+                                area_sqft=room.get("area_sqft"),
+                                fixture_count=room.get("fixture_count"),
+                                confidence=room_conf,
+                            ))
+                            total_room_count += 1
+                    except Exception as room_exc:
+                        logger.warning("vision.room_detect_failed", job_id=job_id, page=i + 1, error=str(room_exc))
+
+                    # 5c. v3 — Pipe run estimation
+                    try:
+                        px_per_ft = bp_page.px_per_ft
+                        pipe_result = await vision_service_v3.detect_pipe_runs(img_data, px_per_ft=px_per_ft, ocr_hint=page_text)
+                        for pr in pipe_result.get("pipe_runs", []):
+                            pr_conf = float(pr.get("confidence", 0.0) or 0.0)
+                            length_ft = float(pr.get("length_ft", 0.0) or 0.0)
+                            db.add(BlueprintPipeRun(
+                                blueprint_job_id=job_id,
+                                page_number=i + 1,
+                                pipe_type=pr.get("pipe_type", "other"),
+                                length_ft=length_ft,
+                                start_point=pr.get("start_point"),
+                                end_point=pr.get("end_point"),
+                                bounding_box=pr.get("bounding_box"),
+                                confidence=pr_conf,
+                            ))
+                            total_pipe_run_ft += length_ft
+                    except Exception as pipe_exc:
+                        logger.warning("vision.pipe_detect_failed", job_id=job_id, page=i + 1, error=str(pipe_exc))
+
                 bp_page.status = "complete"
                 await db.commit()
 

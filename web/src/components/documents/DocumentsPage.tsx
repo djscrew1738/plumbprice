@@ -363,10 +363,11 @@ export function DocumentsPage() {
         <div className="space-y-4">
           {/* File picker */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[color:var(--ink)]">
+            <label htmlFor="file-picker" className="block text-sm font-medium text-[color:var(--ink)]">
               File
             </label>
             <div
+              id="file-picker"
               onClick={() => fileInputRef.current?.click()}
               className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 py-6 transition-colors hover:border-[color:var(--accent)]"
               role="button"

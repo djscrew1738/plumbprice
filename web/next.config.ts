@@ -41,7 +41,6 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
   },
-  eslint: { ignoreDuringBuilds: true },
   async headers() {
     return [
       {

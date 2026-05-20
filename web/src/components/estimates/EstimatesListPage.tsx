@@ -8,7 +8,6 @@ import {
   Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
   TrendingUp, Search, ChevronDown, ArrowUpDown, Check, Download, Copy, AlertTriangle,
 } from 'lucide-react'
-import { format, isValid } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api'
 import { useEstimates, useDeleteEstimate, useDuplicateEstimate, estimateKeys } from '@/lib/hooks'
@@ -18,6 +17,8 @@ import { badgeVariants } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { formatDateShort } from '@/lib/formatters'
+import { JOB_TYPE_CLASS, ESTIMATE_STATUS_VARIANT } from '@/lib/badgeConfig'
 
 interface Estimate {
   id: number; title: string; job_type: string; status: string
@@ -25,20 +26,7 @@ interface Estimate {
   outcome?: string | null; is_expired?: boolean | null; valid_until?: string | null
 }
 
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
-  return isValid(d) ? format(d, 'MMM d, yy') : '—'
-}
 
-const JOB_TYPE_CLASS: Record<string, string> = {
-  service: 'badge-service', construction: 'badge-construction', commercial: 'badge-commercial',
-}
-const STATUS_BADGE_VARIANT: Record<string, 'neutral' | 'info' | 'success' | 'danger'> = {
-  draft: 'neutral',
-  sent: 'info',
-  accepted: 'success',
-  rejected: 'danger',
-}
 
 const STATUS_OPTIONS = [
   { value: 'draft',    label: 'Draft'    },
@@ -75,12 +63,12 @@ function StatusDropdown({
   }
 
   return (
-    <div className="relative" onClick={e => e.stopPropagation()}>
+    <div className="relative" onClick={e => e.stopPropagation()} aria-hidden="true">
       <button
         onClick={() => setOpen(o => !o)}
         disabled={updating}
         className={cn(
-          badgeVariants({ variant: STATUS_BADGE_VARIANT[current] ?? 'neutral', size: 'sm' }),
+          badgeVariants({ variant: ESTIMATE_STATUS_VARIANT[current] ?? 'neutral', size: 'sm' }),
           'cursor-pointer hover:opacity-80 transition-opacity gap-1',
           updating && 'opacity-50 pointer-events-none',
         )}
@@ -91,7 +79,7 @@ function StatusDropdown({
       <AnimatePresence>
         {open && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
             <motion.div
               initial={{ opacity: 0, y: -4, scale: 0.96 }}
               animate={{ opacity: 1, y: 0,  scale: 1    }}
@@ -526,7 +514,7 @@ export function EstimatesListPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-[11px] text-[color:var(--muted-ink)]">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county}</span>
-                        <span className="flex items-center gap-1"><Calendar size={10} />{formatDate(est.created_at)}</span>
+                        <span className="flex items-center gap-1"><Calendar size={10} />{formatDateShort(est.created_at)}</span>
                         {est.is_expired && (
                           <Tooltip content="This estimate has expired">
                             <span className="flex items-center gap-0.5 text-[hsl(var(--warning))]">
@@ -536,6 +524,7 @@ export function EstimatesListPage() {
                           </Tooltip>
                         )}
                       </div>
+                      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
                       <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                         {confirmDelete === est.id ? (
                           <div className="flex items-center gap-1.5">
@@ -627,7 +616,7 @@ export function EstimatesListPage() {
                         <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs">{est.county}</td>
                         <td className="px-4 py-3 font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(est.grand_total)}</td>
                         <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs whitespace-nowrap">
-                          <span>{formatDate(est.created_at)}</span>
+                          <span>{formatDateShort(est.created_at)}</span>
                           {est.is_expired && (
                             <Tooltip content="This estimate has expired">
                               <span className="ml-1.5 inline-flex items-center gap-0.5 text-[hsl(var(--warning))] text-[10px] font-semibold">
@@ -637,6 +626,7 @@ export function EstimatesListPage() {
                           )}
                         </td>
                         <td className="px-4 py-3">
+                          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
                           <div className={cn('flex items-center gap-1 transition-opacity', confirmDelete === est.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')} onClick={e => e.stopPropagation()}>
                             {confirmDelete === est.id ? (
                               <>

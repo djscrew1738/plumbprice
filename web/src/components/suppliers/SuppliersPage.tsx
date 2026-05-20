@@ -18,6 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { StatCard } from '@/components/ui/StatCard'
 import { Alert } from '@/components/ui/Alert'
 import dynamic from 'next/dynamic'
+import { COPY_FEEDBACK_MS } from '@/lib/constants'
 
 const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 const PriceHistoryModal = dynamic(() => import('./PriceHistoryModal').then(m => ({ default: m.PriceHistoryModal })), { ssr: false })
@@ -83,7 +84,7 @@ export function SuppliersPage() {
     void navigator.clipboard.writeText(sku).then(() => {
       setCopiedSku(sku)
       toast.success('SKU copied', sku)
-      setTimeout(() => setCopiedSku(null), 2000)
+      setTimeout(() => setCopiedSku(null), COPY_FEEDBACK_MS)
     })
   }
 
@@ -133,7 +134,7 @@ export function SuppliersPage() {
 
   const suppliers = ['ferguson', 'moore_supply', 'apex']
 
-  const hasStaleWarning = !staleDismissed && cacheStats && cacheStats.stale_count > 0
+  const hasStaleWarning = !staleDismissed && cacheStats && (cacheStats.stale_count ?? 0) > 0
 
   return (
     <div className="min-h-full">
@@ -202,7 +203,7 @@ export function SuppliersPage() {
                 )}
               >
                 Price Cache
-                {cacheStats && cacheStats.stale_count > 0 && (
+                {cacheStats && (cacheStats.stale_count ?? 0) > 0 && (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 )}
               </button>
@@ -215,28 +216,28 @@ export function SuppliersPage() {
                   <StatCard
                     icon={Database}
                     label="Cached Items"
-                    value={cacheStats?.cached_items ?? '—'}
+                    value={(cacheStats?.cached_items as number | undefined) ?? '—'}
                     loading={cacheLoading}
                     variant="default"
                   />
                   <StatCard
                     icon={Zap}
                     label="Hit Rate"
-                    value={cacheStats ? `${(cacheStats.hit_rate * 100).toFixed(1)}%` : '—'}
+                    value={cacheStats ? `${((cacheStats.hit_rate as number | undefined) ?? 0 * 100).toFixed(1)}%` : '—'}
                     loading={cacheLoading}
                     variant="success"
                   />
                   <StatCard
                     icon={AlertTriangle}
                     label="Stale Items"
-                    value={cacheStats?.stale_count ?? '—'}
+                    value={(cacheStats?.stale_count as number | undefined) ?? '—'}
                     loading={cacheLoading}
-                    variant={cacheStats && cacheStats.stale_count > 0 ? 'warning' : 'default'}
+                    variant={cacheStats && (cacheStats.stale_count ?? 0) > 0 ? 'warning' : 'default'}
                   />
                   <StatCard
                     icon={Clock}
                     label="Last Refresh"
-                    value={relativeTime(cacheStats?.last_refresh)}
+                    value={relativeTime(cacheStats?.last_refresh as string | undefined)}
                     loading={cacheLoading}
                     variant="default"
                   />

@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Download, X } from 'lucide-react'
+import { INSTALL_PROMPT_DISMISS_TTL_MS } from '@/lib/constants'
 
 const DISMISS_KEY = 'pp.installPrompt.dismissedAt'
-const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 days — don't pester
+const DISMISS_TTL_MS = INSTALL_PROMPT_DISMISS_TTL_MS  // don't pester
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>

@@ -2,6 +2,128 @@
 
 All notable changes to PlumbPrice are documented here.
 
+## 3.0.0 — AI & Pricing Engine Overhaul (2026-05-17)
+
+### Structured LLM Outputs
+- New `llm_structured.py` service replaces fragile `json_object` + `json.loads()` with Pydantic-structured generation via OpenAI `parse()`.
+- `ClassifyResult` model includes `reasoning` field for transparent chain-of-thought.
+- 3 retries with exponential backoff + fallback to keyword classifier on total failure.
+
+### Tool-Calling Agent v3
+- New `agent_v3.py` orchestrator with parallel tool execution:
+  `search_materials`, `get_labor_template`, `lookup_permit_cost`, `check_price_history`, `get_market_adjustments`.
+- Clarification mode when confidence < 0.8 — asks follow-up questions instead of guessing.
+- Full agent trace persistence to `agent_tool_calls` table for audit/debug.
+
+### Dynamic Market Pricing Engine
+- New `market_pricing.py` engine applies transparent factor adjustments to estimates.
+- Admin CRUD at `/admin/market-pricing` with impact preview on sample estimates.
+- Redis caching layer (5-minute TTL) for active adjustments to reduce DB load.
+- Cache invalidation on create/update/delete.
+
+### Blueprint Vision v3
+- `vision_v3.py` with fixture detection (bounding boxes), room detection (area sqft), and pipe run estimation (linear ft).
+- Celery worker updated to persist all three result sets: `BlueprintDetection`, `BlueprintRoom`, `BlueprintPipeRun`.
+- New `/api/v3/blueprints/quick-analyze` endpoint for instant image analysis from chat.
+
+### API v3 Router Suite
+- `/api/v3/chat` — SSE streaming with `reasoning`, `tool_call`, `tool_result`, `pricing`, `clarification` events.
+- `/api/v3/estimates` — CRUD with market adjustment awareness.
+- `/api/v3/blueprints` — Upload + takeoff with rooms & pipe runs.
+- `/api/v3/market-pricing` — Admin CRUD + preview.
+- `/api/v3/suppliers` — Health dashboard + HMAC-verified webhook receiver.
+- `/api/v3/agent-trace` — Debug/audit inspector.
+- v1 routes now emit `Deprecation`, `Sunset`, and `Link` headers (sunset 2026-09-01).
+
+### Frontend v3 Estimator
+- `EstimatorPageV3` is now the default at `/estimator`.
+- SSE streaming with `ReasoningBubble`, `ToolCallBubble`, `EstimateBreakdownV3`.
+- Blueprint image upload in chat — attaches image, runs quick vision analysis, prepends summary to message.
+- `MarketAdjustmentBadge` shows each applied factor with rationale.
+- `ClarificationModal` opens when confidence is below threshold.
+
+### Admin v3 Pages
+- `/admin/market-pricing` — CRUD + preview.
+- `/admin/agent-traces` — Search by estimate ID, view classification reasoning + tool calls.
+- `/admin/supplier-health` — Supplier status, product counts, webhook delivery stats.
+
+### Infrastructure
+- Database migration `v3p0p0_ai_overhaul_2026_05.py` adds 5 new tables + v3 columns.
+- Version bumped: `2.5.1` → `3.0.0`.
+
+## Unreleased — UI overhaul (in-progress)
+
+Goal: reduce visual clunkiness, get estimators to action faster, tighten
+density without losing branding (burnt-orange palette, Plus Jakarta Sans).
+
+### Foundations
+- New design tokens added to `globals.css` (additive, non-breaking):
+  `--surface-1/2/3`, `--border-subtle/strong`, `--ring-focus`,
+  `--radius-xs/sm/md/lg/xl/2xl`, `--shadow-sm/md/lg/xl`, density vars
+  `--space-page-x/y/section/card`, sidebar rail width `--sidebar-rail`
+  (64px) + dynamic `--sidebar-current` for hover-expand without reflow.
+- Header height slimmed from 68 → 64px (56px on `<= sm`).
+- New layout shell primitives under `web/src/components/layout/shell/`:
+  `PageShell`, `PageHeader`, `Section`, `Stack`, `Inline`, `Grid`.
+- New hooks: `useReducedMotion`, `useBreakpoint` (+ `useMinBreakpoint`),
+  `useSidebarPinned` (persisted via `localStorage["pp_sidebar_pinned"]`).
+- Added Radix primitives + `cmdk` + `react-hook-form` + `zod` to support
+  upcoming a11y-hardened menus, command palette, and form layer. Existing
+  primitives are unchanged.
+
+### Navigation chrome
+- **Sidebar**: rebuilt as a 64px icon rail that hover/focus-expands to
+  248px, with a pin toggle (persists across sessions). Collapsed nav rows
+  show Radix tooltips on the right for keyboard a11y. Hover-expand
+  overlays content with elevation `--shadow-lg` instead of pushing it.
+  Recent jobs list only renders when expanded.
+- **Header**: single-line truncating breadcrumb on `sm+`, just the page
+  title on mobile. DFW pill moved to `md+` only. Tighter horizontal
+  padding and 40px tap targets on the menu/avatar buttons.
+- **MobileNav**: now respects `prefers-reduced-motion` (no slide
+  animation on the active-tab indicator). Icons bumped to 20px for
+  better legibility.
+
+### Home redesign (action-first launcher)
+- Replaced marketing-style hero with **HomeHero**: two large primary
+  action tiles (`New estimate`, `Upload blueprint`) plus an optional
+  Resume tile when an open chat session exists.
+- Replaced the icon-heavy 5-card stat grid with **KpiStrip**: compact,
+  icon-free, horizontally scrollable on mobile, with optional links and
+  warning/success tones.
+- New **ActivityPanel**: side-by-side Recent jobs / Recent sessions on
+  `lg+`, tabbed (Radix Tabs) on smaller viewports.
+- New **InsightsPanel**: collapsible chart panel + expired-estimate
+  warning banner. Chart is lazy-loaded via `next/dynamic` to keep the
+  Home initial bundle lean.
+- Sub-components extracted to `web/src/components/workspace/home/` for
+  focused testing and bundle-splitting.
+- Updated `LauncherHome.test.tsx` to assert the new copy / link names
+  while preserving the original href contracts.
+
+### Utilities
+- `@/lib/utils` now exports `formatCurrency`, `formatCurrencyDecimal`,
+  `formatRelativeTime`, `downloadBlob`, and `getConfidenceColor`
+  alongside the existing `cn` helper.
+
+### Stubs (unblocking pre-existing branch breakage)
+Minimal implementations added so the redesign isn't blocked by missing
+modules from the in-progress `feat/estimator-mutations-proposals-split`
+branch: `@/lib/branding`, `@/lib/notifications`, `@/lib/useOnlineStatus`,
+`@/lib/hooks/useWebSocket`, `@/lib/hooks/useOutbox`,
+`@/lib/hooks/useFeatureFlags`. Each stub matches the inferred call-site
+shape; replace with the real implementations as that work lands.
+
+### Not yet shipped
+The following plan items remain for follow-up commits:
+- Phase 4 — adopt new shell primitives in `pipeline`, `estimates`,
+  and `estimator` page roots.
+- Phase 5 — Radix-backed `Card`/`Dialog`/`Popover`/`Tooltip`/`Tabs`/
+  `DropdownMenu` primitives, `cmdk` Command Palette, RHF + zod form
+  layer wrappers.
+- Phase 6 — full motion audit, multi-viewport visual QA, performance
+  budget refresh.
+
 ## 2.5.1 — Reliability + Quality + Speed
 
 ### Reliability (already in tree, hardened/verified)

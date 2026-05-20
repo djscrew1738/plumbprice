@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { EstimatorPage } from '@/components/estimator/EstimatorPage'
+import { EstimatorPageV3 } from '@/components/estimator-v3/EstimatorPageV3'
 import { EmptyStateSkeleton, ChatSkeleton } from '@/components/ui/Skeleton'
 
 function EstimatorPageFallback() {
@@ -31,7 +31,7 @@ function EstimatorPageFallback() {
 export default function Estimator() {
   return (
     <Suspense fallback={<EstimatorPageFallback />}>
-      <EstimatorPage />
+      <EstimatorPageV3 />
     </Suspense>
   )
 }

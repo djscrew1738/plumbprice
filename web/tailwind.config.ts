@@ -3,7 +3,6 @@ import tailwindcssAnimate from 'tailwindcss-animate'
 
 const config: Config = {
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
@@ -62,9 +61,23 @@ const config: Config = {
         mono: ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
+        // Keep `lg/md/sm` mapped to legacy `--radius` so existing utility
+        // classes (`rounded-lg`, etc.) remain visually identical. New
+        // tokens are exposed under their own scale.
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        'token-xs': 'var(--radius-xs)',
+        'token-sm': 'var(--radius-sm)',
+        'token-md': 'var(--radius-md)',
+        'token-lg': 'var(--radius-lg)',
+        'token-xl': 'var(--radius-xl)',
+        'token-2xl': 'var(--radius-2xl)',
+      },
+      boxShadow: {
+        'elev-1': 'var(--shadow-sm)',
+        'elev-2': 'var(--shadow-md)',
+        'elev-3': 'var(--shadow-lg)',
       },
       keyframes: {
         'accordion-down': {

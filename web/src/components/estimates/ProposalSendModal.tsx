@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { RefreshCw, Copy, Check, FileText, ChevronDown, ChevronUp } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+import { COPY_FEEDBACK_MS } from '@/lib/constants'
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
@@ -52,7 +53,7 @@ export function ProposalSendModal({
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     } catch { /* ignore */ }
   }
 

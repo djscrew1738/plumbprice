@@ -36,6 +36,13 @@ class Estimate(Base):
     # Preferred supplier
     preferred_supplier = Column(String(100), nullable=True)
 
+    # v3 — Market pricing & agent traceability
+    market_adjustment_applied = Column(Float, default=1.0)
+    agent_trace = Column(JSON, default=dict)
+    blueprint_room_count = Column(Integer, nullable=True)
+    blueprint_pipe_run_ft = Column(Float, nullable=True)
+    confidence_components = Column(JSON, default=dict)
+
     # Metadata
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)

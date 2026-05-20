@@ -79,6 +79,7 @@ export function CreateProjectModal({ open, onClose, onCreated }: CreateProjectMo
       >
         <Input
           label="Project Name *"
+          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
           value={form.name}
           onChange={e => set('name', e.target.value)}

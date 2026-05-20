@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
@@ -28,7 +28,7 @@ describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default mock response for hydration
-    ;(api.get as any).mockResolvedValue({ data: null })
+    ;(api.get as Mock).mockResolvedValue({ data: null })
   })
 
   it('provides auth context with default values after loading', async () => {
@@ -63,7 +63,7 @@ describe('AuthContext', () => {
   })
 
   it('handles logout action without throwing', async () => {
-    (api.post as any).mockResolvedValue({ data: {} })
+    ;(api.post as Mock).mockResolvedValue({ data: {} })
     render(
       <AuthProvider>
         <TestComponent />

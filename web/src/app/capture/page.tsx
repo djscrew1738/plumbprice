@@ -20,6 +20,8 @@ import { api } from '@/lib/api'
 import { preprocessImage } from '@/lib/imageProcessing'
 import { getGeolocation, type GeoFix } from '@/lib/getGeolocation'
 import { haptic } from '@/lib/haptics'
+import { DFW_COUNTIES, DEFAULT_COUNTY } from '@/lib/constants'
+import { API_TIMEOUT_LONG_MS } from '@/lib/constants'
 
 const MAX_PHOTOS = 5
 
@@ -63,7 +65,7 @@ export default function CaptureRoute() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [slots, setSlots] = useState<PhotoSlot[]>([])
   const [note, setNote] = useState('')
-  const [county, setCounty] = useState('Dallas')
+  const [county, setCounty] = useState(DEFAULT_COUNTY)
   const [urgency, setUrgency] = useState('standard')
   const [access, setAccess] = useState('first_floor')
   const [geo, setGeo] = useState<GeoFix | null>(null)
@@ -92,7 +94,7 @@ export default function CaptureRoute() {
       setSlots((s) => [
         ...s,
         {
-          id: `${Date.now()}-${Math.random()}`,
+          id: `${Date.now()}-${crypto.randomUUID()}`,
           file: newFile,
           previewUrl: url,
           origBytes: f.size,
@@ -157,7 +159,7 @@ export default function CaptureRoute() {
         }
         const res = await api.post<QuoteResponse>('/photos/quick-quote', fd, {
           headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 90_000,
+          timeout: API_TIMEOUT_LONG_MS,
         })
         out.push({ slotId: slot.id, ok: res.data.status !== 'vision_error', quote: res.data })
       } catch (e: unknown) {
@@ -208,7 +210,7 @@ export default function CaptureRoute() {
         {slots.map((s) => (
           <div key={s.id} className="relative aspect-square overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.4)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.previewUrl} alt="preview" className="h-full w-full object-cover" />
+            <img src={s.previewUrl} alt="Field preview" className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => removeSlot(s.id)}
@@ -272,7 +274,7 @@ export default function CaptureRoute() {
               onChange={(e) => setCounty(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2"
             >
-              {['Dallas', 'Tarrant', 'Collin', 'Denton', 'Rockwall', 'Ellis', 'Kaufman'].map((c) => (
+              {DFW_COUNTIES.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>

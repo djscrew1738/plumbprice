@@ -20,6 +20,7 @@ class Supplier(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     products = relationship("SupplierProduct", back_populates="supplier")
+    webhooks = relationship("SupplierWebhook", back_populates="supplier", cascade="all, delete-orphan")
 
 
 class SupplierProduct(Base):

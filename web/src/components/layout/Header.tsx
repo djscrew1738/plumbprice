@@ -96,57 +96,70 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header
-      className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[color:var(--panel)]/95 backdrop-blur-xl"
+      className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[color:var(--panel)]/90 backdrop-blur-xl"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="flex h-[var(--header-height)] items-center gap-3 px-4">
+      <div className="flex h-[var(--header-height)] items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <button
           onClick={onMenuClick}
-          className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-[0.85rem] text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] lg:hidden"
           aria-label="Open navigation"
         >
           <Menu size={18} aria-hidden="true" />
         </button>
+
+        {/* Title + breadcrumb */}
         <div className="min-w-0 flex-1">
-          <Link href="/" className="group inline-block">
-            <p className="text-[11px] font-bold text-[color:var(--accent-strong)] transition-colors group-hover:text-[color:var(--accent-strong)]">
-              PlumbPrice AI
-            </p>
-            <h1 className="truncate text-lg font-bold text-[color:var(--ink)] group-hover:text-[color:var(--accent-strong)] transition-colors">
-              {meta.title}
-            </h1>
-          </Link>
-          {breadcrumb.length > 1 && (
-            <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-1 mt-0.5">
+          {/* Mobile: just the page title */}
+          <h1 className="truncate text-base font-semibold text-[color:var(--ink)] sm:hidden">
+            {meta.title}
+          </h1>
+
+          {/* sm+: single-line breadcrumb collapsing on overflow */}
+          {breadcrumb.length > 1 ? (
+            <nav
+              aria-label="Breadcrumb"
+              className="hidden items-center gap-1.5 sm:flex"
+            >
               {breadcrumb.map((crumb, i) => (
-                <span key={crumb.href} className="flex items-center gap-1">
-                  {i > 0 && <ChevronRight size={10} className="text-[color:var(--muted-ink)] opacity-50" aria-hidden="true" />}
+                <span key={crumb.href} className="flex min-w-0 items-center gap-1.5">
+                  {i > 0 && (
+                    <ChevronRight
+                      size={12}
+                      className="flex-shrink-0 text-[color:var(--muted-ink)] opacity-50"
+                      aria-hidden="true"
+                    />
+                  )}
                   {i < breadcrumb.length - 1 ? (
                     <Link
                       href={crumb.href}
-                      className="text-[10px] text-[color:var(--muted-ink)] hover:text-[color:var(--accent-strong)] transition-colors"
+                      className="truncate text-xs font-medium text-[color:var(--muted-ink)] transition-colors hover:text-[color:var(--accent-strong)]"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="text-[10px] font-medium text-[color:var(--muted-ink)]">
+                    <span className="truncate text-sm font-semibold text-[color:var(--ink)]">
                       {crumb.label}
                     </span>
                   )}
                 </span>
               ))}
             </nav>
+          ) : (
+            <h1 className="hidden truncate text-lg font-semibold text-[color:var(--ink)] sm:block">
+              {meta.title}
+            </h1>
           )}
         </div>
+
         <Tooltip content="Dallas-Fort Worth metro area">
-          <div
-            className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 sm:flex"
-          >
+          <div className="hidden items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 md:flex">
             <MapPin size={12} className="text-[color:var(--accent-strong)]" aria-hidden="true" />
             <span className="text-xs font-medium text-[color:var(--muted-ink)]">DFW</span>
           </div>
         </Tooltip>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1 sm:gap-2">
           <OutboxBadge />
           <NotificationBell />
           <ThemeToggle />

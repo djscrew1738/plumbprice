@@ -12,7 +12,8 @@ describe('haptics', () => {
 
   it('returns false when navigator.vibrate is missing', () => {
     const original = nav().vibrate
-    delete nav().vibrate
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Reflect.deleteProperty(navigator as any, 'vibrate')
     expect(hapticsEnabled()).toBe(false)
     if (original) nav().vibrate = original
   })

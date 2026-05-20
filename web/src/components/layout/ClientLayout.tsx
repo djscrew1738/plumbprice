@@ -38,13 +38,14 @@ const WhatsNewBanner = dynamic(
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import { registerServiceWorker } from '@/lib/registerSW'
+import { QUERY_STALE_TIME_MS, QUERY_GC_TIME_MS } from '@/lib/constants'
 
 export function ClientLayout({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60_000,   // 5 min — reduces refetches on route transitions
-        gcTime: 10 * 60_000,     // 10 min — must exceed staleTime to avoid early GC
+        staleTime: QUERY_STALE_TIME_MS,
+        gcTime: QUERY_GC_TIME_MS,
         retry: 1,
         refetchOnWindowFocus: false,
       },
@@ -137,13 +138,16 @@ export function ClientLayout({ children }: { children: ReactNode }) {
                   transition={{ duration: 0.18 }}
                   className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 lg:hidden"
                   onClick={closeSidebar}
-                  aria-hidden={sidebarOpen ? "false" : "true"}
                 />
               )}
             </AnimatePresence>
 
             {/* Main */}
-            <div id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-h-0 min-w-0 lg:ml-[248px] outline-none">
+            <div
+              id="main-content"
+              tabIndex={-1}
+              className="flex min-h-0 min-w-0 flex-1 flex-col outline-none transition-[margin] duration-200 ease-out lg:ml-[var(--sidebar-current,64px)]"
+            >
               <Header onMenuClick={openSidebar} />
               <main className="app-scroll flex-1 overflow-y-auto overflow-x-hidden">
                 <AnimatePresence initial={false}>

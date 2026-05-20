@@ -86,9 +86,9 @@ export function SessionHistoryPage() {
     (e: React.MouseEvent, id: number) => {
       e.stopPropagation()
       cloneSession.mutate(id, {
-        onSuccess: (res) => {
+        onSuccess: (res: { id: number }) => {
           toast.success('Session cloned', 'Opening cloned session…')
-          router.push(`/estimator?session=${res.data.id}`)
+          router.push(`/estimator?session=${res.id}`)
         },
         onError: () => toast.error('Could not clone session', 'Please try again.'),
       })

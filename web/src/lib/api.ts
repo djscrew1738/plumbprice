@@ -119,7 +119,7 @@ export const chatApi = {
     api.post<ChatPriceResponse>('/chat/price', body),
 
   /** SSE stream — yields parsed ChatPriceStreamEvents until done */
-  async *priceStream(body: ChatPriceRequest): AsyncGenerator<ChatPriceStreamEvent> {
+  async *priceStream(body: ChatPriceRequest, signal?: AbortSignal): AsyncGenerator<ChatPriceStreamEvent> {
     const base = typeof window === 'undefined'
       ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
       : ''
@@ -128,6 +128,7 @@ export const chatApi = {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(body),
+      signal,
     })
     if (!res.ok || !res.body) {
       throw new Error(`Stream request failed: ${res.status}`)

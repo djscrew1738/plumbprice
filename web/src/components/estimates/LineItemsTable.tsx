@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatCurrencyDecimal } from '@/lib/utils'
+import { LINE_TYPE_VARIANT } from '@/lib/badgeConfig'
 import { WhyThisPriceModal } from './WhyThisPriceModal'
 
 export interface LineItem {
@@ -48,13 +49,6 @@ const LINE_TYPE_LABEL: Record<string, string> = {
   misc: 'Misc',
 }
 
-const LINE_TYPE_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent'> = {
-  labor:    'info',
-  material: 'success',
-  markup:   'warning',
-  tax:      'neutral',
-  misc:     'info',
-}
 
 export interface LineItemsTableProps {
   lineItems: LineItem[]

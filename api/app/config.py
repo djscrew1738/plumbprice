@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # App
     app_name: str = "PlumbPrice AI"
-    version: str = "2.5.1"
+    version: str = "3.0.0"
     environment: str = "development"
     log_level: str = "INFO"
     debug: bool = False

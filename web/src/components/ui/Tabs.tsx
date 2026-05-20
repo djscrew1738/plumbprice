@@ -102,6 +102,7 @@ export function TabsList({ children, className }: TabsListProps) {
     <div
       ref={listRef}
       role="tablist"
+      tabIndex={0}
       onKeyDown={handleKeyDown}
       className={cn(
         'relative flex border-b border-[color:var(--line)]',

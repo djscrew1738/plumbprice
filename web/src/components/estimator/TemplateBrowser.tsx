@@ -29,7 +29,11 @@ export function TemplateBrowser({ open, onClose, onSelect }: TemplateBrowserProp
     setLoading(true)
     templatesApi.list()
       .then(res => { if (active) setTemplates(res.data) })
-      .catch(() => {})
+      .catch((err) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to load templates', err)
+        }
+      })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [open])

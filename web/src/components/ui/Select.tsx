@@ -209,9 +209,8 @@ export function Select({
 
         <span className="flex shrink-0 items-center gap-1">
           {clearable && selected && (
-            <span
-              role="button"
-              tabIndex={-1}
+            <button
+              type="button"
               aria-label="Clear selection"
               onClick={(e) => {
                 e.stopPropagation()
@@ -220,7 +219,7 @@ export function Select({
               className="rounded p-0.5 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
             >
               <X className="h-3.5 w-3.5" />
-            </span>
+            </button>
           )}
           <ChevronDown
             aria-hidden="true"
@@ -276,6 +275,7 @@ export function Select({
           )}
 
           {filtered.map((opt, idx) => (
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events
             <li
               key={opt.value}
               role="option"

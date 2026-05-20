@@ -21,6 +21,7 @@ import {
   type OrgUser,
 } from '@/lib/hooks'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { formatDateMedium } from '@/lib/formatters'
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -32,18 +33,6 @@ const ROLE_BADGE_VARIANT: Record<string, 'accent' | 'info' | 'neutral'> = {
   admin: 'accent',
   estimator: 'info',
   viewer: 'neutral',
-}
-
-function formatDate(dateStr: string) {
-  try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date(dateStr))
-  } catch {
-    return dateStr
-  }
 }
 
 export function OrganizationPage() {
@@ -167,7 +156,7 @@ export function OrganizationPage() {
       width: '120px',
       render: (row) => (
         <span className="text-xs text-[color:var(--muted-ink)]">
-          {formatDate(row.created_at ?? row.joined_at ?? '')}
+          {formatDateMedium(row.created_at ?? row.joined_at ?? '')}
         </span>
       ),
     },
