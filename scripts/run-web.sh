@@ -22,10 +22,23 @@ if [[ ! -f "$STANDALONE_SERVER" ]]; then
   exit 1
 fi
 
-perl -0pi -e "s|http://localhost:8000/api/:path\\*|${API_URL}/api/:path*|g; s|http://${PUBLIC_HOST}:8200/api/:path\\*|${API_URL}/api/:path*|g; s|http://${PUBLIC_HOST}:${API_PORT}/api/:path\\*|${API_URL}/api/:path*|g; s|https://${PUBLIC_HOST}/api/:path\\*|${API_URL}/api/:path*|g" \
-  "$BUILD_DIR/routes-manifest.json" \
-  "$BUILD_DIR/required-server-files.json" \
+# Patch any stale API proxy URLs in the build artifacts (catches localhost:*, 127.0.0.1:*)
+PATCH_FILES=(
+  "$BUILD_DIR/routes-manifest.json"
+  "$BUILD_DIR/required-server-files.json"
   "$STANDALONE_SERVER"
+  "$BUILD_DIR/standalone/.next/routes-manifest.json"
+  "$BUILD_DIR/standalone/.next/required-server-files.json"
+)
+for f in "${PATCH_FILES[@]}"; do
+  [[ -f "$f" ]] || continue
+  perl -0pi -e "
+    s|http://localhost:\d+/api/|${API_URL}/api/|g;
+    s|http://127\.0\.0\.1:\d+/api/|${API_URL}/api/|g;
+    s|http://${PUBLIC_HOST:-NOPUBHOST}:\d+/api/|${API_URL}/api/|g;
+    s|https://${PUBLIC_HOST:-NOPUBHOST}/api/|${API_URL}/api/|g;
+  " "$f"
+done
 
 cd "$ROOT/web"
 exec env PORT="${WEB_PORT}" HOSTNAME=0.0.0.0 node "$STANDALONE_SERVER"
