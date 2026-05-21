@@ -1,22 +1,21 @@
 """
-Phase 5 — Autonomous Customer Agent.
+Phase 5 — Autonomous Customer Agent (v3).
 
 Public, unauthenticated quote widget. Hard-coded guardrails so this can sit on
 the marketing site without leaking margin or booking work outside our scope.
 
 Workflow:
-    1. Visitor types a message ("how much for a new toilet?") plus optional
-       contact info (name/phone/email) and ZIP/county.
-    2. We run their message through the normal chat agent (`process_chat_message`).
+    1. Visitor types a message plus optional contact info and ZIP/county.
+    2. We run their message through the v3 agent (`agent_v3.process_message`).
     3. We apply guardrails:
          - task_code must be in `public_agent_allowed_tasks`
          - grand_total must be <= `public_agent_max_total_usd`
          - confidence must not be "low"
-    4. If guardrails pass → return the priced draft.
-       If not → return a polite "we'll have a tech call you" message.
+    4. If clarification needed → return follow-up questions.
+       If guardrails pass → return the priced draft with line items.
+       If not → return a polite "we'll call you" message.
     5. Either way: if contact info was supplied, we persist a Project at
-       `status="lead"` and (when priced) attach the estimate, so Cory sees
-       every conversation in the pipeline.
+       `status="lead"` and attach the estimate when priced.
 
 Rate limiting is by client IP via slowapi.
 """
@@ -35,7 +34,7 @@ from app.config import settings
 from app.core.limiter import limiter
 from app.database import get_db
 from app.models.projects import Project, ProjectActivity
-from app.services.agent import process_chat_message
+from app.services.agent_v3 import agent_v3, AgentV3Result
 from app.services.estimate_service import persist_estimate
 from app.services.public_agent_audit import record_audit
 
@@ -54,28 +53,51 @@ class PublicCustomer(BaseModel):
     zip_code: Optional[str] = Field(default=None, max_length=10)
 
 
+class HistoryMessage(BaseModel):
+    role: str = Field(..., pattern=r"^(user|assistant)$")
+    content: str
+
+
 class PublicQuoteRequest(BaseModel):
     message: str = Field(..., min_length=2, max_length=1500)
     county: Optional[str] = Field(default=None, max_length=100)
     customer: Optional[PublicCustomer] = None
+    history: Optional[list[HistoryMessage]] = None
+
+
+class LineItemSummary(BaseModel):
+    description: str
+    quantity: float
+    unit: str
+    unit_cost: float
+    total_cost: float
+    line_type: str
 
 
 class PublicQuoteEstimate(BaseModel):
     task_code: Optional[str]
     grand_total: float
+    subtotal: float
     labor_total: float
     materials_total: float
     tax_total: float
+    markup_total: float
+    misc_total: float
+    confidence: float
     confidence_label: Optional[str]
+    line_items: list[LineItemSummary] = []
+    assumptions: list[str] = []
+    market_adjustments: list[dict] = []
 
 
 class PublicQuoteResponse(BaseModel):
-    status: str  # "ok" | "lead_only" | "out_of_scope" | "uncertain"
+    status: str  # "ok" | "lead_only" | "out_of_scope" | "uncertain" | "clarification"
     answer: str
     task_code: Optional[str] = None
     estimate: Optional[PublicQuoteEstimate] = None
     lead_id: Optional[int] = None
     follow_up_required: bool = False
+    clarification_questions: list[str] = []
 
 
 # ── Guardrail helpers ──────────────────────────────────────────────────────
@@ -86,7 +108,12 @@ def _allowed_task_set() -> set[str]:
     return {t.strip().upper() for t in raw.split(",") if t.strip()}
 
 
-def _passes_guardrails(task_code: Optional[str], grand_total: float, confidence_label: Optional[str]):
+def _passes_guardrails(
+    task_code: Optional[str],
+    grand_total: float,
+    confidence: float,
+    confidence_label: Optional[str],
+):
     """
     Returns (ok: bool, reason: str). `reason` is the short tag that drives
     which canned response we send back.
@@ -97,7 +124,7 @@ def _passes_guardrails(task_code: Optional[str], grand_total: float, confidence_
         return False, "out_of_scope"
     if grand_total > settings.public_agent_max_total_usd:
         return False, "too_large"
-    if (confidence_label or "").lower() in {"low", "very_low"}:
+    if confidence < 0.6 or (confidence_label or "").lower() in {"low", "very_low"}:
         return False, "uncertain"
     return True, "ok"
 
@@ -111,7 +138,7 @@ async def _capture_lead(
     customer: Optional[PublicCustomer],
     message: str,
     county: Optional[str],
-    estimate_result,
+    agent_result: Optional[AgentV3Result],
     note: str,
 ) -> Optional[int]:
     """Create or update a `lead` Project for this visitor, if they gave contact info."""
@@ -142,7 +169,7 @@ async def _capture_lead(
             county=county or "Dallas",
             city=county or "Dallas",
             notes=f"[public widget] {message[:1500]}",
-            created_by=None,  # public widget has no user
+            created_by=None,
             organization_id=None,
         )
         db.add(project)
@@ -162,11 +189,11 @@ async def _capture_lead(
     ))
     await db.flush()
 
-    if estimate_result is not None:
+    if agent_result is not None and agent_result.estimate and agent_result.estimate.grand_total > 0:
         try:
             await persist_estimate(
                 db=db,
-                result=estimate_result,
+                result=agent_result.estimate,
                 title=f"Public widget — {message[:60]}",
                 county=county or "Dallas",
                 preferred_supplier=None,
@@ -177,8 +204,6 @@ async def _capture_lead(
                 project_id=project.id,
             )
         except Exception as e:
-            # Don't fail the public response if persistence has a hiccup —
-            # the lead row is the critical record.
             logger.warning("public_agent.persist_estimate_failed",
                            project_id=project.id, error=str(e))
 
@@ -196,7 +221,7 @@ async def public_quote(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Public, unauthenticated quote endpoint for the marketing-site widget.
+    Public, unauthenticated quote endpoint for the marketing-site widget (v3).
     """
     if not settings.public_agent_enabled:
         raise HTTPException(status_code=503, detail="Public quote widget is disabled")
@@ -205,46 +230,73 @@ async def public_quote(
     logger.info("public_agent.request",
                 ip=client_ip, msg_chars=len(body.message), county=body.county)
 
-    result = await process_chat_message(
+    history = None
+    if body.history:
+        history = [{"role": h.role, "content": h.content} for h in body.history]
+
+    result = await agent_v3.process_message(
         message=body.message,
         county=body.county or None,
         preferred_supplier=None,
-        job_type=None,
-        history=None,
+        history=history,
         db=db,
+        skip_llm_response=False,
         user_id=None,
     )
 
-    estimate_result = result.pop("_estimate_result", None)
-    task_code = (getattr(estimate_result, "template_code", None) if estimate_result else None)
-    answer = result.get("answer", "")
-    confidence_label = (
-        getattr(estimate_result, "confidence_label", None) if estimate_result else None
-    )
-    grand_total = float(getattr(estimate_result, "grand_total", 0.0) or 0.0) if estimate_result else 0.0
+    # Clarification mode
+    if result.clarification_questions:
+        return PublicQuoteResponse(
+            status="clarification",
+            answer="I need a little more detail to give you an accurate price.",
+            clarification_questions=result.clarification_questions,
+            follow_up_required=True,
+        )
 
-    ok, reason = _passes_guardrails(task_code, grand_total, confidence_label)
+    task_code = result.classification.task_code
+    confidence = result.classification.confidence
+    confidence_label = result.estimate.confidence_label if result.estimate else None
+    grand_total = result.estimate.grand_total if result.estimate else 0.0
+
+    ok, reason = _passes_guardrails(task_code, grand_total, confidence, confidence_label)
 
     estimate_summary: Optional[PublicQuoteEstimate] = None
     response_status = "ok" if ok else reason
-    follow_up = False
+    follow_up = not ok
 
-    if ok and estimate_result is not None:
+    if ok and result.estimate:
+        line_items = []
+        for li in getattr(result.estimate, "line_items", []) or []:
+            line_items.append(LineItemSummary(
+                description=getattr(li, "description", ""),
+                quantity=float(getattr(li, "quantity", 0)),
+                unit=getattr(li, "unit", "ea"),
+                unit_cost=float(getattr(li, "unit_cost", 0.0)),
+                total_cost=float(getattr(li, "total_cost", 0.0)),
+                line_type=getattr(li, "line_type", "material"),
+            ))
+
         estimate_summary = PublicQuoteEstimate(
             task_code=task_code,
             grand_total=grand_total,
-            labor_total=float(getattr(estimate_result, "labor_total", 0.0) or 0.0),
-            materials_total=float(getattr(estimate_result, "materials_total", 0.0) or 0.0),
-            tax_total=float(getattr(estimate_result, "tax_total", 0.0) or 0.0),
+            subtotal=float(getattr(result.estimate, "subtotal", grand_total)),
+            labor_total=float(getattr(result.estimate, "labor_total", 0.0)),
+            materials_total=float(getattr(result.estimate, "materials_total", 0.0)),
+            tax_total=float(getattr(result.estimate, "tax_total", 0.0)),
+            markup_total=float(getattr(result.estimate, "markup_total", 0.0)),
+            misc_total=float(getattr(result.estimate, "misc_total", 0.0)),
+            confidence=round(confidence, 2),
             confidence_label=confidence_label,
+            line_items=line_items,
+            assumptions=list(getattr(result.estimate, "assumptions", [])),
+            market_adjustments=result.market_adjustments_applied,
         )
         public_answer = (
-            f"{answer}\n\n"
+            f"{result.narrative or 'Here is your estimate.'}\n\n"
             "This is an instant estimate based on typical DFW jobs. "
             "A licensed plumber will confirm the price before any work begins."
         )
     else:
-        follow_up = True
         if reason == "too_large":
             public_answer = (
                 "Thanks — that sounds like a larger project than our instant-quote "
@@ -268,7 +320,7 @@ async def public_quote(
         customer=body.customer,
         message=body.message,
         county=body.county,
-        estimate_result=estimate_result if ok else None,
+        agent_result=result if ok else None,
         note=public_answer,
     )
 
@@ -289,7 +341,7 @@ async def public_quote(
             logger.warning("public_agent.anomaly",
                            ip=client_ip, score=audit.anomaly_score,
                            flags=audit.anomaly_flags, audit_id=audit.id)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("public_agent.audit_failed", error=str(e))
 
     await db.commit()
@@ -305,6 +357,7 @@ async def public_quote(
         estimate=estimate_summary,
         lead_id=lead_id,
         follow_up_required=follow_up,
+        clarification_questions=[],
     )
 
 

@@ -250,6 +250,12 @@ class AgentV3:
                     classification=classification,
                     estimate=EstimateResult(
                         template_code=None,
+                        assembly_code=None,
+                        job_type="service",
+                        access_type="first_floor",
+                        urgency_type="standard",
+                        county=classification.county,
+                        tax_rate=0.0825,
                         line_items=[],
                         labor_total=0.0,
                         materials_total=0.0,
@@ -261,7 +267,8 @@ class AgentV3:
                         confidence_score=classification.confidence,
                         confidence_label="LOW",
                         assumptions=["Insufficient information to generate estimate"],
-                        trace_json={},
+                        sources=["agent_v3_clarification"],
+                        pricing_trace={},
                     ),
                     clarification_questions=clarification.questions,
                     classified_by=classified_by,
@@ -336,6 +343,12 @@ class AgentV3:
             # Unclassifiable
             estimate = EstimateResult(
                 template_code=None,
+                assembly_code=None,
+                job_type="service",
+                access_type="first_floor",
+                urgency_type="standard",
+                county=classification.county,
+                tax_rate=0.0825,
                 line_items=[],
                 labor_total=0.0,
                 materials_total=0.0,
@@ -347,7 +360,8 @@ class AgentV3:
                 confidence_score=classification.confidence,
                 confidence_label="LOW",
                 assumptions=["Could not identify the plumbing task from the description"],
-                trace_json={},
+                sources=["agent_v3_unclassifiable"],
+                pricing_trace={},
             )
 
         # ── Step 5: Market pricing adjustments ────────────────────────────────
