@@ -294,7 +294,7 @@ class VisionServiceV3:
                 "start_point": _parse_point(start_point),
                 "end_point": _parse_point(end_point),
                 "length_ft": length_ft,
-                "bounding_box": _parse_point(bbox) if bbox else None,
+                "bounding_box": bbox if isinstance(bbox, dict) else None,
                 "confidence": confidence,
             })
 

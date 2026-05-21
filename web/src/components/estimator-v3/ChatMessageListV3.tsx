@@ -147,6 +147,7 @@ export function ChatMessageListV3({
                     </span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => onViewBreakdown(message)}
                     className="w-full rounded-lg bg-[color:var(--accent)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
                   >
@@ -162,6 +163,7 @@ export function ChatMessageListV3({
                 </span>
                 {message.role === 'assistant' && message.content && (
                   <button
+                    type="button"
                     onClick={() => onCopyMessage(message.id, message.content)}
                     className="rounded p-1 text-[color:var(--muted-ink)] opacity-0 transition-opacity hover:bg-[color:var(--panel-strong)] group-hover:opacity-100"
                     aria-label="Copy message"
@@ -184,6 +186,7 @@ export function ChatMessageListV3({
           <div className="max-w-[75%]">
             <ChatSkeleton />
             <button
+              type="button"
               onClick={onStopGenerating}
               className="mt-2 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-3 py-1.5 text-xs font-medium text-[color:var(--muted-ink)] hover:bg-[color:var(--panel)] transition-colors"
             >

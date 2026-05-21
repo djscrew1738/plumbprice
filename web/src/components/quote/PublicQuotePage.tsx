@@ -202,6 +202,7 @@ export function PublicQuotePage() {
                 <div className="mt-2 flex flex-wrap gap-2 text-left">
                   {t.clarificationQuestions.map((q, qi) => (
                     <button
+                      type="button"
                       key={qi}
                       onClick={() => send(q)}
                       className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-200"

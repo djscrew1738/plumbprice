@@ -42,6 +42,7 @@ export function ClarificationModal({ questions, onAnswer, onDismiss }: Clarifica
         <div className="space-y-2 mb-3">
           {questions.map((q, i) => (
             <button
+              type="button"
               key={i}
               onClick={() => { setSelected(q); setCustom('') }}
               className={cn(
@@ -64,6 +65,7 @@ export function ClarificationModal({ questions, onAnswer, onDismiss }: Clarifica
         />
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={!selected && !custom.trim()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
@@ -72,6 +74,7 @@ export function ClarificationModal({ questions, onAnswer, onDismiss }: Clarifica
             Submit
           </button>
           <button
+            type="button"
             onClick={onDismiss}
             className="rounded-lg border border-[color:var(--line)] px-3 py-1.5 text-xs font-medium text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)]"
           >

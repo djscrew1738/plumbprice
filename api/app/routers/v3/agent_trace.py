@@ -23,7 +23,7 @@ async def get_estimate_trace(
 ):
     """Get the full agent trace for an estimate — tool calls, reasoning, latencies."""
     # Verify estimate ownership
-    stmt = select(Estimate).where(Estimate.id == estimate_id)
+    stmt = select(Estimate).where(Estimate.id == estimate_id, Estimate.deleted_at.is_(None))
     result = await db.execute(stmt)
     estimate = result.scalar_one_or_none()
     if not estimate:
@@ -61,7 +61,7 @@ async def list_tool_calls(
     current_user: User = Depends(get_current_user),
 ):
     """List individual tool calls for an estimate."""
-    stmt = select(Estimate).where(Estimate.id == estimate_id)
+    stmt = select(Estimate).where(Estimate.id == estimate_id, Estimate.deleted_at.is_(None))
     result = await db.execute(stmt)
     estimate = result.scalar_one_or_none()
     if not estimate:

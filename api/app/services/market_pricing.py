@@ -239,18 +239,14 @@ class MarketPricingEngine:
 
     async def invalidate_cache(self, county: str | None = None) -> None:
         """Invalidate adjustment cache. Called by CRUD operations."""
-        if county:
-            # Best-effort: delete exact key and wildcard is tricky in Redis without scan
-            # We use a simpler approach: delete the broad key pattern via scan
-            from app.core.cache import _get_redis
-            redis = _get_redis()
-            try:
-                async for key in redis.scan_iter(match="market_adj:*"):
-                    await redis.delete(key)
-            except Exception as exc:
-                logger.warning("market_pricing.cache_invalidate_failed", error=str(exc))
-        else:
-            await cache_invalidate("market_adj:*")
+        from app.core.cache import _get_redis
+        redis = _get_redis()
+        pattern = f"market_adj:{county.lower()}:*" if county else "market_adj:*"
+        try:
+            async for key in redis.scan_iter(match=pattern):
+                await redis.delete(key)
+        except Exception as exc:
+            logger.warning("market_pricing.cache_invalidate_failed", error=str(exc))
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

@@ -9,8 +9,7 @@ from enum import Enum
 import structlog
 
 from app.services.labor_engine import (
-    LABOR_TEMPLATES, LaborTemplateData, get_template,
-    AccessType, UrgencyType
+    LaborTemplateData, get_template,
 )
 from app.services.pricing_config_service import pricing_config_service
 
@@ -159,8 +158,7 @@ def get_trip_charge(county: str) -> float:
 
 # Local copies maintained for sync with main.py _sync_runtime_config
 # which has been updated to use pricing_config_service.
-TAX_RATES: dict[str, float] = {}
-MARKUP_RULES: dict[str, dict] = {}
+
 
 
 @dataclass

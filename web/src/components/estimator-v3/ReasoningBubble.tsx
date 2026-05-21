@@ -15,6 +15,7 @@ export function ReasoningBubble({ content }: ReasoningBubbleProps) {
   return (
     <div className="mb-2">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         className={cn(
           'flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors',

@@ -280,6 +280,7 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
       )}
       <div className="mt-2 flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={handleCreateEstimate}
           className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:shadow-lg transition-all active:scale-[0.98]"
         >
@@ -355,6 +356,7 @@ function JobCard({
           {/* Retry (failed only) */}
           {job.status === 'failed' && (
             <button
+              type="button"
               onClick={() => onRetry(job.id)}
               className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-white/[0.07] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
               aria-label={`Retry ${job.filename}`}
@@ -365,6 +367,7 @@ function JobCard({
 
           {/* Remove */}
           <button
+            type="button"
             onClick={() => setConfirmDelete(true)}
             className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-white/[0.07] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
             aria-label={`Remove ${job.filename}`}
@@ -553,6 +556,7 @@ export function BlueprintsPage() {
             <AlertCircle size={16} className="text-red-400 shrink-0" />
             <p className="text-xs text-zinc-400 flex-1">Failed to load blueprints.</p>
             <button
+              type="button"
               onClick={() => void refetch()}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
             >
@@ -570,6 +574,7 @@ export function BlueprintsPage() {
                 Uploaded files ({jobs.length})
               </p>
               <button
+                type="button"
                 onClick={() => setConfirmClearAll(true)}
                 className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
                 aria-label="Clear all uploaded files"

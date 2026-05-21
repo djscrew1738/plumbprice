@@ -389,7 +389,7 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
             >
               <div className="flex items-center justify-between border-b border-[color:var(--line)] px-5 py-3">
                 <span className="text-sm font-semibold text-[color:var(--ink)]">Estimate Breakdown</span>
-                <button onClick={() => setSheetOpen(false)} className="rounded-lg p-1.5 hover:bg-[color:var(--panel-strong)]">
+                <button type="button" onClick={() => setSheetOpen(false)} className="rounded-lg p-1.5 hover:bg-[color:var(--panel-strong)]">
                   <X size={18} className="text-[color:var(--muted-ink)]" />
                 </button>
               </div>

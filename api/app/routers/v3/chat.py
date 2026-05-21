@@ -2,15 +2,24 @@
 Chat API v3 — Agentic pricing with structured outputs, tool calling, and streaming.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import asyncio
+import json
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.database import get_db
 from app.core.auth import get_current_user
 from app.models.users import User
+from app.database import get_db
+from app.core.auth import get_current_user
+from app.models.estimates import Estimate
+from app.models.users import User
 from app.services.agent_v3 import agent_v3, AgentV3Result
 from app.services.estimate_service import persist_estimate
+from app.services.llm_service import llm_service
 from app.schemas.v3.chat import ChatPriceRequestV3, ChatPriceResponseV3, EstimateBreakdownV3, ToolCallInfo, MarketAdjustmentInfo
 
 logger = structlog.get_logger()
@@ -106,8 +115,6 @@ async def chat_price_v3(
             )
             # Store agent trace
             if estimate_id:
-                from sqlalchemy import update
-                from app.models.estimates import Estimate
                 await db.execute(
                     update(Estimate)
                     .where(Estimate.id == estimate_id)
@@ -141,10 +148,6 @@ async def chat_price_stream_v3(
       - clarification: follow-up questions needed
       - done: stream terminator
     """
-    from fastapi.responses import StreamingResponse
-    import json
-    import asyncio
-
     async def event_stream():
         result = await agent_v3.process_message(
             message=req.message,
@@ -203,7 +206,6 @@ async def chat_price_stream_v3(
 
         # Stream narrative tokens
         if result.estimate.template_code:
-            from app.services.llm_service import llm_service
             narrative_stream = llm_service.generate_response_stream(
                 message=req.message,
                 grand_total=result.estimate.grand_total,

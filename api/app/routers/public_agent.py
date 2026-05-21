@@ -100,6 +100,13 @@ class PublicQuoteResponse(BaseModel):
     clarification_questions: list[str] = []
 
 
+class PublicQuoteConfig(BaseModel):
+    enabled: bool
+    max_total_usd: float
+    allowed_task_count: int
+    rate_per_minute: int
+
+
 # ── Guardrail helpers ──────────────────────────────────────────────────────
 
 
@@ -234,15 +241,19 @@ async def public_quote(
     if body.history:
         history = [{"role": h.role, "content": h.content} for h in body.history]
 
-    result = await agent_v3.process_message(
-        message=body.message,
-        county=body.county or None,
-        preferred_supplier=None,
-        history=history,
-        db=db,
-        skip_llm_response=False,
-        user_id=None,
-    )
+    try:
+        result = await agent_v3.process_message(
+            message=body.message,
+            county=body.county or None,
+            preferred_supplier=None,
+            history=history,
+            db=db,
+            skip_llm_response=False,
+            user_id=None,
+        )
+    except Exception as exc:
+        logger.error("public_agent.process_failed", error=str(exc))
+        raise HTTPException(status_code=500, detail="Unable to generate a quote at this time. Please try again later.")
 
     # Clarification mode
     if result.clarification_questions:
@@ -361,7 +372,7 @@ async def public_quote(
     )
 
 
-@router.get("/quote/config")
+@router.get("/quote/config", response_model=PublicQuoteConfig)
 async def public_quote_config():
     """
     Lightweight metadata so the marketing-site widget can branch its UI

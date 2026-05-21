@@ -48,7 +48,7 @@ except ImportError:
 async def upload_blueprint_v3(
     request: Request,
     file: UploadFile = File(...),
-    project_id: int = None,
+    project_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

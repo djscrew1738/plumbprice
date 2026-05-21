@@ -14,9 +14,9 @@ Strategy
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Optional, Literal
-from datetime import datetime, timezone
 import structlog
 
 from pydantic import BaseModel, Field, ValidationError
@@ -62,7 +62,6 @@ class ClarificationRequest(BaseModel):
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-@staticmethod
 def _build_classify_system_prompt() -> str:
     task_codes = ",\n  ".join(sorted(_VALID_TASK_CODES))
     counties = " | ".join(f'"{c}"' for c in sorted(_COUNTIES))
@@ -187,8 +186,6 @@ class LLMStructuredService:
         timeout: float = 20.0,
     ) -> Optional[BaseModel]:
         """Retry structured call with exponential backoff."""
-        import asyncio
-
         for attempt in range(1, self._max_retries + 1):
             result = await self._call_structured(messages, response_model, timeout)
             if result is not None:

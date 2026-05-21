@@ -13,11 +13,12 @@ RULE: Agent reasons and gathers data. PricingEngine calculates. Never the revers
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+import time
+from dataclasses import dataclass, field, replace
 from typing import Optional, Any
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.services.llm_structured import llm_structured, ClassifyResult
 from app.services.market_pricing import market_pricing_engine
 from app.services.pricing_engine import pricing_engine, EstimateResult, MaterialItem
@@ -185,7 +186,7 @@ class AgentV3:
         county: Optional[str] = None,
         preferred_supplier: Optional[str] = None,
         history: list[dict] | None = None,
-        db=None,
+        db: Optional[AsyncSession] = None,
         skip_llm_response: bool = False,
         user_id: Optional[int] = None,
         blueprint_context: Optional[dict] = None,
@@ -391,7 +392,6 @@ class AgentV3:
                     )
 
                     # Rebuild EstimateResult with adjusted values
-                    from dataclasses import replace
                     estimate = replace(
                         estimate,
                         labor_total=adjusted_dict["labor_total"],
@@ -456,7 +456,6 @@ class AgentV3:
 
     async def _execute_tool(self, tool_name: str, arguments: dict) -> ToolCallResult:
         """Execute a single tool and measure latency."""
-        import time
         t0 = time.monotonic()
         try:
             tool_method = getattr(self.tools, tool_name)

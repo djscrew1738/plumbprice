@@ -23,7 +23,7 @@ async def get_estimate_v3(
     current_user: User = Depends(get_current_user),
 ):
     """Get a single estimate with v3 fields (agent trace, market adjustments, blueprint data)."""
-    stmt = select(Estimate).where(Estimate.id == estimate_id)
+    stmt = select(Estimate).where(Estimate.id == estimate_id, Estimate.deleted_at.is_(None))
     result = await db.execute(stmt)
     estimate = result.scalar_one_or_none()
 
