@@ -18,6 +18,7 @@ const buttonVariants = cva(
           'min-h-[40px] bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.2)] border border-[hsl(var(--danger)/0.2)] active:scale-[0.98]',
       },
       size: {
+        xs: 'px-2.5 py-1 text-[11px] gap-1.5 rounded-lg',
         sm: 'px-3 py-1.5 text-xs',
         md: 'px-4 py-2.5 text-sm',
         lg: 'px-6 py-3 text-base',

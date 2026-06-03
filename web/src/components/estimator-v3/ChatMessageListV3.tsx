@@ -3,8 +3,11 @@
 import { motion } from 'framer-motion'
 import { Copy, Check, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import ReactMarkdown from 'react-markdown'
 import { ChatSkeleton } from '@/components/ui/Skeleton'
+
+import dynamic from 'next/dynamic'
+
+const SafeMarkdown = dynamic(() => import('@/components/ui/SafeMarkdown').then(m => ({ default: m.SafeMarkdown })), { ssr: false })
 import { ToolCallBubble } from './ToolCallBubble'
 import { ReasoningBubble } from './ReasoningBubble'
 
@@ -129,7 +132,7 @@ export function ChatMessageListV3({
             )}>
               {message.role === 'assistant' ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{message.content || ''}</ReactMarkdown>
+                  <SafeMarkdown>{message.content || ''}</SafeMarkdown>
                 </div>
               ) : (
                 <p>{message.content}</p>

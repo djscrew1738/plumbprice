@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Copy, Check, Square, Pencil, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, LineItem } from '@/types'
-import ReactMarkdown from 'react-markdown'
+import { SafeMarkdown } from '@/components/ui/SafeMarkdown'
 import { InlineEstimateCard } from './InlineEstimateCard'
 import { InlineLineItemEditor } from './InlineLineItemEditor'
 import { ChatSkeleton } from '@/components/ui/Skeleton'
@@ -85,7 +85,7 @@ export function ChatMessageList({
               {message.role === 'assistant' ? (
                 <>
                   <div className="chat-prose pr-4">
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                    <SafeMarkdown>{message.content}</SafeMarkdown>
                   </div>
                   {message.isError && onRetry && (
                     <button

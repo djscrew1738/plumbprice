@@ -54,6 +54,9 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
     }
     setMessages(prev => [...prev, userMsg])
     setInput('')
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
     setAttachedImage(null)
     setImagePreview(null)
     setBlueprintSummary(null)
@@ -148,7 +151,7 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
       setLoading(false)
       abortRef.current = null
     }
-  }, [input, loading, county, projectId])
+  }, [input, loading, county, projectId, imagePreview])
 
   const handleCopy = useCallback((id: string, content: string) => {
     navigator.clipboard.writeText(content)
@@ -182,6 +185,11 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) return
+    const maxBytes = 100 * 1024 * 1024 // 100 MB
+    if (file.size > maxBytes) {
+      setBlueprintSummary('Image too large — max 100 MB.')
+      return
+    }
     setAttachedImage(file)
     setImagePreview(URL.createObjectURL(file))
     setImageAnalyzing(true)
@@ -196,11 +204,14 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
   }, [])
 
   const handleRemoveImage = useCallback(() => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
     setAttachedImage(null)
     setImagePreview(null)
     setBlueprintSummary(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [])
+  }, [imagePreview])
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">

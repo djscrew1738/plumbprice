@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { EstimatorPageV3 } from '@/components/estimator-v3/EstimatorPageV3'
 import { EmptyStateSkeleton, ChatSkeleton } from '@/components/ui/Skeleton'
+
+export const metadata: Metadata = {
+  title: 'Pricing Workspace – PlumbPrice AI',
+  description: 'Build and review a live plumbing estimate powered by AI and real supplier pricing.',
+}
 
 function EstimatorPageFallback() {
   return (

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
-import { EstimateDetailPage } from '@/components/estimates/EstimateDetailPage'
+import type { ReactNode } from 'react'
 
 const API_BASE =
   process.env.API_URL ??
@@ -16,30 +16,30 @@ export async function generateMetadata({
   const numericId = Number(id)
 
   if (isNaN(numericId)) {
-    return { title: 'Estimate – PlumbPrice AI' }
+    return { title: 'Project – PlumbPrice AI' }
   }
 
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('pp_token')?.value
-    const res = await fetch(`${API_BASE}/api/v1/estimates/${numericId}`, {
+    const res = await fetch(`${API_BASE}/api/v1/projects/${numericId}`, {
       headers: token ? { Cookie: `pp_token=${token}` } : {},
       next: { revalidate: 0 },
     })
 
     if (!res.ok) throw new Error()
 
-    const data = (await res.json()) as { title?: string }
+    const data = (await res.json()) as { name?: string }
     return {
-      title: data.title
-        ? `${data.title} – PlumbPrice AI`
-        : `Estimate #${numericId} – PlumbPrice AI`,
+      title: data.name
+        ? `${data.name} – PlumbPrice AI`
+        : `Project #${numericId} – PlumbPrice AI`,
     }
   } catch {
-    return { title: `Estimate #${numericId} – PlumbPrice AI` }
+    return { title: `Project #${numericId} – PlumbPrice AI` }
   }
 }
 
-export default function Page() {
-  return <EstimateDetailPage />
+export default function ProjectLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>
 }

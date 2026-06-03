@@ -19,7 +19,7 @@ import { useToast } from '@/components/ui/Toast'
 import { blueprintsApi } from '@/lib/api'
 import { blueprintApiV3, type BlueprintTakeoffV3 } from '@/lib/api-v3'
 import { useBlueprints, useUploadBlueprint, useDeleteBlueprint, type JobStatus, type BlueprintJob } from '@/lib/hooks'
-import { BLUEPRINT_POLL_INTERVAL_MS } from '@/lib/constants'
+import { BLUEPRINT_POLL_INTERVAL_MS, MAX_BLUEPRINT_SIZE_MB } from '@/lib/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,7 +146,7 @@ function DropZone({ onFiles, isUploading }: { onFiles: (files: File[]) => void; 
       <p className="text-xs text-zinc-600">
         Drag & drop or{' '}
         <span className="font-bold" style={{ color: 'hsl(221 83% 65%)' }}>browse files</span>
-        {' '}· PDF or image
+        {' '}· PDF or image · max {MAX_BLUEPRINT_SIZE_MB} MB
       </p>
     </motion.div>
   )
@@ -448,7 +448,16 @@ export function BlueprintsPage() {
   const deleteMutation = useDeleteBlueprint()
 
   const handleFiles = useCallback((files: File[]) => {
-    files.forEach(file => uploadMutation.mutate(file, {
+    const maxBytes = MAX_BLUEPRINT_SIZE_MB * 1024 * 1024
+    const validFiles: File[] = []
+    for (const file of files) {
+      if (file.size > maxBytes) {
+        toast.error('File too large', `${file.name} exceeds ${MAX_BLUEPRINT_SIZE_MB} MB limit.`)
+      } else {
+        validFiles.push(file)
+      }
+    }
+    validFiles.forEach(file => uploadMutation.mutate(file, {
       onError: (err: Error) => toast.error('Upload failed', err.message || 'Please try again.'),
     }))
   }, [uploadMutation, toast])

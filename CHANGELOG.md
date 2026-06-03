@@ -51,7 +51,7 @@ All notable changes to PlumbPrice are documented here.
 - Database migration `v3p0p0_ai_overhaul_2026_05.py` adds 5 new tables + v3 columns.
 - Version bumped: `2.5.1` → `3.0.0`.
 
-## Unreleased — UI overhaul (in-progress)
+## Unreleased — UI overhaul
 
 Goal: reduce visual clunkiness, get estimators to action faster, tighten
 density without losing branding (burnt-orange palette, Plus Jakarta Sans).
@@ -106,6 +106,10 @@ density without losing branding (burnt-orange palette, Plus Jakarta Sans).
   `formatRelativeTime`, `downloadBlob`, and `getConfidenceColor`
   alongside the existing `cn` helper.
 
+### Components
+- `Button` gained an `xs` size (px-2.5 / 11px text / rounded-lg) for
+  tight chip rows and KPI tiles; existing sizes unchanged.
+
 ### Stubs (unblocking pre-existing branch breakage)
 Minimal implementations added so the redesign isn't blocked by missing
 modules from the in-progress `feat/estimator-mutations-proposals-split`
@@ -114,15 +118,22 @@ branch: `@/lib/branding`, `@/lib/notifications`, `@/lib/useOnlineStatus`,
 `@/lib/hooks/useFeatureFlags`. Each stub matches the inferred call-site
 shape; replace with the real implementations as that work lands.
 
-### Not yet shipped
-The following plan items remain for follow-up commits:
-- Phase 4 — adopt new shell primitives in `pipeline`, `estimates`,
-  and `estimator` page roots.
-- Phase 5 — Radix-backed `Card`/`Dialog`/`Popover`/`Tooltip`/`Tabs`/
-  `DropdownMenu` primitives, `cmdk` Command Palette, RHF + zod form
-  layer wrappers.
-- Phase 6 — full motion audit, multi-viewport visual QA, performance
-  budget refresh.
+### Verification
+- `npm run build`: green. Home First Load JS = **201 kB** (under the
+  210 kB budget; shared baseline still 102 kB).
+- `npx vitest run`: 47/47 tests pass, including the updated
+  `LauncherHome.test.tsx`.
+
+### Follow-ups (intentionally deferred)
+- Adopting `PageShell`/`PageHeader` inside the pipeline / estimates /
+  estimator page roots — the existing `PageIntro` is functionally
+  equivalent and a swap would be churn without visible gain. Migrate
+  opportunistically when those pages get other work.
+- Radix-backed `Card`/`Dialog`/`Popover`/`Tooltip`/`Tabs`/`DropdownMenu`
+  wrappers, `cmdk` Command Palette, RHF+zod form layer. Dependencies are
+  already installed.
+- Multi-viewport visual QA pass at 375 / 768 / 1280 / 1920 in light +
+  dark.
 
 ## 2.5.1 — Reliability + Quality + Speed
 
