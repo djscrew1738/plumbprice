@@ -428,4 +428,24 @@ The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`
 
 ---
 
+## Installed Skills
+
+| Skill | Path | Purpose |
+|---|---|---|
+| iterate | `.agents/skills/iterate/` | Drive PR through CI, review, QA to merge |
+| agent-memory | `.agents/skills/agent-memory/` | Persist/retrieve repo knowledge |
+| code-review | `.agents/skills/code-review/` | Rigorous PR code review |
+| docker | `.agents/skills/docker/` | Docker daemon + container management |
+| github | `.agents/skills/github/` | GitHub API/CLI interactions |
+| agent-creator | `.agents/skills/agent-creator/` | Guided workflow to create sub-agents |
+| code-simplifier | `.agents/skills/code-simplifier/` | Simplify and refine code |
+| openhands-automation | `.agents/skills/openhands-automation/` | Create cron/webhook automations |
+| github-pr-review | `.agents/skills/github-pr-review/` | Post PR review comments via GitHub API |
+| qa-changes | `.agents/skills/qa-changes/` | Structured QA methodology for PRs |
+| release-notes | `.agents/skills/release-notes/` | Generate changelogs from git history |
+| learn-from-code-review | `.agents/skills/learn-from-code-review/` | Distill PR feedback into reusable skills |
+| prd | `.agents/skills/prd/` | Generate Product Requirements Documents |
+| agent-sdk-builder | `.agents/skills/agent-sdk-builder/` | Guided workflow for building custom agents |
+| openhands-sdk | `.agents/skills/openhands-sdk/` | OpenHands Software Agent SDK reference |
+
 *Keep this file accurate. When you add new infrastructure, change build commands, or modify testing strategy, update this guide.*
