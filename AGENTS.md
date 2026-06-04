@@ -447,5 +447,14 @@ The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`
 | prd | `.agents/skills/prd/` | Generate Product Requirements Documents |
 | agent-sdk-builder | `.agents/skills/agent-sdk-builder/` | Guided workflow for building custom agents |
 | openhands-sdk | `.agents/skills/openhands-sdk/` | OpenHands Software Agent SDK reference |
+| kubernetes | `.agents/skills/kubernetes/` | Local K8s clusters via KIND |
+| vercel | `.agents/skills/vercel/` | Vercel deployment & management |
+| uv | `.agents/skills/uv/` | Python dependency/environment management |
+| npm | `.agents/skills/npm/` | npm package installation in non-interactive envs |
+| swift-linux | `.agents/skills/swift-linux/` | Swift installation on Debian Linux |
+| frontend-design | `.agents/skills/frontend-design/` | Production-grade frontend UI design |
+| theme-factory | `.agents/skills/theme-factory/` | Theming toolkit for artifacts |
+| pdflatex | `.agents/skills/pdflatex/` | Compile LaTeX to PDF |
+| openhands-api | `.agents/skills/openhands-api/` | OpenHands Cloud REST API (V1) |
 
 *Keep this file accurate. When you add new infrastructure, change build commands, or modify testing strategy, update this guide.*
