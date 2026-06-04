@@ -32,14 +32,22 @@ const WhatsNewBanner = dynamic(
   { ssr: false }
 )
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
+import { useAuth } from '@/contexts/AuthContext'
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import { registerServiceWorker } from '@/lib/registerSW'
 import { useSessionExpiry } from '@/lib/hooks'
 
-export function ClientLayout({ children }: { children: ReactNode }) {
+export function ClientLayout({
+  children,
+  initialHasSession = false,
+}: {
+  children: ReactNode
+  initialHasSession?: boolean
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const pathname = usePathname()
+  const { user, loading } = useAuth()
 
   useKeyboardShortcuts()
 
@@ -72,12 +80,15 @@ export function ClientLayout({ children }: { children: ReactNode }) {
   // Auth pages need AuthProvider (for useAuth()) but not app chrome —
   // they render their own full-screen layout.
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(pathname ?? '')
+  const isPublicHome = pathname === '/' && !user && (!loading || !initialHasSession)
+  const renderBareMain = isPublicSurface || isAuthPage || isPublicHome
+  const hideAppEnhancements = renderBareMain
 
   return (
     <>
-      <OfflineBanner />
-      <UpdateBanner />
-      {!isPublicSurface && <InstallPrompt />}
+      {!hideAppEnhancements && <OfflineBanner />}
+      {!hideAppEnhancements && <UpdateBanner />}
+      {!hideAppEnhancements && <InstallPrompt />}
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
@@ -87,11 +98,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
         Skip to main content
       </a>
 
-      {isPublicSurface ? (
-        <main id="main-content" tabIndex={-1} className="min-h-dvh outline-none">
-          {children}
-        </main>
-      ) : isAuthPage ? (
+      {renderBareMain ? (
         <main id="main-content" tabIndex={-1} className="min-h-dvh outline-none">
           {children}
         </main>
@@ -129,7 +136,6 @@ export function ClientLayout({ children }: { children: ReactNode }) {
                   transition={{ duration: 0.12, ease: 'easeOut' }}
                 >
                   <ErrorBoundary
-                    key={pathname}
                     fallback={
                       <ErrorFallback message="Failed to load this page. Please try again." onRetry={() => window.location.reload()} />
                     }
@@ -148,7 +154,7 @@ export function ClientLayout({ children }: { children: ReactNode }) {
       )}
       <ShortcutsDialog />
       <CommandPalette />
-      {!isPublicSurface && <WhatsNewBanner />}
+      {!hideAppEnhancements && <WhatsNewBanner />}
       <RouteAnnouncer />
     </>
   )

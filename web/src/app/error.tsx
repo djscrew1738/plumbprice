@@ -15,10 +15,10 @@ export default function Error({
   const router = useRouter()
 
   useEffect(() => {
-    // Log to Sentry or other error tracker in production.
-    // console.error is intentionally omitted to avoid leaking internals to the browser console.
+    // In production, send to Sentry instead of console.error to avoid leaking
+    // component stacks and file paths to the browser console.
     if (process.env.NODE_ENV === 'development') {
-      console.error(error)
+      console.error('Root error.tsx caught:', error)
     }
   }, [error])
 

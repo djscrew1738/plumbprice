@@ -95,6 +95,8 @@ PostgreSQL + pgvector       Redis (broker + cache)
 - AI providers (OpenAI, Anthropic, Ollama) are pluggable via `DEFAULT_LLM_PROVIDER` / `DEFAULT_LLM_MODEL` env vars and a service abstraction in `api/app/services/llm_service.py`.
 - The LLM service uses a **dual-model circuit breaker**: primary `qwen3:8b`, fallback `hermes3:3b`, with a keyword-only classifier as last resort. Falls through gracefully if Ollama is unavailable.
 - Confidence scores (0.0–1.0) and human-readable labels (High / Medium / Low / Estimate-Only) are surfaced on every estimate.
+- **v3 agent rule**: the v3 agent (`services/agent_v3.py`) reasons, calls tools, and gathers data — the `PricingEngine` does all dollar math. Never put pricing calculations inside the agent; never call the LLM from the pricing engine.
+- **Auto-seed on first run**: `_ensure_seeded()` in `main.py` seeds canonical suppliers, labor templates, and pricing rules automatically when the suppliers table is empty. This is distinct from the demo-data seed script (`app.scripts.seed`).
 
 ---
 
@@ -135,6 +137,9 @@ PostgreSQL + pgvector       Redis (broker + cache)
 - **Safe queries**: use `useSafeQuery(options, fallback)` from `@/lib/hooks` for list queries — guarantees `data` is never `undefined`.
 - **Error handling in components**: always handle `isError`. Pattern: `if (isLoading) return <Skeleton />; if (isError) return <ErrorState onRetry={() => void refetch()} />;`
 - **Lazy loading**: use `next/dynamic` for heavy components.
+- **API clients**: domain-specific modules live in `web/src/lib/api/` (e.g. `estimates.ts`, `blueprints.ts`). All are built with `createApiClient` from `@/lib/api/client`. Import from `@/lib/api` (barrel). For v3 endpoints use `apiV3` from `@/lib/api-v3`.
+- **Auth cookie**: the JWT is stored as a `pp_token` HttpOnly cookie. On a 401, the axios interceptor dispatches a `pp:session-expired` custom event and redirects to `/login` after 3 s. Don't handle 401 redirects manually.
+- **Network resilience**: for mutations that may fail on flaky connections, wrap the call with `withRetry(fn)` from `@/lib/withRetry` (3 attempts, exponential back-off, retries network errors + 408/429/5xx only). For offline queueing, use `enqueue` / `dequeue` from `@/lib/outbox` (Dexie/IndexedDB, gated by `flag:outbox_offline` localStorage flag).
 
 ### Adding a frontend page
 

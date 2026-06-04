@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { cookies } from 'next/headers'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Providers } from '@/components/layout/Providers'
 import { ClientLayout } from '@/components/layout/ClientLayout'
@@ -33,9 +34,12 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
+  const hasSessionCookie = Boolean(cookieStore.get('pp_token')?.value)
+
   return (
-    <html lang="en" className={plusJakartaSans.variable}>
+    <html lang="en" className={plusJakartaSans.variable} suppressHydrationWarning>
       <head>
         {/* Dark mode init — must run before first paint to avoid flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('pp_theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}})();` }} />
@@ -44,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${plusJakartaSans.className} bg-[hsl(var(--background))] text-[color:var(--ink)] antialiased`}>
         <Providers>
-          <ClientLayout>{children}</ClientLayout>
+          <ClientLayout initialHasSession={hasSessionCookie}>{children}</ClientLayout>
         </Providers>
       </body>
     </html>
