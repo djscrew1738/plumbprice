@@ -21,3 +21,9 @@ fi
 cd "$WEB_DIR"
 npm ci
 npm run build:prod
+
+# Copy static assets into standalone (required for Next.js standalone deployment)
+echo "Copying static assets to standalone..."
+cp -r .next/static .next/standalone/.next/static
+cp -r public .next/standalone/public
+echo "Standalone ready."

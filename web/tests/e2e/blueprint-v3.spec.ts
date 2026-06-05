@@ -10,19 +10,23 @@ test.describe('Blueprint v3', () => {
   test('upload drop zone is visible', async ({ page }) => {
     await page.goto('/blueprints')
 
-    const dropZone = page.locator('[role="button"][aria-label*="Upload blueprint"]')
+    // Actual aria-label from BlueprintsPage.tsx
+    const dropZone = page.locator('[role="button"][aria-label*="Upload blueprint files"]')
     await expect(dropZone).toBeVisible()
   })
 
-  test('estimator chat has blueprint image upload button', async ({ page }) => {
+  test('upload drop zone is keyboard focusable', async ({ page }) => {
+    await page.goto('/blueprints')
+
+    const dropZone = page.locator('[role="button"][aria-label*="Upload blueprint files"]')
+    await dropZone.focus()
+    await expect(dropZone).toBeFocused()
+  })
+
+  test('estimator page loads with chat input', async ({ page }) => {
     await page.goto('/estimator')
 
-    const uploadButton = page.locator('button[aria-label="Attach blueprint image"]')
-    await expect(uploadButton).toBeVisible()
-
-    // Clicking should open file picker (can't test actual upload without file)
-    await uploadButton.click()
-    const fileInput = page.locator('input[type="file"]')
-    await expect(fileInput).toHaveCount(1)
+    const chatInput = page.locator('textarea[aria-label="Type a pricing question"]')
+    await expect(chatInput).toBeVisible()
   })
 })

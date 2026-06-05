@@ -1,4 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+
+// Login tests must run without stored auth so we can test the unauthenticated state
+test.use({ storageState: { cookies: [], origins: [] } })
 
 test.describe('Login Flow', () => {
   test('login page loads', async ({ page }) => {
