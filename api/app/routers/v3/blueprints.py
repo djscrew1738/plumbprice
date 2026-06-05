@@ -3,7 +3,7 @@ Blueprints API v3 — Enhanced blueprint analysis with rooms, pipe runs, and bou
 """
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import structlog
@@ -13,19 +13,19 @@ import io
 from app.core.auth import get_current_user
 from app.core.broker import broker_available
 from app.database import get_db
-from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection
-from app.models.blueprint_rooms import BlueprintRoom
-from app.models.blueprint_pipe_runs import BlueprintPipeRun
+from app.models.blueprints import BlueprintJob
 from app.models.users import User
 from app.core.storage import storage_client
-from app.config import settings
-from app.core.limiter import limiter
-from app.services.vision_v3 import vision_service_v3
-from app.core.cache import cache_get, cache_set, cache_invalidate
 from app.services.blueprint_to_estimate_v3 import (
+    _load_job_v3,
+    _user_owns_job,
     create_estimate_from_blueprint_v3,
     EmptyTakeoffError,
 )
+from app.config import settings
+from app.core.limiter import limiter  # noqa: F401 — imported for rate-limit registration
+from app.services.vision_v3 import vision_service_v3
+from app.core.cache import cache_get, cache_set
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -84,7 +84,7 @@ async def upload_blueprint_v3(
         storage_path=unique_filename,
         status="uploaded",
         project_id=project_id,
-        uploaded_by=current_user.id,
+        created_by=current_user.id,
         retention_until=retention_until,
     )
     db.add(job)
@@ -186,41 +186,9 @@ async def get_blueprint_job_v3(
     db: AsyncSession = Depends(get_db),
 ):
     """Get blueprint job status with v3 data (rooms, pipe runs, detections)."""
-    job = (
-        await db.execute(
-            select(BlueprintJob)
-            .where(BlueprintJob.id == job_id)
-            .where(BlueprintJob.uploaded_by == current_user.id)
-        )
-    ).scalar_one_or_none()
-    if not job:
+    job = await _load_job_v3(db, job_id)
+    if not job or not _user_owns_job(job, current_user):
         raise HTTPException(status_code=404, detail="Job not found")
-
-    pages = (
-        await db.execute(
-            select(BlueprintPage).where(BlueprintPage.blueprint_job_id == job_id)
-        )
-    ).scalars().all()
-
-    detections = (
-        await db.execute(
-            select(BlueprintDetection).where(
-                BlueprintDetection.blueprint_page_id.in_([p.id for p in pages])
-            )
-        )
-    ).scalars().all()
-
-    rooms = (
-        await db.execute(
-            select(BlueprintRoom).where(BlueprintRoom.blueprint_job_id == job_id)
-        )
-    ).scalars().all()
-
-    pipe_runs = (
-        await db.execute(
-            select(BlueprintPipeRun).where(BlueprintPipeRun.blueprint_job_id == job_id)
-        )
-    ).scalars().all()
 
     return {
         "id": job.id,
@@ -231,8 +199,6 @@ async def get_blueprint_job_v3(
             {
                 "id": p.id,
                 "page_number": p.page_number,
-                "width": p.width,
-                "height": p.height,
                 "detections": [
                     {
                         "id": d.id,
@@ -240,10 +206,10 @@ async def get_blueprint_job_v3(
                         "confidence": d.confidence,
                         "bounding_box": d.bounding_box,
                     }
-                    for d in detections if d.blueprint_page_id == p.id
+                    for d in (p.detections or [])
                 ],
             }
-            for p in pages
+            for p in (job.pages or [])
         ],
         "rooms": [
             {
@@ -255,7 +221,7 @@ async def get_blueprint_job_v3(
                 "confidence": r.confidence,
                 "bounding_box": r.bounding_box,
             }
-            for r in rooms
+            for r in (job.rooms or [])
         ],
         "pipe_runs": [
             {
@@ -264,10 +230,10 @@ async def get_blueprint_job_v3(
                 "length_ft": p.length_ft,
                 "confidence": p.confidence,
             }
-            for p in pipe_runs
+            for p in (job.pipe_runs or [])
         ],
-        "total_room_count": len(rooms),
-        "total_pipe_run_ft": round(sum(p.length_ft for p in pipe_runs), 2),
+        "total_room_count": len(job.rooms or []),
+        "total_pipe_run_ft": round(sum(p.length_ft for p in (job.pipe_runs or [])), 2),
     }
 
 
@@ -279,7 +245,7 @@ async def list_blueprint_jobs_v3(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(BlueprintJob).where(BlueprintJob.uploaded_by == current_user.id)
+    stmt = select(BlueprintJob).where(BlueprintJob.created_by == current_user.id)
     if project_id is not None:
         stmt = stmt.where(BlueprintJob.project_id == project_id)
     stmt = stmt.order_by(BlueprintJob.created_at.desc())

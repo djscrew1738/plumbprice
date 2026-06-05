@@ -2,7 +2,6 @@
 Chat API v3 — Agentic pricing with structured outputs, tool calling, and streaming.
 """
 
-import asyncio
 import json
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -10,17 +9,14 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from app.database import get_db
 from app.core.auth import get_current_user
-from app.models.users import User
 from app.database import get_db
-from app.core.auth import get_current_user
 from app.models.estimates import Estimate
 from app.models.users import User
+from app.schemas.v3.chat import ChatPriceRequestV3, ChatPriceResponseV3, EstimateBreakdownV3, ToolCallInfo, MarketAdjustmentInfo
 from app.services.agent_v3 import agent_v3, AgentV3Result
 from app.services.estimate_service import persist_estimate
 from app.services.llm_service import llm_service
-from app.schemas.v3.chat import ChatPriceRequestV3, ChatPriceResponseV3, EstimateBreakdownV3, ToolCallInfo, MarketAdjustmentInfo
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -55,14 +51,14 @@ def _build_response(result: AgentV3Result, estimate_id: int | None = None) -> Ch
                 for li in est.line_items
             ],
             market_adjustment_applied=result.overall_market_factor,
-            confidence_components=est.confidence_components if hasattr(est, "confidence_components") else {},
+            confidence_components=est.confidence_components,
         ) if est.line_items else None,
         estimate_id=estimate_id,
         confidence=est.confidence_score,
         confidence_label=est.confidence_label,
         assumptions=est.assumptions,
-        sources=est.sources if hasattr(est, "sources") else [],
-        job_type_detected=est.job_type if hasattr(est, "job_type") else None,
+        sources=est.sources,
+        job_type_detected=est.job_type,
         template_used=est.template_code,
         classified_by=result.classified_by,
         clarification_questions=result.clarification_questions,
@@ -106,13 +102,15 @@ async def chat_price_v3(
     estimate_id = None
     if result.estimate.template_code and result.clarification_questions is None:
         try:
-            estimate_id = await persist_estimate(
+            estimate = await persist_estimate(
                 db=db,
-                estimate_result=result.estimate,
-                user_id=current_user.id,
+                result=result.estimate,
+                county=result.estimate.county or req.county,
                 title=f"Chat: {req.message[:60]}",
+                created_by=current_user.id,
                 project_id=req.project_id,
             )
+            estimate_id = estimate.id
             # Store agent trace
             if estimate_id:
                 await db.execute(
@@ -121,7 +119,7 @@ async def chat_price_v3(
                     .values(
                         agent_trace=result.agent_trace,
                         market_adjustment_applied=result.overall_market_factor,
-                        confidence_components=result.estimate.confidence_components if hasattr(result.estimate, "confidence_components") else {},
+                        confidence_components=result.estimate.confidence_components,
                     )
                 )
                 await db.commit()
@@ -170,7 +168,7 @@ async def chat_price_stream_v3(
         # Emit clarification if needed
         if result.clarification_questions:
             yield f"event: clarification\ndata: {json.dumps({'questions': result.clarification_questions})}\n\n"
-            yield f"event: done\ndata: {{}}\n\n"
+            yield "event: done\ndata: {}\n\n"
             return
 
         # Emit pricing
@@ -220,7 +218,7 @@ async def chat_price_stream_v3(
             async for chunk in narrative_stream:
                 yield f"event: token\ndata: {json.dumps({'content': chunk})}\n\n"
 
-        yield f"event: done\ndata: {{}}\n\n"
+        yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(
         event_stream(),

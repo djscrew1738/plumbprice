@@ -2,9 +2,13 @@
 Suppliers API v3 — Webhook endpoints and supplier health monitoring.
 """
 
+from datetime import datetime, timezone
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 import hmac
 import hashlib
 import structlog
@@ -12,7 +16,7 @@ import structlog
 from app.database import get_db
 from app.core.auth import get_current_user
 from app.models.users import User
-from app.models.suppliers import Supplier
+from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.models.supplier_webhooks import SupplierWebhook
 from app.schemas.v3.suppliers import WebhookEvent, SupplierWebhookCreate, SupplierWebhookResponse
 from app.services.data_sources.price_enrichment import get_enrichment_service
@@ -48,7 +52,7 @@ async def receive_webhook(
     # Find active webhook config
     stmt = select(SupplierWebhook).where(
         SupplierWebhook.supplier_id == supplier.id,
-        SupplierWebhook.is_active == True,
+        SupplierWebhook.is_active,
     )
     result = await db.execute(stmt)
     webhook = result.scalar_one_or_none()
@@ -69,9 +73,6 @@ async def receive_webhook(
 
     # Process event
     if event.type == "price_change" and event.new_cost is not None:
-        from app.models.suppliers import SupplierProduct
-        from app.models.suppliers import SupplierPriceHistory
-
         # Find product by SKU
         stmt = select(SupplierProduct).where(
             SupplierProduct.supplier_id == supplier.id,
@@ -108,7 +109,6 @@ async def receive_webhook(
             logger.warning("webhook.product_not_found", supplier=supplier_slug, sku=event.sku)
 
     elif event.type == "stock_update":
-        from app.models.suppliers import SupplierProduct
         stmt = select(SupplierProduct).where(
             SupplierProduct.supplier_id == supplier.id,
             SupplierProduct.sku == event.sku,
@@ -153,7 +153,6 @@ async def create_webhook(
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    import secrets
     webhook = SupplierWebhook(
         supplier_id=supplier_id,
         event_type=req.event_type,
@@ -176,39 +175,33 @@ async def supplier_health(
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    from sqlalchemy import func
-    from app.models.suppliers import SupplierProduct
-
-    stmt = select(Supplier)
+    # Single query: eager-load suppliers with webhooks
+    stmt = select(Supplier).options(selectinload(Supplier.webhooks))
     result = await db.execute(stmt)
     suppliers = result.scalars().all()
 
+    # Single aggregate query: product counts for all suppliers
+    count_stmt = select(
+        SupplierProduct.supplier_id,
+        func.count(SupplierProduct.id).label("cnt"),
+    ).group_by(SupplierProduct.supplier_id)
+    count_result = await db.execute(count_stmt)
+    product_counts = {row.supplier_id: row.cnt for row in count_result}
+
     health = []
     for s in suppliers:
-        product_count = (
-            await db.execute(
-                select(func.count(SupplierProduct.id)).where(SupplierProduct.supplier_id == s.id)
-            )
-        ).scalar() or 0
-
-        webhook_stmt = select(SupplierWebhook).where(
-            SupplierWebhook.supplier_id == s.id,
-            SupplierWebhook.is_active == True,
-        )
-        webhook_result = await db.execute(webhook_stmt)
-        webhooks = webhook_result.scalars().all()
-
+        active_webhooks = [w for w in s.webhooks if w.is_active]
         health.append({
             "id": s.id,
             "name": s.name,
             "slug": s.slug,
             "is_active": s.is_active,
-            "product_count": product_count,
-            "active_webhooks": len(webhooks),
-            "webhook_last_delivery": max([w.last_delivered_at for w in webhooks if w.last_delivered_at], default=None),
+            "product_count": product_counts.get(s.id, 0),
+            "active_webhooks": len(active_webhooks),
+            "webhook_last_delivery": max(
+                (w.last_delivered_at for w in active_webhooks if w.last_delivered_at),
+                default=None,
+            ),
         })
 
     return {"suppliers": health}
-
-
-from datetime import datetime, timezone
