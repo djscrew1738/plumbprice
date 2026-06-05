@@ -143,8 +143,10 @@ export default function CaptureRoute() {
     setResults([])
 
     // Sequential to be friendly to the API rate limiter (20/min on this route).
-    const out: SubmitResult[] = []
-    for (const slot of slots) {
+    const out: SubmitResult[] = new Array(slots.length)
+    const CONCURRENCY = 2
+
+    const uploadSlot = async (slot: (typeof slots)[number], idx: number) => {
       try {
         const fd = new FormData()
         fd.append('file', slot.file)
@@ -161,17 +163,22 @@ export default function CaptureRoute() {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: API_TIMEOUT_LONG_MS,
         })
-        out.push({ slotId: slot.id, ok: res.data.status !== 'vision_error', quote: res.data })
+        out[idx] = { slotId: slot.id, ok: res.data.status !== 'vision_error', quote: res.data }
       } catch (e: unknown) {
         const err = e as { response?: { data?: { detail?: string } }; message?: string }
-        out.push({
+        out[idx] = {
           slotId: slot.id,
           ok: false,
           error: err?.response?.data?.detail ?? err?.message ?? 'Upload failed',
-        })
+        }
       }
       // Update incrementally so the user sees progress.
-      setResults([...out])
+      setResults([...out.filter(Boolean)])
+    }
+
+    // Run with concurrency=2 to stay well inside the 20/min rate limit
+    for (let i = 0; i < slots.length; i += CONCURRENCY) {
+      await Promise.all(slots.slice(i, i + CONCURRENCY).map((s, j) => uploadSlot(s, i + j)))
     }
     setBusy(null)
     if (out.some((r) => !r.ok)) haptic('warning')

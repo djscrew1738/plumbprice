@@ -2,7 +2,7 @@ import { chromium, FullConfig } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 
-async function globalSetup(_config: FullConfig) {
+async function globalSetup(_config: FullConfig) {  // eslint-disable-line @typescript-eslint/no-unused-vars
   const authFile = path.join(__dirname, '.auth/user.json')
 
   // Ensure auth dir exists

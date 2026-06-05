@@ -190,26 +190,47 @@ class AgentV3:
         t0 = asyncio.get_event_loop().time()
 
         # ── Step 1: Structured classification ─────────────────────────────────
-        classification = await llm_structured.classify(message, history=history)
+        # Fast path: run keyword classifier first (0 ms). If it's highly
+        # confident, skip the LLM entirely — saves 5-12 s per clear request.
+        from app.services.agent import classify_request
+        keyword_result = classify_request(message)
+        kw_confidence = keyword_result.get("confidence", 0.0)
 
-        if classification is None:
-            # Total failure — fall back to keyword classifier from v1
-            from app.services.agent import classify_request
-            keyword_result = classify_request(message)
+        _KEYWORD_FAST_PATH_THRESHOLD = 0.88
+
+        if kw_confidence >= _KEYWORD_FAST_PATH_THRESHOLD:
             classification = ClassifyResult(
                 task_code=keyword_result.get("task_code"),
                 access_type=keyword_result.get("access_type", "first_floor"),
                 urgency=keyword_result.get("urgency", "standard"),
-                county=keyword_result.get("county", "Dallas"),
+                county=keyword_result.get("county", county or "Dallas"),
                 city=keyword_result.get("city"),
                 quantity=keyword_result.get("quantity", 1),
-                preferred_supplier=keyword_result.get("preferred_supplier"),
-                confidence=keyword_result.get("confidence", 0.75),
-                reasoning="Fallback to keyword classification (structured LLM unavailable)",
+                preferred_supplier=keyword_result.get("preferred_supplier") or preferred_supplier,
+                confidence=kw_confidence,
+                reasoning=f"Keyword fast-path (confidence={kw_confidence:.2f})",
             )
-            classified_by = "keyword"
+            classified_by = "keyword_fast_path"
         else:
-            classified_by = "llm_structured"
+            # LLM classification for ambiguous requests (shorter prompt now)
+            classification = await llm_structured.classify(message, history=history)
+
+            if classification is None:
+                # LLM timed out or failed — use keyword result
+                classification = ClassifyResult(
+                    task_code=keyword_result.get("task_code"),
+                    access_type=keyword_result.get("access_type", "first_floor"),
+                    urgency=keyword_result.get("urgency", "standard"),
+                    county=keyword_result.get("county", "Dallas"),
+                    city=keyword_result.get("city"),
+                    quantity=keyword_result.get("quantity", 1),
+                    preferred_supplier=keyword_result.get("preferred_supplier"),
+                    confidence=keyword_result.get("confidence", 0.75),
+                    reasoning="Fallback to keyword classification (structured LLM unavailable)",
+                )
+                classified_by = "keyword"
+            else:
+                classified_by = "llm_structured"
 
         # Caller overrides
         if county:

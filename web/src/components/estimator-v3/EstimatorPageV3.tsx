@@ -2,14 +2,22 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, DollarSign, ImagePlus, Loader2 } from 'lucide-react'
 
 import { chatApiV3, blueprintApiV3, type ChatPriceRequestV3 } from '@/lib/api-v3'
 import { ChatMessageListV3, type ChatMessageV3 } from './ChatMessageListV3'
-import { EstimateBreakdownV3 } from './EstimateBreakdownV3'
-import { ClarificationModal } from './ClarificationModal'
 import { Send, RotateCcw } from 'lucide-react'
+
+const EstimateBreakdownV3 = dynamic(
+  () => import('./EstimateBreakdownV3').then(m => ({ default: m.EstimateBreakdownV3 })),
+  { ssr: false }
+)
+const ClarificationModal = dynamic(
+  () => import('./ClarificationModal').then(m => ({ default: m.ClarificationModal })),
+  { ssr: false }
+)
 
 interface EstimatorPageV3Props {
   projectId?: number
@@ -101,10 +109,27 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
             existing.latency_ms = event.latency_ms || existing.latency_ms
           }
         } else if (event.type === 'pricing') {
+          // Render estimate immediately — don't wait for narrative
           estimateData = event.estimate as NonNullable<ChatMessageV3['estimate']>
           confidence = event.confidence
           confidenceLabel = event.confidence_label
           assumptions = event.assumptions
+          const earlyMsg: ChatMessageV3 = {
+            id: assistantId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            estimate: estimateData,
+            confidence,
+            confidence_label: confidenceLabel,
+            assumptions,
+            reasoning,
+            tool_calls: toolCalls,
+            market_adjustments: marketAdjustments,
+          }
+          setMessages(prev => prev.map(m => m.id === assistantId ? earlyMsg : m))
+          setSelectedMessage(earlyMsg)
+          setSheetOpen(true)
         } else if (event.type === 'clarification') {
           setClarificationQuestions(event.questions)
           setLoading(false)
@@ -112,6 +137,10 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
           return
         } else if (event.type === 'token') {
           narrative += event.content
+          // Stream narrative text into the message bubble progressively
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId ? { ...m, content: narrative } : m
+          ))
         } else if (event.type === 'error') {
           narrative += `\n[Error: ${event.message}]`
         } else if (event.type === 'done') {
@@ -119,24 +148,28 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
         }
       }
 
+      // Final pass: fill in narrative if it arrived, or use default
+      const finalMsg: Partial<ChatMessageV3> = {
+        content: narrative || (estimateData ? 'Estimate generated.' : ''),
+        estimate: estimateData ?? undefined,
+        confidence,
+        confidence_label: confidenceLabel,
+        assumptions,
+        reasoning,
+        tool_calls: toolCalls,
+        market_adjustments: marketAdjustments,
+      }
       setMessages(prev => prev.map(m =>
-        m.id === assistantId
-          ? {
-              ...m,
-              content: narrative || 'Estimate generated.',
-              estimate: estimateData,
-              confidence,
-              confidence_label: confidenceLabel,
-              assumptions,
-              reasoning,
-              tool_calls: toolCalls,
-              market_adjustments: marketAdjustments,
-            }
-          : m
+        m.id === assistantId ? { ...m, ...finalMsg } : m
       ))
+      // Sync selectedMessage with final narrative text
+      setSelectedMessage(prev =>
+        prev?.id === assistantId ? { ...prev, ...finalMsg } : prev
+      )
 
-      if (estimateData) {
-        setSelectedMessage(messagesRef.current.find(m => m.id === assistantId) || null)
+      // Sheet was opened on pricing event; this is a fallback if stream had no pricing
+      if (estimateData && !sheetOpen) {
+        setSelectedMessage(prev => prev ?? (messagesRef.current.find(m => m.id === assistantId) || null))
         setSheetOpen(true)
       }
     } catch (err) {
@@ -151,7 +184,7 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
       setLoading(false)
       abortRef.current = null
     }
-  }, [input, loading, county, projectId, imagePreview])
+  }, [input, loading, county, projectId, imagePreview, sheetOpen])
 
   const handleCopy = useCallback((id: string, content: string) => {
     navigator.clipboard.writeText(content)

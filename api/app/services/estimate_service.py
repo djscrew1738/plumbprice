@@ -93,6 +93,7 @@ async def persist_estimate(
         chat_context=chat_context,
         created_by=created_by,
         organization_id=organization_id,
+        updated_at=datetime.now(timezone.utc),
         valid_until=datetime.now(timezone.utc) + timedelta(days=30),
     )
     db.add(estimate)
@@ -132,6 +133,7 @@ async def persist_estimate(
         version_number=1,
         snapshot_json=snapshot,
         change_summary="Initial estimate version",
+        created_by=created_by,
     ))
 
     if project_id is not None:
@@ -240,6 +242,7 @@ async def update_draft_estimate(
             supplier=item.supplier,
             sku=item.sku,
             canonical_item=item.canonical_item,
+            trace_json=getattr(item, 'trace_json', None),
             sort_order=i,
         ))
 
@@ -250,7 +253,7 @@ async def update_draft_estimate(
     estimate.misc_total = totals["misc_total"]
     estimate.subtotal = totals["subtotal"]
     estimate.grand_total = totals["grand_total"]
-    estimate.updated_at = datetime.now(timezone.utc)
+    # updated_at is handled by onupdate=func.now() on the column
 
     await db.commit()
     await db.refresh(estimate)

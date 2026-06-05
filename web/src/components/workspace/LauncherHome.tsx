@@ -51,8 +51,8 @@ function getGreeting(date: Date) {
 export function LauncherHome() {
   const [estimatesQuery, sessionsQuery, outcomeStatsQuery] = useQueries({
     queries: [
-      { queryKey: ['estimates'], queryFn: () => estimatesApi.list() },
-      { queryKey: ['sessions'], queryFn: () => sessionsApi.list(5) },
+      { queryKey: ['estimates', { limit: 20 }], queryFn: () => estimatesApi.list({ limit: 20 }), staleTime: 2 * 60_000 },
+      { queryKey: ['sessions'], queryFn: () => sessionsApi.list(5), staleTime: 2 * 60_000 },
       { queryKey: ['outcome-stats'], queryFn: () => outcomesApi.stats(), staleTime: 60_000 },
     ],
   })

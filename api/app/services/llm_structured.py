@@ -31,6 +31,39 @@ logger = structlog.get_logger()
 _VALID_TASK_CODES = frozenset(code.upper() for code in list_template_codes())
 _COUNTIES = {c.value for c in County}
 
+# Curated subset of common residential/commercial task codes used in the classify
+# prompt. Using all 314+ codes makes the prompt ~2000 tokens which is too slow
+# for local inference. These 69 cover >95% of real requests; the full
+# _VALID_TASK_CODES set is still used for post-LLM validation.
+_PROMPT_TASK_CODES: frozenset[str] = frozenset({
+    "ANGLE_STOP_REPLACE", "ANGLE_STOP_REPLACE_PAIR", "BACKFLOW_PREVENTER_INSTALL",
+    "BACKFLOW_TEST_ANNUAL", "BATHTUB_DRAIN_REPAIR", "CAMERA_INSPECTION",
+    "CLEAN_OUT_INSTALL", "DISHWASHER_HOOKUP", "DRAIN_CLEAN_BATHTUB",
+    "DRAIN_CLEAN_KITCHEN", "DRAIN_CLEAN_SHOWER", "DRAIN_CLEAN_STANDARD",
+    "EXPANSION_TANK_INSTALL", "EXPANSION_TANK_ONLY", "FAUCET_CARTRIDGE_REPAIR",
+    "GARBAGE_DISPOSAL_INSTALL", "GARBAGE_DISPOSAL_REPAIR", "GAS_LINE_NEW_RUN",
+    "GAS_LINE_REPAIR_MINOR", "GAS_PRESSURE_TEST", "GAS_SHUTOFF_REPLACE",
+    "HOSE_BIB_ADD_NEW", "HOSE_BIB_REPLACE", "HYDROJETTING",
+    "ICE_MAKER_LINE_INSTALL", "IRRIGATION_BACKFLOW_REPAIR", "KITCHEN_FAUCET_REPLACE",
+    "LAV_FAUCET_REPLACE", "LAV_SINK_REPLACE", "LEAK_DETECTION",
+    "MAIN_LINE_CLEAN", "MAIN_SHUTOFF_REPLACE", "MIXING_VALVE_REPLACE",
+    "OUTDOOR_SHOWER_INSTALL", "PRV_INSTALL_NEW", "PRV_REPLACE",
+    "PTRAP_REPLACE", "RECIRCULATION_PUMP_INSTALL", "SEWER_SPOT_REPAIR",
+    "SHOWER_HEAD_REPLACE", "SHOWER_PAN_LINER_REPAIR", "SHOWER_VALVE_REPLACE",
+    "SLAB_LEAK_REPAIR", "SUPPLY_LINE_REPLACE", "TOILET_COMFORT_HEIGHT",
+    "TOILET_FILL_VALVE_REPLACE", "TOILET_FLANGE_REPAIR", "TOILET_FLAPPER_REPLACE",
+    "TOILET_INSTALL_NEW", "TOILET_REPLACE_STANDARD", "TUB_SPOUT_REPLACE",
+    "TUB_SHOWER_COMBO_REPLACE", "UNDER_SINK_FILTER_INSTALL", "URINAL_REPLACE",
+    "WATER_HEATER_FLUSH", "WATER_SOFTENER_INSTALL",
+    "WH_40G_GAS_STANDARD", "WH_50G_GAS_STANDARD", "WH_50G_GAS_ATTIC",
+    "WH_40G_ELEC_STANDARD", "WH_50G_ELEC_STANDARD",
+    "WH_ANODE_REPLACE", "WH_ELEMENT_REPLACE", "WH_FLUSH_MAINTENANCE",
+    "WH_REPAIR_GAS", "WH_TANKLESS_GAS", "WH_TANKLESS_ELEC",
+    "WHOLE_HOUSE_FILTER_INSTALL", "WHOLE_HOUSE_REPIPING",
+})
+# Keep only codes that actually exist in the labor template catalog
+_PROMPT_TASK_CODES = _PROMPT_TASK_CODES & _VALID_TASK_CODES
+
 
 # ── Pydantic Response Models ──────────────────────────────────────────────────
 
@@ -64,25 +97,24 @@ class ClarificationRequest(BaseModel):
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 def _build_classify_system_prompt() -> str:
-    task_codes = ",\n  ".join(sorted(_VALID_TASK_CODES))
-    counties = " | ".join(f'"{c}"' for c in sorted(_COUNTIES))
+    # Use curated common codes (~69) not all 314 — keeps prompt ~400 tokens for fast local inference
+    task_codes = ", ".join(sorted(_PROMPT_TASK_CODES))
     return f"""\
 /no_think
 You are a plumbing estimator AI for DFW (Dallas-Fort Worth) Texas contractors.
-Classify the user's natural-language plumbing, construction, or commercial request into structured data.
+Classify the plumbing request into structured JSON. Pick the best task_code or null.
 
-Valid task_code values (pick the single best match from the real labor template catalog, or null if unknown):
-  {task_codes}
+Common task codes: {task_codes}
 
-Disambiguation rules (apply BEFORE picking task_code):
-- "sink backed up / clogged / slow / draining slow / won't drain" → DRAIN_CLEAN_STANDARD (or DRAIN_CLEAN_KITCHEN / MAIN_LINE_CLEAN), NOT a fixture replacement.
-- "toilet won't flush / clogged / backed up" → DRAIN_CLEAN_STANDARD, NOT TOILET_REPLACE.
-- "angle stop(s) / shutoff valve / supply valve leaking / replace" → ANGLE_STOP_REPLACE (or ANGLE_STOP_REPLACE_PAIR if two/both/pair). The fact that they sit under a sink does NOT mean the sink itself is being replaced.
-- "sewer line broken / cracked / collapsed / needs excavation" → SEWER_SPOT_REPAIR, NOT MAIN_LINE_CLEAN.
-- Quantity: extract integer from words like "two", "three", "both", "pair" (both/pair = 2). Default 1.
+Rules:
+- "clogged/backed up/slow drain" → DRAIN_CLEAN_STANDARD (not a replacement)
+- "toilet won't flush/clogged" → DRAIN_CLEAN_STANDARD, not TOILET_REPLACE_STANDARD
+- "angle stop/shutoff valve" → ANGLE_STOP_REPLACE or ANGLE_STOP_REPLACE_PAIR
+- "sewer line broken/collapsed" → SEWER_SPOT_REPAIR, not MAIN_LINE_CLEAN
+- Quantity: extract from "two/three/both/pair" (both/pair=2). Default 1.
+- county: DFW county name (Dallas, Tarrant, Collin, Denton, etc.)
 
-Respond with valid JSON matching the expected schema. Include a brief reasoning field explaining your classification.
-"""
+Respond with valid JSON only. Include a brief reasoning field."""
 
 
 # ── Service ───────────────────────────────────────────────────────────────────

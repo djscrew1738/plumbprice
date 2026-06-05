@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "pp_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZXhwIjoxNzgwNjIzNTg3fQ.-NXAvoSPzS1LIoO_UnrRBn5PGXcfy4Jfu8zIRoO1f_o",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1780623587.111,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "pp_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZXhwIjoxNzgwNjIzNTg3fQ.-NXAvoSPzS1LIoO_UnrRBn5PGXcfy4Jfu8zIRoO1f_o",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

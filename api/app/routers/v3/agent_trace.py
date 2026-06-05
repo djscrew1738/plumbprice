@@ -71,4 +71,14 @@ async def list_tool_calls(
 
     stmt = select(AgentToolCall).where(AgentToolCall.estimate_id == estimate_id).order_by(AgentToolCall.created_at)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    tool_calls = result.scalars().all()
+    return [
+        {
+            "tool_name": tc.tool_name,
+            "arguments": tc.arguments,
+            "result": tc.result,
+            "latency_ms": tc.latency_ms,
+            "created_at": tc.created_at.isoformat() if tc.created_at else None,
+        }
+        for tc in tool_calls
+    ]

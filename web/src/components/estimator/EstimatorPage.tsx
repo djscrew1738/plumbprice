@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { FileUp, X } from 'lucide-react'
 import { chatApi, estimatesApi, sessionsApi, templatesApi, type EstimateDetailResponse, type PricingTemplateSummary } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
@@ -106,7 +107,6 @@ export function EstimatorPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   const [sessionId, setSessionId] = useState<number | null>(null)
-  const [pricingTemplates, setPricingTemplates] = useState<PricingTemplateSummary[]>([])
   const [keyboardOffset, setKeyboardOffset] = useState(0)
   const [templateBrowserOpen, setTemplateBrowserOpen] = useState(false)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
@@ -151,17 +151,14 @@ export function EstimatorPage() {
     }
   }, [])
 
-  useEffect(() => {
-    let active = true
-    templatesApi.list().then(res => {
-      if (active) setPricingTemplates(res.data)
-    }).catch((err) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Failed to load pricing templates', err)
-      }
-    })
-    return () => { active = false }
-  }, [])
+  const { data: pricingTemplates = [] } = useQuery({
+    queryKey: ['templates', 'pricing'],
+    queryFn: async () => {
+      const res = await templatesApi.list()
+      return res.data
+    },
+    staleTime: 15 * 60_000,
+  })
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

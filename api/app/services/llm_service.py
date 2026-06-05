@@ -575,9 +575,14 @@ class LLMService:
                 temperature=0.35,
                 max_tokens=200,
                 stream=True,
+                stream_options={"include_usage": True},
             )
             yielded_any = False
+            final_usage = None
             async for chunk in stream:
+                # Capture usage from final chunk (sent when stream_options includes usage)
+                if hasattr(chunk, "usage") and chunk.usage:
+                    final_usage = chunk.usage
                 delta = chunk.choices[0].delta.content if chunk.choices else None
                 if delta:
                     yielded_any = True
@@ -587,6 +592,12 @@ class LLMService:
                 yield self.make_static_narrative(
                     template_name, grand_total, labor_total, materials_total, county, quantity
                 )
+            # Track cloud costs for streaming responses
+            if self._active_tier == "cloud" and final_usage:
+                try:
+                    self._record_cloud_usage(int(final_usage.total_tokens) if final_usage.total_tokens else 0)
+                except Exception:
+                    pass
         except Exception as e:  # noqa: BLE001
             err_type = type(e).__name__
             if any(k in err_type for k in ("Timeout", "ReadTimeout", "Connection", "Connect")):

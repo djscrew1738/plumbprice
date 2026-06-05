@@ -81,6 +81,7 @@ export function DocumentsPage() {
 
   const { data: suppliersRaw } = useQuery({
     queryKey: ['suppliers-list'],
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       const res = await suppliersApi.list()
       return res.data

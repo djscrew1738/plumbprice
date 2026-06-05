@@ -3137,6 +3137,12 @@ class SupplierService:
 
         return None
 
+    def canonical_lookup(
+        self, canonical_item: str, preferred_supplier: Optional[str] = None
+    ) -> Optional[MaterialCostResult]:
+        """Look up a material's cost from the canonical price map (public)."""
+        return self._canonical_lookup(canonical_item, preferred_supplier)
+
     def _canonical_lookup(
         self, canonical_item: str, preferred_supplier: Optional[str] = None
     ) -> Optional[MaterialCostResult]:
@@ -3290,6 +3296,13 @@ class SupplierService:
         comparison = {}
         totals = {"ferguson": 0.0, "moore_supply": 0.0, "apex": 0.0}
 
+        if db:
+            # Enrich from DB when available — canonical map is the fallback
+            try:
+                db_results = await self._db_lookup_batch(db, canonical_items)
+            except Exception:
+                db_results = {}
+
         for item in canonical_items:
             item_map = CANONICAL_MAP.get(item, {})
             comparison[item] = {}
@@ -3301,10 +3314,23 @@ class SupplierService:
                         "sku": data.get("sku"),
                         "name": data["name"],
                         "cost": data["cost"],
+                        "source": "canonical_map",
                     }
                     totals[supplier] += data["cost"]
                 else:
                     comparison[item][supplier] = None
+
+            # Overlay DB results when available (more current pricing)
+            if db:
+                db_item = db_results.get(item)
+                if db_item and db_item.selected_supplier in comparison[item]:
+                    comparison[item][db_item.selected_supplier] = {
+                        "sku": db_item.sku,
+                        "name": db_item.name,
+                        "cost": db_item.unit_cost,
+                        "source": "database",
+                    }
+                    totals[db_item.selected_supplier] += db_item.unit_cost
 
         best_supplier = min(totals, key=totals.get) if any(totals.values()) else None
 
