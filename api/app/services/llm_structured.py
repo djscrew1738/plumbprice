@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Optional, Literal
 import structlog
 
@@ -66,6 +67,7 @@ def _build_classify_system_prompt() -> str:
     task_codes = ",\n  ".join(sorted(_VALID_TASK_CODES))
     counties = " | ".join(f'"{c}"' for c in sorted(_COUNTIES))
     return f"""\
+/no_think
 You are a plumbing estimator AI for DFW (Dallas-Fort Worth) Texas contractors.
 Classify the user's natural-language plumbing, construction, or commercial request into structured data.
 
@@ -89,7 +91,8 @@ class LLMStructuredService:
     """Reliable structured LLM output with Pydantic validation and retry."""
 
     def __init__(self) -> None:
-        self._max_retries = 3
+        # Use fewer retries for local LLMs to fail fast and fall back to keyword classification.
+        self._max_retries = 1
         self._base_delay = 1.0
 
     # ── Internal helpers ──────────────────────────────────────────────────────
@@ -129,6 +132,15 @@ class LLMStructuredService:
             return settings.default_llm_model
         return settings.llm_primary_model
 
+    def _is_cloud_provider(self) -> bool:
+        """Return True when using OpenAI or Anthropic cloud APIs."""
+        provider = (settings.default_llm_provider or "openai").lower()
+        if provider == "openai" and settings.openai_api_key:
+            return True
+        if provider == "anthropic" and settings.anthropic_api_key:
+            return True
+        return False
+
     async def _call_structured(
         self,
         messages: list[dict],
@@ -142,25 +154,24 @@ class LLMStructuredService:
 
         model = self._active_model()
 
-        # Build JSON schema from Pydantic model for Ollama compatibility
-        schema = response_model.model_json_schema()
+        # beta.parse() is OpenAI-native structured outputs — Ollama hangs on it,
+        # so only attempt it for real cloud providers.
+        if self._is_cloud_provider():
+            try:
+                response = await client.beta.chat.completions.parse(
+                    model=model,
+                    messages=messages,
+                    response_format=response_model,
+                    temperature=0.0,
+                    max_tokens=640,
+                )
+                parsed = response.choices[0].message.parsed
+                if parsed is not None:
+                    return parsed
+            except Exception as parse_exc:
+                logger.debug("llm_structured.parse_failed", error=str(parse_exc), model=model)
 
-        try:
-            # Try native OpenAI parse() first (gpt-4o-mini+ supports this)
-            response = await client.beta.chat.completions.parse(
-                model=model,
-                messages=messages,
-                response_format=response_model,
-                temperature=0.0,
-                max_tokens=640,
-            )
-            parsed = response.choices[0].message.parsed
-            if parsed is not None:
-                return parsed
-        except Exception as parse_exc:
-            logger.debug("llm_structured.parse_failed", error=str(parse_exc), model=model)
-
-        # Fallback: use JSON mode + manual validation
+        # JSON mode + manual validation (works with Ollama and cloud fallback)
         try:
             response = await client.chat.completions.create(
                 model=model,
@@ -170,6 +181,12 @@ class LLMStructuredService:
                 max_tokens=640,
             )
             raw = (response.choices[0].message.content or "{}").strip()
+            # Strip <think>...</think> reasoning blocks (qwen3 and similar models)
+            raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+            # Extract first JSON object if the model still prepends text
+            json_match = re.search(r"\{.*\}", raw, re.DOTALL)
+            if json_match:
+                raw = json_match.group(0)
             data = json.loads(raw)
             return response_model.model_validate(data)
         except (json.JSONDecodeError, ValidationError) as exc:
@@ -185,9 +202,16 @@ class LLMStructuredService:
         response_model: type[BaseModel],
         timeout: float = 20.0,
     ) -> Optional[BaseModel]:
-        """Retry structured call with exponential backoff."""
+        """Retry structured call with exponential backoff and hard wall-clock timeout."""
         for attempt in range(1, self._max_retries + 1):
-            result = await self._call_structured(messages, response_model, timeout)
+            try:
+                result = await asyncio.wait_for(
+                    self._call_structured(messages, response_model, timeout),
+                    timeout=timeout,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("llm_structured.timeout", attempt=attempt, timeout=timeout)
+                result = None
             if result is not None:
                 return result
 

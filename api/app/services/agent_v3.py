@@ -25,6 +25,7 @@ from app.services.pricing_engine import pricing_engine, EstimateResult, Material
 from app.services.supplier_service import supplier_service, MATERIAL_ASSEMBLIES
 from app.services.labor_engine import get_template
 from app.services.llm_service import llm_service
+from app.config import settings
 
 logger = structlog.get_logger()
 
@@ -145,21 +146,6 @@ class AgentTools:
 
         cost = pricing_config_service.get_permit_cost(county, permit_category)
         return {"required": True, "cost": cost, "category": permit_category}
-
-    @staticmethod
-    async def check_price_history(task_code: str) -> dict:
-        """Check recent price trends for materials associated with a task."""
-        # Stub: returns empty trend for MVP. Full implementation would query
-        # supplier_price_history for price drift analysis.
-        return {"trend": "stable", "drift_pct": 0.0, "last_updated": None}
-
-    @staticmethod
-    async def get_market_adjustments(county: str = "Dallas") -> dict:
-        """Fetch active market adjustments for a county (async-safe stub)."""
-        # The real lookup requires a DB session; this returns a lightweight signal
-        # that the caller (agent_v3) will resolve via the market pricing engine.
-        return {"county": county, "has_adjustments": True}
-
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -328,7 +314,7 @@ class AgentV3:
                         quantity=m["quantity"],
                         unit="ea",
                         unit_cost=m["unit_cost"],
-                        supplier=m.get("supplier"),
+                        supplier=m.get("supplier") or "",
                     ))
 
             estimate = pricing_engine.calculate_service_estimate(
@@ -383,6 +369,7 @@ class AgentV3:
                         "misc_total": estimate.misc_total,
                         "subtotal": estimate.subtotal,
                         "grand_total": estimate.grand_total,
+                        "trip_charge": estimate.trip_total,
                         "tax_rate": estimate.tax_rate,
                         "county": classification.county,
                         "confidence_components": {},
@@ -401,6 +388,7 @@ class AgentV3:
                         misc_total=adjusted_dict["misc_total"],
                         subtotal=adjusted_dict["subtotal"],
                         grand_total=adjusted_dict["grand_total"],
+                        confidence_components=adjusted_dict.get("confidence_components", {}),
                     )
 
                     overall_market_factor = adjusted_dict["market_adjustment_applied"]
@@ -414,17 +402,24 @@ class AgentV3:
         # ── Step 6: LLM narrative ─────────────────────────────────────────────
         narrative = None
         if not skip_llm_response and classification.task_code:
-            narrative = await llm_service.generate_response(
-                message=message,
-                grand_total=estimate.grand_total,
-                labor_total=estimate.labor_total,
-                materials_total=estimate.materials_total,
-                tax_total=estimate.tax_total,
-                template_name=estimate.template_name or classification.task_code,
-                county=classification.county,
-                quantity=classification.quantity,
-                history=history,
-            )
+            try:
+                narrative = await asyncio.wait_for(
+                    llm_service.generate_response(
+                        message=message,
+                        grand_total=estimate.grand_total,
+                        labor_total=estimate.labor_total,
+                        materials_total=estimate.materials_total,
+                        tax_total=estimate.tax_total,
+                        template_name=estimate.template_code or classification.task_code,
+                        county=classification.county,
+                        quantity=classification.quantity,
+                        history=history,
+                    ),
+                    timeout=float(settings.llm_timeout),
+                )
+            except asyncio.TimeoutError:
+                logger.warning("agent_v3.narrative_timeout", timeout=settings.llm_timeout)
+                narrative = None
 
         total_latency_ms = int((asyncio.get_event_loop().time() - t0) * 1000)
 

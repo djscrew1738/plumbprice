@@ -2,6 +2,7 @@
 Chat API v3 — Agentic pricing with structured outputs, tool calling, and streaming.
 """
 
+import asyncio
 import json
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -9,6 +10,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
+from app.config import settings
 from app.core.auth import get_current_user
 from app.database import get_db
 from app.models.estimates import Estimate
@@ -202,21 +204,31 @@ async def chat_price_stream_v3(
             }
             yield f"event: pricing\ndata: {json.dumps(pricing_data)}\n\n"
 
-        # Stream narrative tokens
+        # Generate narrative with a hard asyncio timeout; emit as a single token event.
+        # Using generate_response() (not streaming) so asyncio.wait_for() can enforce
+        # the deadline even if the LLM hangs before yielding the first token.
         if result.estimate.template_code:
-            narrative_stream = llm_service.generate_response_stream(
-                message=req.message,
-                grand_total=result.estimate.grand_total,
-                labor_total=result.estimate.labor_total,
-                materials_total=result.estimate.materials_total,
-                tax_total=result.estimate.tax_total,
-                template_name=result.estimate.template_name or result.classification.task_code or "",
-                county=result.classification.county,
-                quantity=result.classification.quantity,
-                history=[{"role": m.role, "content": m.content} for m in (req.history or [])],
-            )
-            async for chunk in narrative_stream:
-                yield f"event: token\ndata: {json.dumps({'content': chunk})}\n\n"
+            try:
+                narrative_text = await asyncio.wait_for(
+                    llm_service.generate_response(
+                        message=req.message,
+                        grand_total=result.estimate.grand_total,
+                        labor_total=result.estimate.labor_total,
+                        materials_total=result.estimate.materials_total,
+                        tax_total=result.estimate.tax_total,
+                        template_name=result.estimate.template_code or result.classification.task_code or "",
+                        county=result.classification.county,
+                        quantity=result.classification.quantity,
+                        history=[{"role": m.role, "content": m.content} for m in (req.history or [])],
+                    ),
+                    timeout=float(settings.llm_timeout),
+                )
+                if narrative_text:
+                    yield f"event: token\ndata: {json.dumps({'content': narrative_text})}\n\n"
+            except asyncio.TimeoutError:
+                logger.warning("chat_v3_stream.narrative_timeout", timeout=settings.llm_timeout)
+            except Exception as exc:
+                logger.warning("chat_v3_stream.narrative_failed", error=str(exc))
 
         yield "event: done\ndata: {}\n\n"
 
