@@ -11,7 +11,7 @@ import { ArrowLeft, Briefcase, CheckCircle, Clock, AlertCircle } from 'lucide-re
 import { useSafeQuery } from '@/lib/hooks'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
-import type { Estimate } from '@/types/estimates'
+import type { EstimateListItem as Estimate } from '@/types'
 
 function useFieldJobs() {
   return useSafeQuery(

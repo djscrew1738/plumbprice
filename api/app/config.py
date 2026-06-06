@@ -138,6 +138,10 @@ class Settings(BaseSettings):
     # Alert when live price deviates more than this fraction from stored cost
     price_change_alert_threshold: float = 0.10
 
+    # Scraper live mode toggles (v4.1) — default off (simulation mode)
+    moore_supply_enabled: bool = False
+    apex_supply_enabled: bool = False
+
     # Vision provider (v4.1): "openai" uses GPT-4V; "ollama" uses local vision model
     vision_provider: str = "ollama"
     # Confidence threshold below which a detection is flagged for manual review

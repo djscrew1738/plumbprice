@@ -3,6 +3,7 @@ Blueprints API v3 — Enhanced blueprint analysis with rooms, pipe runs, and bou
 """
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -14,6 +15,7 @@ from app.core.auth import get_current_user
 from app.core.broker import broker_available
 from app.database import get_db
 from app.models.blueprints import BlueprintJob
+from app.models.blueprint_pipe_runs import BlueprintPipeRun
 from app.models.users import User
 from app.core.storage import storage_client
 from app.services.blueprint_to_estimate_v3 import (
@@ -287,4 +289,48 @@ async def blueprint_to_estimate_v3(
         "grand_total": estimate.grand_total,
         "blueprint_room_count": estimate.blueprint_room_count,
         "blueprint_pipe_run_ft": estimate.blueprint_pipe_run_ft,
+    }
+
+
+# ── Pipe run inline editing ───────────────────────────────────────────────────
+
+
+class PipeRunPatch(BaseModel):
+    estimated_footage: Optional[float] = None
+    material_type: Optional[str] = None
+
+
+@router.patch("/pipe-runs/{pipe_run_id}")
+async def patch_pipe_run(
+    pipe_run_id: int,
+    body: PipeRunPatch,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Update footage and/or material type for a pipe run (takeoff editor)."""
+    result = await db.execute(select(BlueprintPipeRun).where(BlueprintPipeRun.id == pipe_run_id))
+    pipe_run = result.scalar_one_or_none()
+    if not pipe_run:
+        raise HTTPException(status_code=404, detail="Pipe run not found")
+
+    # `estimated_footage` maps to the `length_ft` column
+    if body.estimated_footage is not None:
+        pipe_run.length_ft = body.estimated_footage
+    if body.material_type is not None:
+        pipe_run.material_type = body.material_type  # type: ignore[attr-defined]
+
+    await db.commit()
+    await db.refresh(pipe_run)
+
+    logger.info(
+        "pipe_run.updated",
+        pipe_run_id=pipe_run_id,
+        user_id=current_user.id,
+        footage=pipe_run.length_ft,
+        material=getattr(pipe_run, "material_type", None),
+    )
+    return {
+        "id": pipe_run.id,
+        "estimated_footage": pipe_run.length_ft,
+        "material_type": getattr(pipe_run, "material_type", None),
     }
