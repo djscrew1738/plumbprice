@@ -241,3 +241,88 @@ async def winrate_by_task(
         task_codes=body.task_codes,
         min_n=body.min_n,
     )
+
+
+# ── v4.1: Actual cost capture (E2.1) ─────────────────────────────────────────
+
+class CloseJobRequest(BaseModel):
+    actual_materials_cost: Optional[float] = None
+    actual_labor_hours: Optional[float] = None
+    actual_labor_cost: Optional[float] = None
+    actual_total: float
+    notes: Optional[str] = Field(None, max_length=2000)
+
+
+@router.patch("/{estimate_id}/close", response_model=dict)
+async def close_job_with_actuals(
+    estimate_id: int,
+    body: CloseJobRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record actual costs for a completed job and compute variance.
+
+    Sets outcome to 'won' and stores actual cost figures for variance analysis.
+    """
+    from datetime import datetime, timezone
+
+    estimate = (
+        await db.execute(
+            select(Estimate).where(
+                Estimate.id == estimate_id,
+                Estimate.organization_id == current_user.organization_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+
+    # Upsert outcome record
+    outcome_row = (
+        await db.execute(
+            select(EstimateOutcome).where(EstimateOutcome.estimate_id == estimate_id)
+        )
+    ).scalar_one_or_none()
+
+    if not outcome_row:
+        outcome_row = EstimateOutcome(
+            estimate_id=estimate_id,
+            outcome="won",
+            organization_id=current_user.organization_id,
+            recorded_by=current_user.id,
+        )
+        db.add(outcome_row)
+
+    outcome_row.outcome = "won"
+    outcome_row.actual_materials_cost = body.actual_materials_cost
+    outcome_row.actual_labor_hours = body.actual_labor_hours
+    outcome_row.actual_labor_cost = body.actual_labor_cost
+    outcome_row.actual_total = body.actual_total
+    outcome_row.closed_by_user_id = current_user.id
+    outcome_row.closed_at = datetime.now(timezone.utc)
+    if body.notes:
+        outcome_row.notes = body.notes
+
+    # Compute variance percentage
+    estimated_total = estimate.grand_total or 0.0
+    if estimated_total > 0:
+        outcome_row.variance_pct = round(
+            ((body.actual_total - estimated_total) / estimated_total) * 100, 2
+        )
+
+    await db.commit()
+
+    logger.info(
+        "job_closed.actuals_recorded",
+        estimate_id=estimate_id,
+        actual_total=body.actual_total,
+        variance_pct=outcome_row.variance_pct,
+        user_id=current_user.id,
+    )
+    return {
+        "status": "closed",
+        "estimate_id": estimate_id,
+        "actual_total": body.actual_total,
+        "estimated_total": estimated_total,
+        "variance_pct": outcome_row.variance_pct,
+    }
