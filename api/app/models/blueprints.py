@@ -12,8 +12,9 @@ class BlueprintJob(Base):
     filename = Column(String(500), nullable=False)
     original_filename = Column(String(500), nullable=True)
     storage_path = Column(String(1000), nullable=True)
-    status = Column(String(50), default="uploaded")  # uploaded, processing, complete, error
+    status = Column(String(50), default="uploaded")  # uploaded, queued, processing, complete, error
     page_count = Column(Integer, nullable=True)
+    celery_task_id = Column(String(255), nullable=True, index=True)
     processing_error = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

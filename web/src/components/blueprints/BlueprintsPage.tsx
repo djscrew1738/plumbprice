@@ -17,7 +17,7 @@ const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { blueprintsApi } from '@/lib/api'
-import { blueprintApiV3, type BlueprintTakeoffV3 } from '@/lib/api-v3'
+import { blueprintApiV3, type BlueprintJobV3 } from '@/lib/api-v3'
 import { useBlueprints, useUploadBlueprint, useDeleteBlueprint, type JobStatus, type BlueprintJob } from '@/lib/hooks'
 import { BLUEPRINT_POLL_INTERVAL_MS, MAX_BLUEPRINT_SIZE_MB } from '@/lib/constants'
 import { AdobeCloudPicker } from '@/components/blueprints/AdobeCloudPicker'
@@ -160,16 +160,42 @@ function TakeoffDisplay({ jobId, onCreateEstimate }: { jobId: string; onCreateEs
     queryKey: ['blueprint-takeoff', jobId],
     queryFn: async () => {
       const res = await blueprintApiV3.getTakeoff(Number(jobId))
-      const v3 = res.data as BlueprintTakeoffV3
+      const job = res.data as BlueprintJobV3
+
+      // Aggregate detections across all pages into fixtures
+      const fixtureMap = new Map<string, { count: number; totalConfidence: number }>()
+      for (const page of job.pages || []) {
+        for (const det of page.detections || []) {
+          const existing = fixtureMap.get(det.fixture_type)
+          if (existing) {
+            existing.count++
+            existing.totalConfidence += det.confidence
+          } else {
+            fixtureMap.set(det.fixture_type, { count: 1, totalConfidence: det.confidence })
+          }
+        }
+      }
+      const fixtures = Array.from(fixtureMap.entries()).map(([name, data]) => ({
+        name,
+        quantity: data.count,
+        confidence: Math.round((data.totalConfidence / data.count) * 100) / 100,
+        unit: 'ea',
+      }))
+
       return {
-        fixtures: v3.fixtures.map(f => ({
-          name: f.type,
-          quantity: f.count,
-          confidence: f.confidence,
-          unit: 'ea',
+        fixtures,
+        rooms: (job.rooms || []).map(r => ({
+          type: r.room_type,
+          name: r.room_name,
+          area_sqft: r.area_sqft,
+          fixture_count: r.fixture_count,
+          confidence: r.confidence,
         })),
-        rooms: v3.rooms,
-        pipe_runs: v3.pipe_runs,
+        pipe_runs: (job.pipe_runs || []).map(p => ({
+          pipe_type: p.pipe_type,
+          length_ft: p.length_ft,
+          confidence: p.confidence,
+        })),
       } as TakeoffResult
     },
     staleTime: Infinity,
@@ -409,7 +435,7 @@ function useBlueprintPolling(jobs: BlueprintJob[]) {
       await Promise.allSettled(
         active.map(async (job) => {
           try {
-            const res = await blueprintsApi.getStatus(job.id)
+            const res = await blueprintsApi.getStatus(Number(job.id))
             const newStatus = res.data?.status as JobStatus | undefined
             if (newStatus && newStatus !== job.status) {
               queryClient.invalidateQueries({ queryKey: ['blueprints'] })

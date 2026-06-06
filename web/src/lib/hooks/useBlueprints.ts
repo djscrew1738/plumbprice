@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { blueprintsApi } from '@/lib/api'
+import { blueprintApiV3 } from '@/lib/api-v3'
 import { useToast } from '@/components/ui/Toast'
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
@@ -23,6 +24,28 @@ export interface BlueprintJob {
   message?: string
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** Normalise a v1 or v3 list response into BlueprintJob[]. */
+function normaliseJobs(raw: unknown): BlueprintJob[] {
+  // v1-style: bare array of jobs
+  if (Array.isArray(raw)) {
+    return raw as BlueprintJob[]
+  }
+  // v3-style: { jobs: [...], total, limit, offset }
+  const obj = raw as Record<string, unknown>
+  if (Array.isArray(obj.jobs)) {
+    return obj.jobs.map((j: Record<string, unknown>) => ({
+      id: String(j.id),
+      filename: (j.original_filename ?? '') as string,
+      pages: 0,
+      status: (j.status ?? 'queued') as JobStatus,
+      uploaded_at: (j.created_at ?? new Date().toISOString()) as string,
+    }))
+  }
+  return []
+}
+
 // ─── Queries ────────────────────────────────────────────────────────────────
 
 export function useBlueprints(
@@ -31,8 +54,14 @@ export function useBlueprints(
   return useQuery({
     queryKey: blueprintKeys.all,
     queryFn: async () => {
-      const res = await blueprintsApi.list()
-      return (Array.isArray(res.data) ? res.data : res.data?.jobs ?? []) as BlueprintJob[]
+      // Try v3 first (richer response), fall back to v1
+      try {
+        const res = await blueprintApiV3.list()
+        return normaliseJobs(res.data)
+      } catch {
+        const res = await blueprintsApi.list()
+        return normaliseJobs(res.data)
+      }
     },
     ...options,
   })

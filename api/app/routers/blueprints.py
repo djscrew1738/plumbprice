@@ -93,7 +93,9 @@ async def upload_blueprint(
     await db.refresh(job)
 
     # 4. Trigger background analysis — broker checked above, so enqueue directly.
-    _analyze_blueprint.delay(job.id, job.storage_path)
+    task = _analyze_blueprint.delay(job.id, job.storage_path)
+    job.celery_task_id = task.id
+    await db.commit()
 
     logger.info("blueprint.uploaded", job_id=job.id, user_id=current_user.id)
     return BlueprintJobResponse(

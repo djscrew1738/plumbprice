@@ -115,14 +115,14 @@ export function BlueprintUploadFlow({ projectId }: Props) {
     stopPolling(id)
     pollTimersRef.current[id] = setInterval(async () => {
       try {
-        const statusRes = await blueprintsApi.getStatus(String(jobId))
+        const statusRes = await blueprintsApi.getStatus(jobId)
         const { stage, label } = mapStage(statusRes.data?.status)
         updateJob(id, { stage, statusLabel: label })
 
         if (stage === 'completed') {
           stopPolling(id)
           try {
-            const takeoff = await blueprintsApi.getTakeoff(String(jobId))
+            const takeoff = await blueprintsApi.getTakeoff(jobId)
             updateJob(id, { fixtures: takeoff.data?.fixtures ?? [] })
           } catch {
             // Non-fatal — estimate creation does its own aggregation
@@ -152,7 +152,7 @@ export function BlueprintUploadFlow({ projectId }: Props) {
     if (msg.status === 'completed') {
       stopPolling(localId)
       const numericJobId = Number(remoteJobId)
-      blueprintsApi.getTakeoff(remoteJobId)
+      blueprintsApi.getTakeoff(numericJobId)
         .then(takeoff => {
           updateJob(localId, { stage: 'completed', statusLabel: 'Ready', fixtures: takeoff.data?.fixtures ?? [] })
         })

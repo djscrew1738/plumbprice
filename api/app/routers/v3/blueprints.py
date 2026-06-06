@@ -2,9 +2,9 @@
 Blueprints API v3 — Enhanced blueprint analysis with rooms, pipe runs, and bounding boxes.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import structlog
@@ -25,7 +25,7 @@ from app.services.blueprint_to_estimate_v3 import (
     EmptyTakeoffError,
 )
 from app.config import settings
-from app.core.limiter import limiter  # noqa: F401 — imported for rate-limit registration
+from app.core.limiter import limiter
 from app.services.vision_v3 import vision_service_v3
 from app.core.cache import cache_get, cache_set
 
@@ -34,6 +34,7 @@ router = APIRouter()
 
 _MAX_BLUEPRINT_BYTES = 100 * 1024 * 1024
 _MAX_IMAGE_BYTES = 20 * 1024 * 1024
+_PDF_MAGIC = b"%PDF"
 
 
 try:
@@ -44,9 +45,16 @@ except ImportError:
     _worker_available = False
 
 
-# ── Upload (same as v1, but triggers v3 analysis) ────────────────────────────
+def _validate_pdf_file(content: bytes) -> None:
+    """Validate that the uploaded file is a PDF by checking magic bytes."""
+    if not content.startswith(_PDF_MAGIC):
+        raise HTTPException(status_code=400, detail="File is not a valid PDF (missing %PDF header)")
+
+
+# ── Upload (v3 analysis with rooms + pipe runs + fixtures with bboxes) ───────
 
 @router.post("/upload")
+@limiter.limit("10/minute")
 async def upload_blueprint_v3(
     request: Request,
     file: UploadFile = File(...),
@@ -63,9 +71,16 @@ async def upload_blueprint_v3(
     if not await broker_available():
         raise HTTPException(status_code=503, detail="Blueprint analysis queue is unavailable")
 
+    # Check content-length header before reading the body
+    if file.size is not None and file.size > _MAX_BLUEPRINT_BYTES:
+        raise HTTPException(status_code=413, detail="Blueprint PDF exceeds 100 MB limit")
+
     content = await file.read()
     if len(content) > _MAX_BLUEPRINT_BYTES:
         raise HTTPException(status_code=413, detail="Blueprint PDF exceeds 100 MB limit")
+
+    # Validate PDF magic bytes
+    _validate_pdf_file(content)
 
     unique_filename = f"blueprints/{uuid.uuid4()}.pdf"
     success = storage_client.upload_file(
@@ -84,7 +99,7 @@ async def upload_blueprint_v3(
         filename=unique_filename,
         original_filename=file.filename,
         storage_path=unique_filename,
-        status="uploaded",
+        status="queued",
         project_id=project_id,
         created_by=current_user.id,
         retention_until=retention_until,
@@ -93,10 +108,9 @@ async def upload_blueprint_v3(
     await db.commit()
     await db.refresh(job)
 
-    # Enqueue Celery task for v3 analysis
-    task = _analyze_blueprint.delay(job.id)
+    # Enqueue Celery task with both required arguments
+    task = _analyze_blueprint.delay(job.id, job.storage_path)
     job.celery_task_id = task.id
-    job.status = "queued"
     await db.commit()
 
     logger.info(
@@ -117,6 +131,7 @@ async def upload_blueprint_v3(
 # ── Quick image analyze (for chat attachment) ────────────────────────────────
 
 @router.post("/quick-analyze")
+@limiter.limit("30/minute")
 async def quick_analyze_image_v3(
     request: Request,
     file: UploadFile = File(...),
@@ -145,25 +160,29 @@ async def quick_analyze_image_v3(
         logger.warning("blueprint.quick_analyze_failed", error=str(exc))
         raise HTTPException(status_code=503, detail="Vision analysis failed")
 
+    # Vision services return "type" key; normalize to display consistently
     summary_parts = []
-    if rooms.get("rooms"):
+    room_list = (rooms.get("rooms") or []) if isinstance(rooms, dict) else (rooms or [])
+    if room_list:
         room_types = {}
-        for r in rooms["rooms"]:
-            rt = r.get("room_type", "room")
+        for r in room_list:
+            rt = r.get("room_type") or r.get("type", "room")
             room_types[rt] = room_types.get(rt, 0) + 1
         room_str = ", ".join(f"{c} {t}" for t, c in room_types.items())
         summary_parts.append(f"Detected rooms: {room_str}")
-    if fixtures.get("fixtures"):
+    fixture_list = (fixtures.get("fixtures") or []) if isinstance(fixtures, dict) else (fixtures or [])
+    if fixture_list:
         fixture_types = {}
-        for f in fixtures["fixtures"]:
-            ft = f.get("fixture_type", "fixture")
+        for f in fixture_list:
+            ft = f.get("fixture_type") or f.get("type", "fixture")
             fixture_types[ft] = fixture_types.get(ft, 0) + 1
         fix_str = ", ".join(f"{c} {t}" for t, c in fixture_types.items())
         summary_parts.append(f"Detected fixtures: {fix_str}")
-    if pipes.get("pipe_runs"):
-        total_ft = sum(p.get("length_ft", 0) for p in pipes["pipe_runs"])
+    pipe_list = (pipes.get("pipe_runs") or []) if isinstance(pipes, dict) else (pipes or [])
+    if pipe_list:
+        total_ft = sum(p.get("length_ft", 0) for p in pipe_list)
         pipe_types = {}
-        for p in pipes["pipe_runs"]:
+        for p in pipe_list:
             pt = p.get("pipe_type", "pipe")
             pipe_types[pt] = pipe_types.get(pt, 0) + 1
         pipe_str = ", ".join(f"{c} {t} run{'s' if c > 1 else ''}" for t, c in pipe_types.items())
@@ -171,9 +190,9 @@ async def quick_analyze_image_v3(
 
     result = {
         "summary": "; ".join(summary_parts) if summary_parts else "No plumbing elements detected.",
-        "fixtures": fixtures.get("fixtures", []),
-        "rooms": rooms.get("rooms", []),
-        "pipe_runs": pipes.get("pipe_runs", []),
+        "fixtures": fixture_list,
+        "rooms": room_list,
+        "pipe_runs": pipe_list,
     }
     await cache_set(cache_key, result, ttl=3600)
     return result
@@ -231,6 +250,10 @@ async def get_blueprint_job_v3(
                 "pipe_type": p.pipe_type,
                 "length_ft": p.length_ft,
                 "confidence": p.confidence,
+                "from_fixture": p.from_fixture,
+                "to_fixture": p.to_fixture,
+                "material_type": p.material_type,
+                "needs_review": p.needs_review,
             }
             for p in (job.pipe_runs or [])
         ],
@@ -239,28 +262,75 @@ async def get_blueprint_job_v3(
     }
 
 
-# ── List jobs ────────────────────────────────────────────────────────────────
+# ── List jobs (paginated) ───────────────────────────────────────────────────
 
 @router.get("/jobs")
 async def list_blueprint_jobs_v3(
-    project_id: Optional[int] = None,
+    project_id: Optional[int] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(BlueprintJob).where(BlueprintJob.created_by == current_user.id)
     if project_id is not None:
         stmt = stmt.where(BlueprintJob.project_id == project_id)
-    stmt = stmt.order_by(BlueprintJob.created_at.desc())
+    stmt = stmt.order_by(BlueprintJob.created_at.desc()).offset(offset).limit(limit)
     rows = (await db.execute(stmt)).scalars().all()
-    return [
-        {
-            "id": j.id,
-            "status": j.status,
-            "original_filename": j.original_filename,
-            "created_at": j.created_at.isoformat() if j.created_at else None,
-        }
-        for j in rows
-    ]
+
+    # Get total count for pagination metadata
+    count_stmt = select(sa_func.count(BlueprintJob.id)).where(BlueprintJob.created_by == current_user.id)
+    if project_id is not None:
+        count_stmt = count_stmt.where(BlueprintJob.project_id == project_id)
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    return {
+        "jobs": [
+            {
+                "id": j.id,
+                "status": j.status,
+                "original_filename": j.original_filename,
+                "created_at": j.created_at.isoformat() if j.created_at else None,
+            }
+            for j in rows
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+# ── Retry failed job ─────────────────────────────────────────────────────────
+
+@router.post("/jobs/{job_id}/retry")
+async def retry_blueprint_job(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Re-enqueue a failed blueprint job for analysis."""
+    job = await _load_job_v3(db, job_id)
+    if not job or not _user_owns_job(job, current_user):
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in ("error", "failed"):
+        raise HTTPException(status_code=400, detail=f"Cannot retry job in status '{job.status}'")
+    if not _worker_available or not _analyze_blueprint:
+        raise HTTPException(status_code=503, detail="Blueprint worker is not deployed")
+    if not await broker_available():
+        raise HTTPException(status_code=503, detail="Blueprint analysis queue is unavailable")
+
+    job.status = "queued"
+    job.processing_error = None
+    task = _analyze_blueprint.delay(job.id, job.storage_path)
+    job.celery_task_id = task.id
+    await db.commit()
+
+    logger.info("blueprint.retried", job_id=job.id, user_id=current_user.id, celery_task_id=task.id)
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "celery_task_id": task.id,
+    }
 
 
 # ── Convert to estimate ──────────────────────────────────────────────────────
