@@ -2,7 +2,7 @@
 // PlumbPrice service worker — v4.1 (PWA shell, runtime caching, field tech offline, background sync).
 // On every release, bump SW_VERSION to force-refresh clients.
 
-const SW_VERSION = '4.1.0';
+const SW_VERSION = '4.1.1';
 const SHELL_CACHE = `plumbprice-shell-${SW_VERSION}`;
 const STATIC_CACHE = `plumbprice-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `plumbprice-runtime-${SW_VERSION}`;

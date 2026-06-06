@@ -26,6 +26,19 @@ if [[ ! -f "$STANDALONE_SERVER" ]]; then
   exit 1
 fi
 
+# Copy static assets and public dir into the standalone tree.
+# Next.js standalone does not bundle these automatically — they must be present
+# alongside server.js for the server to serve them correctly.
+STANDALONE_DIR="$(dirname "$STANDALONE_SERVER")"
+if [[ -d "$BUILD_DIR/static" ]]; then
+  rm -rf "$STANDALONE_DIR/.next/static"
+  cp -r "$BUILD_DIR/static" "$STANDALONE_DIR/.next/static"
+fi
+if [[ -d "$ROOT/web/public" ]]; then
+  rm -rf "$STANDALONE_DIR/public"
+  cp -r "$ROOT/web/public" "$STANDALONE_DIR/public"
+fi
+
 # Patch any stale API proxy URLs in the build artifacts (catches localhost:*, 127.0.0.1:*)
 PATCH_FILES=(
   "$BUILD_DIR/routes-manifest.json"
