@@ -35,4 +35,12 @@ services:
     environment:
       - ENVIRONMENT=production
       - LOG_LEVEL=${LOG_LEVEL:-WARNING}
-    command: celery -A worker.worker worker --loglevel=${WORKER_LOG_LEVEL:-warning} --concurrency=4
+    command: celery -A worker.worker worker --loglevel=${WORKER_LOG_LEVEL:-warning} --concurrency=4 --queues=default
+
+  worker-ml:
+    restart: unless-stopped
+    volumes: []
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=${LOG_LEVEL:-WARNING}
+    command: celery -A worker.worker worker --loglevel=${WORKER_LOG_LEVEL:-warning} --concurrency=1 --queues=ml --hostname=worker-ml@%h
