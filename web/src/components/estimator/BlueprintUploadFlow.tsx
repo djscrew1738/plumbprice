@@ -18,6 +18,7 @@ import { AlertCircle, FileUp, Loader2, CheckCircle2, RotateCw, X } from 'lucide-
 import { blueprintsApi } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import { useWebSocket } from '@/lib/hooks/useWebSocket'
+import { BLUEPRINT_POLL_INTERVAL_MS } from '@/lib/constants'
 
 type Stage = 'uploading' | 'processing' | 'completed' | 'failed'
 
@@ -42,7 +43,7 @@ interface Props {
   projectId?: number
 }
 
-const POLL_MS = 2000
+const POLL_MS = BLUEPRINT_POLL_INTERVAL_MS
 
 function mapStage(apiStatus: string): { stage: Stage; label: string } {
   const s = (apiStatus || '').toLowerCase()
@@ -134,10 +135,9 @@ export function BlueprintUploadFlow({ projectId }: Props) {
               statusRes.data?.processing_error || 'Blueprint analysis failed',
           })
         }
-      } catch (err) {
+      } catch {
         // Transient poll errors: keep polling, but surface on repeated failure.
-        // A single failed poll is logged and ignored.
-        console.debug('blueprint status poll failed', err)
+        // A single failed poll is silently ignored.
       }
     }, POLL_MS)
   }, [createEstimate, stopPolling, updateJob])
@@ -175,7 +175,7 @@ export function BlueprintUploadFlow({ projectId }: Props) {
   useWebSocket(handleWsMessage)
 
   const uploadFile = useCallback(async (file: File) => {
-    const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const id = `${file.name}-${Date.now()}-${crypto.randomUUID()}`
     setJobs(prev => [
       ...prev,
       { id, file, stage: 'uploading', statusLabel: 'Uploading…' },

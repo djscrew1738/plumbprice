@@ -80,10 +80,11 @@ export function MemoryPage() {
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-[color:var(--muted-ink)] mb-1">
+              <label htmlFor="memory-content" className="block text-xs font-medium text-[color:var(--muted-ink)] mb-1">
                 Memory content
               </label>
               <Input
+                id="memory-content"
                 value={newContent}
                 onChange={e => setNewContent(e.target.value)}
                 placeholder="e.g. My standard truck stock includes 1/2 in PEX and Sharkbite fittings"
@@ -91,10 +92,11 @@ export function MemoryPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[color:var(--muted-ink)] mb-1">
+                <label htmlFor="memory-kind" className="block text-xs font-medium text-[color:var(--muted-ink)] mb-1">
                   Kind
                 </label>
                 <select
+                  id="memory-kind"
                   value={newKind}
                   onChange={e => setNewKind(e.target.value as MemoryKind)}
                   className="w-full rounded-md border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm"

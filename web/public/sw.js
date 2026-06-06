@@ -1,17 +1,21 @@
 /* global self, caches, fetch, Response, URL */
-// PlumbPrice service worker — v2 (PWA shell, runtime caching).
+// PlumbPrice service worker — v4.1 (PWA shell, runtime caching, field tech offline, background sync).
 // On every release, bump SW_VERSION to force-refresh clients.
 
-const SW_VERSION = '2.1.1-rc1';
+const SW_VERSION = '4.1.0';
 const SHELL_CACHE = `plumbprice-shell-${SW_VERSION}`;
 const STATIC_CACHE = `plumbprice-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `plumbprice-runtime-${SW_VERSION}`;
 const API_CACHE = `plumbprice-api-${SW_VERSION}`;
 
-// App shell — small set of HTML routes the field tech reaches first.
-// We don't precache full pages (Next emits hashed JS chunks) — we precache
-// the offline fallback and let runtime caching handle the rest.
-const SHELL_URLS = ['/offline', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+// App shell — precache these on install. Includes /field routes for offline field tech.
+const SHELL_URLS = [
+  '/offline',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/field',
+];
 
 // API GETs we're willing to serve stale-while-revalidate so the estimator
 // loads instantly even on bad LTE. Limited to read-only reference data.
@@ -20,6 +24,7 @@ const SWR_API_PATHS = [
   '/api/v1/markups',
   '/api/v1/suppliers',
   '/api/v1/admin/items',
+  '/api/v3/geo/county',
 ];
 
 // API endpoints that must always hit network (auth, mutations, fresh AI calls).
@@ -30,6 +35,8 @@ const NEVER_CACHE_API = [
   '/api/v1/public-agent',
   '/api/v1/photos',
   '/api/v1/blueprints',
+  '/api/v3/photos',
+  '/api/v3/chat',
 ];
 
 self.addEventListener('install', (event) => {
@@ -163,4 +170,56 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Everything else (e.g., third-party fonts already CDN-cached): default.
+});
+
+// ── Background Sync (v4.1: field tech outbox) ─────────────────────────────────
+// The outbox (Dexie/IndexedDB) enqueues offline estimate creates. When
+// connectivity is restored, the service worker fires 'sync' with tag
+// 'outbox-sync' and the app's sync handler flushes the queue.
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'outbox-sync') {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) =>
+          client.postMessage({ type: 'OUTBOX_SYNC_TRIGGERED' })
+        );
+      })
+    );
+  }
+});
+
+// ── Push notification handler ─────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'PlumbPrice', body: event.data.text(), url: '/field' };
+  }
+
+  const options = {
+    body: payload.body || '',
+    icon: payload.icon || '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: payload.url || '/field' },
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'PlumbPrice', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/field';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((c) => c.url.includes(url));
+      if (existing) return existing.focus();
+      return self.clients.openWindow(url);
+    })
+  );
 });

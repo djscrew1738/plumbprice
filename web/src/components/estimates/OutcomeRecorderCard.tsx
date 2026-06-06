@@ -8,6 +8,8 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { proposalsApi } from '@/lib/api'
 import { downloadBlob } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { PROPOSAL_STATUS_VARIANT, PROPOSAL_STATUS_LABEL } from '@/lib/badgeConfig'
+import { COPY_FEEDBACK_MS } from '@/lib/constants'
 
 export interface SentProposal {
   id: number
@@ -31,25 +33,7 @@ export interface OutcomeRecorderCardProps {
   onGenerateProposal?: () => void
 }
 
-const STATUS_VARIANT: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'danger'> = {
-  draft:    'neutral',
-  sent:     'info',
-  viewed:   'warning',
-  opened:   'warning',
-  accepted: 'success',
-  declined: 'danger',
-  expired:  'neutral',
-}
 
-const STATUS_LABEL: Record<string, string> = {
-  sent:     'Sent',
-  opened:   'Opened',
-  viewed:   'Opened',
-  accepted: 'Accepted',
-  declined: 'Declined',
-  expired:  'Expired',
-  draft:    'Draft',
-}
 
 export function OutcomeRecorderCard({
   assumptions,
@@ -68,7 +52,7 @@ export function OutcomeRecorderCard({
       const origin = typeof window !== 'undefined' ? window.location.origin : ''
       await navigator.clipboard.writeText(`${origin}/p/${token}`)
       setCopiedId(id)
-      setTimeout(() => setCopiedId((v) => (v === id ? null : v)), 2000)
+      setTimeout(() => setCopiedId((v) => (v === id ? null : v)), COPY_FEEDBACK_MS)
       toast.success('Link copied')
     } catch {
       toast.error('Could not copy link')
@@ -135,7 +119,7 @@ export function OutcomeRecorderCard({
           <ul className="space-y-3">
             {sentProposals.map(p => {
               const status = p.status ?? 'sent'
-              const statusLabel = STATUS_LABEL[status] ?? (status.charAt(0).toUpperCase() + status.slice(1))
+              const statusLabel = PROPOSAL_STATUS_LABEL[status] ?? (status.charAt(0).toUpperCase() + status.slice(1))
               const dateStr = p.sent_at
                 ? new Date(p.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -148,7 +132,7 @@ export function OutcomeRecorderCard({
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[11px] text-[color:var(--muted-ink)]">{dateStr}</span>
-                      <Badge variant={STATUS_VARIANT[status] ?? 'neutral'} size="sm" dot>
+                      <Badge variant={PROPOSAL_STATUS_VARIANT[status] ?? 'neutral'} size="sm" dot>
                         {statusLabel}
                       </Badge>
                       {status === 'accepted' && p.client_signature && (

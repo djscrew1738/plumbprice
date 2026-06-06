@@ -9,8 +9,7 @@ from enum import Enum
 import structlog
 
 from app.services.labor_engine import (
-    LABOR_TEMPLATES, LaborTemplateData, get_template,
-    AccessType, UrgencyType
+    LaborTemplateData, get_template,
 )
 from app.services.pricing_config_service import pricing_config_service
 
@@ -159,8 +158,7 @@ def get_trip_charge(county: str) -> float:
 
 # Local copies maintained for sync with main.py _sync_runtime_config
 # which has been updated to use pricing_config_service.
-TAX_RATES: dict[str, float] = {}
-MARKUP_RULES: dict[str, dict] = {}
+
 
 
 @dataclass
@@ -214,6 +212,7 @@ class EstimateResult:
     assumptions: list[str]
     sources: list[str]
     pricing_trace: dict   # full deterministic trace
+    confidence_components: dict = field(default_factory=dict)
     # Optional fields added for construction/service parity
     city: Optional[str] = None
     trip_total: float = 0.0
@@ -706,7 +705,7 @@ class PricingEngine:
                         ))
                     else:
                         # Fall back to CANONICAL_MAP supplier lookup
-                        result = supplier_service._canonical_lookup(canonical_item, preferred_supplier)
+                        result = supplier_service.canonical_lookup(canonical_item, preferred_supplier)
                         if result:
                             materials.append(MaterialItem(
                                 canonical_item=canonical_item,
@@ -770,17 +769,16 @@ class PricingEngine:
                     trace_json=li.trace_json,
                 ))
 
-        # Recalculate grand_total to keep trip/permit fixed
-        grand_total = round(
-            result.labor_total * q
-            + result.materials_total * q
-            + result.markup_total * q
-            + result.misc_total * q
-            + result.tax_total * q
-            + trip_total
-            + permit_total,
-            2,
-        )
+        # Scale individual totals (rounded once)
+        labor_total = round(result.labor_total * q, 2)
+        materials_total = round(result.materials_total * q, 2)
+        markup_total = round(result.markup_total * q, 2)
+        misc_total = round(result.misc_total * q, 2)
+        tax_total = round(result.tax_total * q, 2)
+
+        # Subtotal and grand_total derived from rounded values for consistency
+        subtotal = round(labor_total + materials_total + markup_total + misc_total + trip_total + permit_total, 2)
+        grand_total = round(subtotal + tax_total, 2)
 
         return EstimateResult(
             template_code=result.template_code,
@@ -791,23 +789,15 @@ class PricingEngine:
             county=result.county,
             city=result.city,
             tax_rate=result.tax_rate,
-            labor_total=round(result.labor_total * q, 2),
-            materials_total=round(result.materials_total * q, 2),
-            tax_total=round(result.tax_total * q, 2),
-            markup_total=round(result.markup_total * q, 2),
-            misc_total=round(result.misc_total * q, 2),
+            labor_total=labor_total,
+            materials_total=materials_total,
+            tax_total=tax_total,
+            markup_total=markup_total,
+            misc_total=misc_total,
             trip_total=round(trip_total, 2),
             permit_total=round(permit_total, 2),
             city_premium=round(result.city_premium * q, 2) if result.city_premium else 0.0,
-            subtotal=round(
-                result.labor_total * q
-                + result.materials_total * q
-                + result.markup_total * q
-                + result.misc_total * q
-                + trip_total
-                + permit_total,
-                2,
-            ),
+            subtotal=subtotal,
             grand_total=grand_total,
             confidence_score=result.confidence_score,
             confidence_label=result.confidence_label,

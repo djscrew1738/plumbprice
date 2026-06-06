@@ -11,12 +11,13 @@ import {
   ArrowRightLeft, Send, CheckCircle2, XCircle, MessageSquare, UserPlus,
   Activity as ActivityIcon, Trash2,
 } from 'lucide-react'
-import { format, isValid } from 'date-fns'
 import { projectsApi, api } from '@/lib/api'
 import { cn, formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { formatDateMedium } from '@/lib/formatters'
+import { JOB_TYPE_CLASS } from '@/lib/badgeConfig'
 
 const ConfirmDialog = dynamic(
   () => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })),
@@ -63,16 +64,7 @@ const STATUS_COLORS: Record<string, string> = {
   complete:      'bg-emerald-600/15 text-emerald-300 border-emerald-600/25',
 }
 
-const JOB_TYPE_CLASS: Record<string, string> = {
-  service: 'badge-service',
-  construction: 'badge-construction',
-  commercial: 'badge-commercial',
-}
 
-function fmtDate(s: string) {
-  const d = new Date(s)
-  return isValid(d) ? format(d, 'MMM d, yyyy') : '—'
-}
 
 export function ProjectDrawer({
   projectId,
@@ -287,7 +279,7 @@ export function ProjectDrawer({
                       </span>
                       <span className="text-[11px] text-zinc-600 flex items-center gap-1">
                         <Calendar size={10} />
-                        {fmtDate(project.created_at)}
+                        {formatDateMedium(project.created_at)}
                       </span>
                     </div>
                   </div>
@@ -435,7 +427,7 @@ export function ProjectDrawer({
                                   {est.title || `Estimate #${est.id}`}
                                 </div>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[10px] text-zinc-600">{fmtDate(est.created_at)}</span>
+                                  <span className="text-[10px] text-zinc-600">{formatDateMedium(est.created_at)}</span>
                                   <span className={cn('badge text-[9px] py-px', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>
                                     {est.job_type}
                                   </span>
@@ -627,7 +619,7 @@ function ActivityTab({ projectId }: { projectId: number }) {
             const meta = ACTIVITY_ICON[entry.kind] ?? { icon: MessageSquare, className: 'text-zinc-400' }
             const Icon = meta.icon
             const actorName = entry.actor?.full_name || entry.actor?.email || 'Someone'
-            const when = formatRelativeTime(entry.created_at, { unknownLabel: '' })
+            const when = formatRelativeTime(entry.created_at)
             return (
               <li
                 key={entry.id}

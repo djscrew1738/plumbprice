@@ -1,21 +1,21 @@
 'use client'
 
 /**
- * Phase 2.5 — Blueprint review UI.
+ * Phase 4.1 — Blueprint review UI (extended).
  *
  * Surfaces every low-confidence detection (`needs_review[]`) returned by
  * `GET /api/v1/blueprints/{id}/takeoff` and lets the user adjudicate each
  * one with `POST /api/v1/blueprints/detections/{detection_id}/feedback`.
  *
- * Three verdicts are wired up:
- *   - correct  → keeps the detection as-is and clears the review flag
- *   - wrong    → zeros the count (audit-trail safe, doesn't delete)
- *   - edited   → user types a corrected fixture_type and/or count
+ * v4.1 additions:
+ *   - Editable pipe runs takeoff table (inline edit footage, material type)
+ *   - PhotoAnnotationCanvas for bounding-box visualization
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { apiV3 } from '@/lib/api-v3'
 
 type ReviewItem = {
   detection_id: number
@@ -45,12 +45,24 @@ type Fixture = {
   needs_review: boolean
 }
 
+type PipeRun = {
+  id: number
+  page_id: number
+  from_fixture: string | null
+  to_fixture: string | null
+  material_type: string | null
+  estimated_footage: number
+  routing_json: unknown | null
+  needs_review: boolean
+}
+
 type Takeoff = {
   job_id: number
   status: string
   fixtures: Fixture[]
   pages: PageSummary[]
   needs_review: ReviewItem[]
+  pipe_runs?: PipeRun[]
 }
 
 export default function BlueprintReviewPage() {
@@ -64,6 +76,9 @@ export default function BlueprintReviewPage() {
   const [busy, setBusy] = useState<Record<number, boolean>>({})
   const [edits, setEdits] = useState<Record<number, { fixture_type?: string; count?: number; note?: string }>>({})
   const [resolved, setResolved] = useState<Record<number, string>>({}) // detection_id → verdict
+  const [pipeEdits, setPipeEdits] = useState<Record<number, { estimated_footage?: number; material_type?: string }>>({})
+  const [pipesBusy, setPipesBusy] = useState<Record<number, boolean>>({})
+  const [pipeSaved, setPipeSaved] = useState<Record<number, boolean>>({})
 
   async function load() {
     if (!jobId) return
@@ -99,6 +114,24 @@ export default function BlueprintReviewPage() {
       setError(msg)
     } finally {
       setBusy(b => ({ ...b, [item.detection_id]: false }))
+    }
+  }
+
+  async function savePipeRun(pipeId: number) {
+    const edit = pipeEdits[pipeId]
+    if (!edit) return
+    setPipesBusy(b => ({ ...b, [pipeId]: true }))
+    try {
+      await apiV3.patch(`/blueprints/pipe-runs/${pipeId}`, {
+        estimated_footage: edit.estimated_footage,
+        material_type: edit.material_type,
+      })
+      setPipeSaved(s => ({ ...s, [pipeId]: true }))
+      setTimeout(() => setPipeSaved(s => ({ ...s, [pipeId]: false })), 2000)
+    } catch {
+      setError('Failed to save pipe run')
+    } finally {
+      setPipesBusy(b => ({ ...b, [pipeId]: false }))
     }
   }
 
@@ -258,6 +291,88 @@ export default function BlueprintReviewPage() {
           })}
         </div>
       </section>
+
+      {/* ── Pipe Runs Takeoff Editor ── */}
+      {(data.pipe_runs ?? []).length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            Pipe Runs ({data.pipe_runs!.length})
+          </h2>
+          <div className="overflow-x-auto rounded border border-gray-200 bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-3 py-2">From → To</th>
+                  <th className="px-3 py-2">Material</th>
+                  <th className="px-3 py-2">Footage (ft)</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {data.pipe_runs!.map(pr => {
+                  const edit = pipeEdits[pr.id] ?? {}
+                  const footage = edit.estimated_footage ?? pr.estimated_footage
+                  const material = edit.material_type ?? pr.material_type ?? ''
+                  const dirty = pipeEdits[pr.id] !== undefined
+                  const isSaved = pipeSaved[pr.id]
+                  return (
+                    <tr key={pr.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-3 py-2 text-xs text-gray-700">
+                        {pr.from_fixture ?? '?'} → {pr.to_fixture ?? '?'}
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          className="w-28 rounded border border-gray-300 px-2 py-1 text-xs"
+                          value={material}
+                          placeholder="e.g. copper"
+                          onChange={ev => setPipeEdits(s => ({
+                            ...s,
+                            [pr.id]: { ...s[pr.id], material_type: ev.target.value },
+                          }))}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          className="w-20 rounded border border-gray-300 px-2 py-1 text-xs"
+                          value={footage}
+                          onChange={ev => setPipeEdits(s => ({
+                            ...s,
+                            [pr.id]: { ...s[pr.id], estimated_footage: parseFloat(ev.target.value) || 0 },
+                          }))}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        {pr.needs_review ? (
+                          <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">review</span>
+                        ) : (
+                          <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">ok</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {isSaved ? (
+                          <span className="text-[11px] text-emerald-600 font-semibold">✓ saved</span>
+                        ) : (
+                          <button
+                            onClick={() => void savePipeRun(pr.id)}
+                            disabled={!dirty || pipesBusy[pr.id]}
+                            className="rounded bg-blue-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+                          >
+                            Save
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

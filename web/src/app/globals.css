@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,7 +23,9 @@
     --radius: 0.95rem;
     --content-max-width: 1280px;
     --sidebar-width: 248px;
-    --header-height: 68px;
+    --sidebar-rail: 64px;
+    --sidebar-current: var(--sidebar-rail);
+    --header-height: 64px;
     --mobile-nav-height: 80px;
     --sat: env(safe-area-inset-top);
     --sar: env(safe-area-inset-right);
@@ -64,6 +64,35 @@
     --duration-slow: 0.35s;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ── New design tokens (v2.6 polish) ──
+     * Additive: existing tokens above are preserved for backwards-compat.
+     * New components should consume these for consistent surfaces and shadows.
+     */
+    --surface-1: hsl(36 36% 98%);
+    --surface-2: hsl(34 27% 95%);
+    --surface-3: hsl(34 24% 91%);
+    --surface-inverse: hsl(24 16% 13%);
+    --border-subtle: hsl(30 18% 88%);
+    --border-strong: hsl(30 18% 76%);
+    --ring-focus: hsl(24 78% 52%);
+
+    --radius-xs: 0.375rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 0.95rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+
+    --shadow-sm: 0 1px 2px rgba(84, 60, 39, 0.06), 0 1px 3px rgba(84, 60, 39, 0.04);
+    --shadow-md: 0 4px 12px rgba(84, 60, 39, 0.08), 0 2px 4px rgba(84, 60, 39, 0.04);
+    --shadow-lg: 0 18px 40px rgba(84, 60, 39, 0.10), 0 6px 16px rgba(84, 60, 39, 0.06);
+    --shadow-xl: 0 28px 60px rgba(84, 60, 39, 0.14), 0 10px 24px rgba(84, 60, 39, 0.08);
+
+    --space-page-x: clamp(1rem, 3vw, 2rem);
+    --space-page-y: clamp(1rem, 2.5vw, 1.75rem);
+    --space-section: clamp(1.25rem, 2vw, 2rem);
+    --space-card: clamp(1rem, 1.5vw, 1.5rem);
   }
 
   .dark {
@@ -111,6 +140,20 @@
     --stage-sent: 24 78% 55%;
     --stage-won: 160 84% 39%;
     --stage-lost: 0 72% 51%;
+
+    /* New design tokens (dark) */
+    --surface-1: hsl(24 16% 11%);
+    --surface-2: hsl(24 16% 14%);
+    --surface-3: hsl(24 16% 17%);
+    --surface-inverse: hsl(0 0% 98%);
+    --border-subtle: hsl(0 0% 18%);
+    --border-strong: hsl(0 0% 26%);
+    --ring-focus: hsl(24 78% 55%);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.18);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.38), 0 2px 4px rgba(0, 0, 0, 0.20);
+    --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25);
+    --shadow-xl: 0 28px 60px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.30);
   }
 }
 
@@ -360,6 +403,13 @@ body {
   }
 }
 
+/* Mobile gets a slimmer header. */
+@media (max-width: 640px) {
+  :root {
+    --header-height: 56px;
+  }
+}
+
 /* ── Reduced motion ──────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -374,6 +424,14 @@ body {
 }
 
 /* ── Print styles ────────────────────────────────── */
+@keyframes pp-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-indeterminate {
+  animation: pp-indeterminate 1.5s ease-in-out infinite;
+}
+
 @media print {
   /* Hide navigation and UI chrome */
   .sticky,

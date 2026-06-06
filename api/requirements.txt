@@ -26,3 +26,6 @@ pymupdf
 sentry-sdk[fastapi]
 resend
 weasyprint
+pywebpush
+prometheus-fastapi-instrumentator>=7.0.0
+beautifulsoup4>=4.12.0

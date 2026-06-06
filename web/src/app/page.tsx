@@ -1,14 +1,22 @@
+import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { LauncherHome } from '@/components/workspace/LauncherHome'
-import { PageSkeleton } from '@/components/ui/Skeleton'
+import { LauncherHomeSkeleton } from '@/components/workspace/LauncherHome'
+import { PublicHome } from '@/components/workspace/PublicHome'
 
 function HomeContent() {
   return <LauncherHome />
 }
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies()
+
+  if (!cookieStore.get('pp_token')?.value) {
+    return <PublicHome />
+  }
+
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <Suspense fallback={<LauncherHomeSkeleton />}>
       <HomeContent />
     </Suspense>
   )

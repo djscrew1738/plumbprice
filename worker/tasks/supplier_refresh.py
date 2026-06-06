@@ -132,6 +132,7 @@ def refresh_all_suppliers(self):
     """
     Refresh prices for all active suppliers.
     Phase 2 implementation: Uses SupplierScraperService.
+    After refresh, checks for significant price changes and creates alerts (v4.1).
     """
     logger.info("Starting global supplier price refresh")
 
@@ -141,6 +142,9 @@ def refresh_all_suppliers(self):
         # Trigger confidence score decrement as part of the daily cycle
         decrement_confidence_scores.delay()
 
+        # v4.1: check for price change alerts after refresh
+        asyncio.run(_async_check_price_alerts())
+
         logger.info("Supplier refresh complete", results=results)
         return {"status": "complete", "suppliers": results}
 
@@ -148,6 +152,19 @@ def refresh_all_suppliers(self):
         logger.error("Supplier refresh failed", error=str(exc), exc_info=True)
         backoff = min(300 * (2 ** self.request.retries) + random.uniform(0, 60), 3600)
         raise self.retry(exc=exc, countdown=backoff)
+
+
+async def _async_check_price_alerts():
+    """Run price alert check after a supplier refresh."""
+    try:
+        from app.services.price_alert_service import check_price_alerts
+        async with AsyncSessionLocal() as db:
+            alerts = await check_price_alerts(db)
+            if alerts:
+                logger.info("price_alerts.generated", count=len(alerts))
+    except Exception as exc:
+        # Non-fatal — don't fail the whole refresh if alert check breaks
+        logger.error("price_alerts.check_failed", error=str(exc))
 
 
 async def _async_refresh_supplier(supplier_slug: str):

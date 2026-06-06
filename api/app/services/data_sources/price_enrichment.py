@@ -155,6 +155,14 @@ class PriceEnrichmentService:
             return entry.unit_cost
         return None
 
+    def invalidate(self, canonical_id: str) -> None:
+        """Remove a canonical item from the enrichment cache.
+
+        Called when a supplier webhook reports a price change so the next
+        lookup fetches fresh data.
+        """
+        self._cache.pop(canonical_id, None)
+
     def cache_stats(self) -> dict:
         total = len(self._cache)
         fresh = sum(1 for e in self._cache.values() if not e.is_stale())

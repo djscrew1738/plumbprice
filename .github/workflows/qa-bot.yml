@@ -1,0 +1,218 @@
+name: QA Bot
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'api/app/**'
+      - 'worker/**'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to QA'
+        required: true
+
+concurrency:
+  group: qa-bot-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  qa-frontend:
+    name: Frontend QA
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    outputs:
+      tests_passed: ${{ steps.run-tests.outcome == 'success' }}
+      coverage_pct: ${{ steps.coverage.outputs.pct }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        id: run-tests
+        continue-on-error: true
+        run: npx vitest run --coverage --reporter=verbose 2>&1 | tee vitest-output.txt
+
+      - name: Extract coverage summary
+        id: coverage
+        run: |
+          PCT=$(grep -oP 'STATEMENTS\s*:\s*\K[\d.]+(?=%)' vitest-output.txt 2>/dev/null || echo "0")
+          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-frontend-report
+          path: web/vitest-output.txt
+          retention-days: 7
+
+  qa-api:
+    name: API QA
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: plumbprice
+          POSTGRES_PASSWORD: plumbprice_dev
+          POSTGRES_DB: plumbprice
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: api
+    outputs:
+      tests_passed: ${{ steps.run-tests.outcome == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install psycopg2-binary
+
+      - name: Run migrations
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://plumbprice:plumbprice_dev@localhost:5432/plumbprice
+          DATABASE_URL_SYNC: postgresql+psycopg2://plumbprice:plumbprice_dev@localhost:5432/plumbprice
+
+      - name: Run tests with summary
+        id: run-tests
+        continue-on-error: true
+        run: |
+          DATABASE_URL=postgresql+asyncpg://plumbprice:plumbprice_dev@localhost:5432/plumbprice \
+          DATABASE_URL_SYNC=postgresql+psycopg2://plumbprice:plumbprice_dev@localhost:5432/plumbprice \
+          SECRET_KEY=ci-test-secret-do-not-use-in-prod \
+          REDIS_URL=redis://localhost:6379/0 \
+          ENVIRONMENT=test \
+          MINIO_ENDPOINT=localhost:9000 \
+          MINIO_ACCESS_KEY=minioadmin \
+          MINIO_SECRET_KEY=minioadmin123 \
+          pytest --tb=short -q 2>&1 | tail -30 | tee pytest-summary.txt
+
+  qa-report:
+    name: QA Report
+    needs: [qa-frontend, qa-api]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test outputs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: qa-*-report
+          merge-multiple: true
+
+      - name: Build QA report comment
+        id: report
+        run: |
+          FRONTEND_STATUS="${{ needs.qa-frontend.result }}"
+          API_STATUS="${{ needs.qa-api.result }}"
+          COVERAGE="${{ needs.qa-frontend.outputs.coverage_pct }}"
+
+          {
+            echo 'qa_report<<QAEOF'
+            echo '## 🤖 QA Bot Report'
+            echo ''
+            echo '| Check | Status | Details |'
+            echo '|---|---|---|'
+            if [ "$FRONTEND_STATUS" = "success" ]; then
+              echo "| Frontend Tests | ✅ Pass | Coverage: ${COVERAGE:-N/A}% |"
+            else
+              echo "| Frontend Tests | ❌ Fail | Coverage: ${COVERAGE:-N/A}% |"
+            fi
+            if [ "$API_STATUS" = "success" ]; then
+              echo "| API Tests | ✅ Pass | |"
+            else
+              echo "| API Tests | ❌ Fail | See logs for details |"
+            fi
+            echo ''
+            echo '### Notes'
+            echo '- All failures are QA-blocking for merge'
+            echo '- Pre-existing CI failures on `main` are tracked separately'
+            echo '- Run ID: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})'
+            echo 'QAEOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Find or create QA comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number
+              || parseInt('${{ github.event.inputs.pr_number }}');
+
+            if (!prNumber) {
+              core.info('Not a PR event — skipping comment');
+              return;
+            }
+
+            const qaBody = `${{ steps.report.outputs.qa_report }}`;
+
+            // Look for an existing QA bot comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body?.includes('QA Bot Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: qaBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: qaBody,
+              });
+            }

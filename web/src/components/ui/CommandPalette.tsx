@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { estimatesApi, type EstimateListItem } from '@/lib/api'
 import { useTheme } from '@/lib/useTheme'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 interface CommandItem {
   id: string
@@ -43,6 +44,7 @@ export function CommandPalette() {
   const [recentEstimates, setRecentEstimates] = useState<EstimateListItem[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useFocusTrap<HTMLDivElement>(open)
 
   const close = useCallback(() => {
     setOpen(false)
@@ -63,20 +65,12 @@ export function CommandPalette() {
     let cancelled = false
     estimatesApi.list({ limit: 5 }).then(res => {
       if (cancelled) return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = res.data as any;
-      setRecentEstimates('items' in data ? data.items : Array.isArray(data) ? data : [])
+      const data = res.data
+      setRecentEstimates(Array.isArray(data) ? data : [])
     }).catch(() => {
       // silently ignore
     })
     return () => { cancelled = true }
-  }, [open])
-
-  // Auto-focus input when opened
-  useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => inputRef.current?.focus())
-    }
   }, [open])
 
   const staticSections: CommandSection[] = useMemo(() => [
@@ -211,6 +205,7 @@ export function CommandPalette() {
             onClick={close}
           />
           <motion.div
+            ref={dialogRef}
             initial={{ opacity: 0, scale: 0.96, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -8 }}

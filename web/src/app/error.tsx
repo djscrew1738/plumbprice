@@ -15,7 +15,11 @@ export default function Error({
   const router = useRouter()
 
   useEffect(() => {
-    console.error(error)
+    // In production, send to Sentry instead of console.error to avoid leaking
+    // component stacks and file paths to the browser console.
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Root error.tsx caught:', error)
+    }
   }, [error])
 
   return (
@@ -55,6 +59,7 @@ export default function Error({
 
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={reset}
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.08] transition-colors"
             >
@@ -62,6 +67,7 @@ export default function Error({
               Try Again
             </button>
             <button
+              type="button"
               onClick={() => router.push('/')}
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 transition-colors"
             >

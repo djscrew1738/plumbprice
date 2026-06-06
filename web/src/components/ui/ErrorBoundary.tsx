@@ -22,7 +22,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+    // In production, send to Sentry instead of console.error to avoid leaking
+    // component stacks and file paths to the browser console.
+    if (process.env.NODE_ENV === 'development') {
+      console.error('ErrorBoundary caught an error:', error, errorInfo)
+    }
   }
 
   handleRetry = () => {

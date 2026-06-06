@@ -1,9 +1,11 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { BUILT_BY_LINE } from '@/lib/branding'
 
-export const metadata = {
-  title: 'Changelog — PlumbPrice',
+export const metadata: Metadata = {
+  title: 'Changelog – PlumbPrice AI',
+  description: 'Major shipped improvements and release notes for PlumbPrice AI.',
 }
 
 interface ChangeEntry {

@@ -28,6 +28,7 @@ logger = structlog.get_logger()
 # Response: { "products": [{ "sku": "...", "listPrice": 0.00, "netPrice": 0.00 }] }
 _FERGUSON_PRICING_PATH = "/pricing/products"
 _BATCH_SIZE = 50  # Ferguson API accepts up to 50 SKUs per request
+_TOKEN_URL = "https://api.ferguson.com/oauth2/token"  # OAuth2 client credentials endpoint
 
 
 class FergusonScraper(SupplierScraper):
@@ -36,13 +37,86 @@ class FergusonScraper(SupplierScraper):
         self.simulation_mode = simulation_mode
 
         from app.config import settings
-        self._api_key = settings.ferguson_api_key
+        self._api_key = settings.ferguson_api_key  # Legacy: static bearer token
+        self._client_id = settings.ferguson_client_id  # OAuth2 client ID (v4.1)
+        self._client_secret = settings.ferguson_client_secret  # OAuth2 client secret
         self._api_base = settings.ferguson_api_base_url
         self._alert_threshold = settings.price_change_alert_threshold
 
-        # Use live mode if an API key is configured, regardless of simulation_mode flag
-        if self._api_key:
+        # Live mode when OAuth2 credentials OR legacy API key is configured
+        if self._client_id and self._client_secret:
             self.simulation_mode = False
+            self._use_oauth2 = True
+        elif self._api_key:
+            self.simulation_mode = False
+            self._use_oauth2 = False
+        else:
+            self._use_oauth2 = False
+
+    async def _get_auth_header(self) -> str:
+        """Return the Authorization header value.
+
+        For OAuth2: fetches a token from Redis cache or requests a new one.
+        For legacy API key: returns the static bearer token.
+        """
+        if not self._use_oauth2:
+            return f"Bearer {self._api_key}"
+
+        # Try Redis cache first (15-min TTL)
+        token = await self._get_cached_token()
+        if token:
+            return f"Bearer {token}"
+
+        # Fetch new token via client credentials grant
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                _TOKEN_URL,
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": self._client_id,
+                    "client_secret": self._client_secret,
+                    "scope": "pricing.read",
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            token = data["access_token"]
+            expires_in = data.get("expires_in", 900)
+
+        await self._cache_token(token, ttl=min(expires_in - 30, 870))
+        return f"Bearer {token}"
+
+    async def _get_cached_token(self):
+        """Return the cached OAuth2 token from Redis, or None."""
+        try:
+            import redis.asyncio as aioredis
+            import os
+
+            client = aioredis.from_url(
+                os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+                socket_connect_timeout=2,
+            )
+            token = await client.get("ferguson:oauth2_token")
+            await client.aclose()
+            return token.decode() if token else None
+        except Exception:
+            return None
+
+    async def _cache_token(self, token: str, ttl: int) -> None:
+        """Cache the OAuth2 token in Redis with a TTL."""
+        try:
+            import redis.asyncio as aioredis
+            import os
+
+            client = aioredis.from_url(
+                os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+                socket_connect_timeout=2,
+            )
+            await client.set("ferguson:oauth2_token", token, ex=ttl)
+            await client.aclose()
+        except Exception as exc:
+            logger.warning("ferguson.token_cache_failed", error=str(exc))
 
     async def fetch_prices(self, canonical_items: List[str]) -> List[ScrapedProduct]:
         if self.simulation_mode:
@@ -83,8 +157,9 @@ class FergusonScraper(SupplierScraper):
 
         results: List[ScrapedProduct] = []
         failed_canonical_items: list[str] = []
+        auth_header = await self._get_auth_header()
         headers = {
-            "Authorization": f"Bearer {self._api_key}",
+            "Authorization": auth_header,
             "Accept": "application/json",
         }
 

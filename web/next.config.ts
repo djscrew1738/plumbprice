@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
+import withBundleAnalyzer from '@next/bundle-analyzer'
 
 const apiOrigin =
   process.env.API_URL ||
@@ -41,8 +42,19 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
   },
-  eslint: { ignoreDuringBuilds: true },
   async headers() {
+    const cspReportOnly = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' blob: data: https:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ')
+
     return [
       {
         // HTML pages: short browser-side TTL but allow Cloudflare to cache &
@@ -59,6 +71,7 @@ const nextConfig: NextConfig = {
           // and deploy-web.sh purges Cloudflare cache after each release.
           { key: 'CDN-Cache-Control', value: 'public, s-maxage=86400, stale-while-revalidate=604800' },
           { key: 'Cloudflare-CDN-Cache-Control', value: 'public, s-maxage=86400, stale-while-revalidate=604800' },
+          { key: 'Content-Security-Policy', value: cspReportOnly },
         ],
       },
     ]
@@ -73,7 +86,9 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default process.env.NEXT_PUBLIC_SENTRY_DSN
+const bundleAnalyzer = withBundleAnalyzer({ enabled: process.env.ANALYZE === 'true' })
+
+const finalConfig = process.env.NEXT_PUBLIC_SENTRY_DSN
   ? withSentryConfig(nextConfig, {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
@@ -83,3 +98,5 @@ export default process.env.NEXT_PUBLIC_SENTRY_DSN
       disableLogger: true,
     })
   : nextConfig
+
+export default bundleAnalyzer(finalConfig)

@@ -85,3 +85,7 @@ coverage.xml
 web/coverage/
 api/htmlcov/
 web/tsconfig.tsbuildinfo
+
+# Playwright test artifacts
+web/playwright-report/
+web/test-results/

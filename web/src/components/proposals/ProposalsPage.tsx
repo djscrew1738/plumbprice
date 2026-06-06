@@ -9,7 +9,7 @@ import {
   Copy, Check, Printer, FileText, ChevronRight,
   Zap, Download, Send,
 } from 'lucide-react'
-import { format, isValid } from 'date-fns'
+import { format } from 'date-fns'
 import { api, proposalsApi, type ProposalListItem } from '@/lib/api'
 import { formatCurrency, formatCurrencyDecimal, downloadBlob } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -20,16 +20,19 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Select } from '@/components/ui/Select'
+import { formatDateLong, formatDateShort } from '@/lib/formatters'
+import { JOB_TYPE_VARIANT, PROPOSAL_STATUS_VARIANT, ESTIMATE_STATUS_VARIANT } from '@/lib/badgeConfig'
+import { PROPOSAL_VALIDITY_DAYS } from '@/lib/constants'
 
-// ─── Company config (move to /api/v1/settings when multi-tenant) ──────────────
+// ─── Company config (override via env when multi-tenant) ──────────────────────
 const COMPANY = {
-  name: 'CTL PLUMBING LLC',
-  tagline: 'Licensed Master Plumber — DFW Metroplex',
-  license: 'MPL-44467',
-  taclb: 'TACLB-058513',
-  phone: '(469) 843-4066',
-  email: 'estimating@ctlplumbingllc.com',
-  repLabel: 'CTL Plumbing Rep',
+  name: process.env.NEXT_PUBLIC_COMPANY_NAME || 'CTL PLUMBING LLC',
+  tagline: process.env.NEXT_PUBLIC_COMPANY_TAGLINE || 'Licensed Master Plumber — DFW Metroplex',
+  license: process.env.NEXT_PUBLIC_COMPANY_LICENSE || 'MPL-44467',
+  taclb: process.env.NEXT_PUBLIC_COMPANY_TACLB || 'TACLB-058513',
+  phone: process.env.NEXT_PUBLIC_COMPANY_PHONE || '(469) 843-4066',
+  email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'estimating@ctlplumbingllc.com',
+  repLabel: process.env.NEXT_PUBLIC_COMPANY_REP_LABEL || 'CTL Plumbing Rep',
 } as const
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,35 +72,7 @@ interface EstimateDetail extends Estimate {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtDate(s: string) {
-  const d = new Date(s)
-  return isValid(d) ? format(d, 'MMMM d, yyyy') : '—'
-}
 
-function fmtDateShort(s: string) {
-  const d = new Date(s)
-  return isValid(d) ? format(d, 'MMM d, yy') : '—'
-}
-
-const JOB_TYPE_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info'> = {
-  service: 'info',
-  construction: 'accent',
-  commercial: 'warning',
-}
-
-const PROPOSAL_STATUS_VARIANT: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'danger'> = {
-  draft:    'neutral',
-  sent:     'info',
-  viewed:   'warning',
-  accepted: 'success',
-  declined: 'danger',
-}
-
-const ESTIMATE_STATUS_VARIANT: Record<string, 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info'> = {
-  draft:    'neutral',
-  sent:     'info',
-  accepted: 'success',
-}
 
 const STATUS_FILTER_OPTIONS = [
   { value: '',         label: 'All statuses' },
@@ -112,7 +87,7 @@ const STATUS_FILTER_OPTIONS = [
 
 function buildProposalText(est: EstimateDetail): string {
   const today = format(new Date(), 'MMMM d, yyyy')
-  const validUntil = format(new Date(Date.now() + 30 * 86400000), 'MMMM d, yyyy')
+  const validUntil = format(new Date(Date.now() + PROPOSAL_VALIDITY_DAYS * 86400000), 'MMMM d, yyyy')
   const jobLabel = est.job_type === 'construction'
     ? 'New Construction'
     : est.job_type === 'commercial'
@@ -247,10 +222,12 @@ function ProposalModal({
           pre { white-space: pre-wrap; word-wrap: break-word; margin: 0; }
         </style>
       </head><body>
-        <pre>${proposalText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+        <pre id="pp-proposal"></pre>
         <script>window.onload = function(){ window.print(); }</script>
       </body></html>`)
     win.document.close()
+    const pre = win.document.getElementById('pp-proposal')
+    if (pre) pre.textContent = proposalText
   }
 
   return (
@@ -286,6 +263,7 @@ function ProposalModal({
             </div>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={handleCopy}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
               >
@@ -294,6 +272,7 @@ function ProposalModal({
               </button>
               <Tooltip content="Download as .txt">
                 <button
+                  type="button"
                   onClick={handleDownload}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
                   aria-label="Download proposal"
@@ -303,6 +282,7 @@ function ProposalModal({
                 </button>
               </Tooltip>
               <button
+                type="button"
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-colors"
                 aria-label="Print proposal"
@@ -311,6 +291,7 @@ function ProposalModal({
                 Print
               </button>
               <button
+                type="button"
                 onClick={onClose}
                 className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors"
                 aria-label="Close proposal preview"
@@ -448,7 +429,7 @@ function ProposalsTableSection({
       width: '120px',
       render: (row) => (
         <span className="text-[color:var(--muted-ink)] text-xs">
-          {fmtDateShort(row.created_at)}
+          {formatDateShort(row.created_at)}
         </span>
       ),
     },
@@ -462,6 +443,7 @@ function ProposalsTableSection({
           {row.status === 'sent' && (
             <Tooltip content="Resend proposal">
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); void onResend(row.id) }}
                 className="p-1.5 rounded-lg hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
                 aria-label="Resend proposal"
@@ -472,6 +454,7 @@ function ProposalsTableSection({
           )}
           <Tooltip content="Download PDF">
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); void onDownloadPdf(row.id) }}
               className="p-1.5 rounded-lg hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               aria-label="Download PDF"
@@ -593,6 +576,7 @@ export function ProposalsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => void load()}
               disabled={loading}
               className="p-2 rounded-xl hover:bg-white/[0.07] text-zinc-500 hover:text-zinc-300 transition-colors"
@@ -642,7 +626,7 @@ export function ProposalsPage() {
             title="No estimates yet"
             description="Generate pricing estimates first, then come back here to create proposals."
             action={
-              <button onClick={() => router.push('/estimator')} className="btn-primary">
+              <button type="button" onClick={() => router.push('/estimator')} className="btn-primary">
                 <Zap size={15} />
                 Open Estimator
               </button>
@@ -683,12 +667,13 @@ export function ProposalsPage() {
                       </h3>
                       <div className="flex items-center gap-3 text-[11px] text-zinc-600">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county}</span>
-                        <span className="flex items-center gap-1"><Calendar size={10} />{fmtDateShort(est.created_at)}</span>
+                        <span className="flex items-center gap-1"><Calendar size={10} />{formatDateShort(est.created_at)}</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-lg font-extrabold text-white mb-2">{formatCurrency(est.grand_total)}</div>
                       <button
+                        type="button"
                         onClick={() => void generateProposal(est)}
                         disabled={generating === est.id}
                         className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
@@ -714,7 +699,7 @@ export function ProposalsPage() {
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-zinc-600 mt-0.5">
                         <span className="flex items-center gap-1"><MapPin size={10} />{est.county} County</span>
-                        <span className="flex items-center gap-1"><Calendar size={10} />{fmtDate(est.created_at)}</span>
+                        <span className="flex items-center gap-1"><Calendar size={10} />{formatDateLong(est.created_at)}</span>
                         <Badge variant={ESTIMATE_STATUS_VARIANT[est.status] ?? 'neutral'} size="sm">
                          {est.status}
                        </Badge>
@@ -724,6 +709,7 @@ export function ProposalsPage() {
                       {formatCurrency(est.grand_total)}
                     </div>
                     <button
+                      type="button"
                       onClick={() => void generateProposal(est)}
                       disabled={generating === est.id}
                       className="btn-primary shrink-0 text-xs px-4 py-2"

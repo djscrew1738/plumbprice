@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Flag, Plus, Trash2 } from 'lucide-react'
 import { adminApi, type FlagRow } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
+import { BLUEPRINT_POLL_INTERVAL_MS } from '@/lib/constants'
 
 const ADMIN_FLAGS_KEY = ['admin', 'flags'] as const
 
@@ -17,7 +18,7 @@ export function FeatureFlagsTab() {
   const { data: flags = [], isLoading, isError } = useQuery({
     queryKey: ADMIN_FLAGS_KEY,
     queryFn: async () => (await adminApi.listFlags()).data,
-    staleTime: 30_000,
+    staleTime: BLUEPRINT_POLL_INTERVAL_MS,
   })
 
   const invalidate = () => {

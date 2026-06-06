@@ -23,6 +23,8 @@ class BlueprintJob(Base):
     retention_until = Column(DateTime(timezone=True), nullable=True, index=True)
 
     pages = relationship("BlueprintPage", back_populates="job")
+    rooms = relationship("BlueprintRoom", back_populates="job", cascade="all, delete-orphan")
+    pipe_runs = relationship("BlueprintPipeRun", back_populates="job", cascade="all, delete-orphan")
 
 
 class BlueprintPage(Base):

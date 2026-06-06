@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Eye, Flag } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
@@ -47,11 +47,13 @@ export function AdminPage() {
   })
 
   // Track last-synced timestamp so we only sync new fetches
-  const [markupSyncedAt, setMarkupSyncedAt] = useState(0)
-  if (markupData && markupUpdatedAt > markupSyncedAt) {
-    setMarkupRules(markupData)
-    setMarkupSyncedAt(markupUpdatedAt)
-  }
+  const markupSyncedAtRef = useRef(0)
+  useEffect(() => {
+    if (markupData && markupUpdatedAt > markupSyncedAtRef.current) {
+      setMarkupRules(markupData)
+      markupSyncedAtRef.current = markupUpdatedAt
+    }
+  }, [markupData, markupUpdatedAt])
 
   const { data: canonicalItems = [], isLoading: pricesLoading, error: pricesError } = useAdminItems({
     enabled: tab === 'prices',

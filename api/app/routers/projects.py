@@ -202,10 +202,18 @@ async def get_project(
 
     estimates_result = await db.execute(
         select(Estimate)
-        .where(Estimate.project_id == project_id)
+        .where(Estimate.project_id == project_id, Estimate.deleted_at.is_(None))
         .order_by(desc(Estimate.created_at))
+        .limit(50)
     )
     estimates = estimates_result.scalars().all()
+
+    # Count all non-deleted estimates for this project (may exceed the 50-item limit above)
+    count_result = await db.execute(
+        select(func.count(Estimate.id))
+        .where(Estimate.project_id == project_id, Estimate.deleted_at.is_(None))
+    )
+    estimate_count = count_result.scalar_one()
 
     return {
         "id": project.id,
@@ -223,7 +231,7 @@ async def get_project(
         "notes": project.notes,
         "created_at": project.created_at,
         "updated_at": project.updated_at,
-        "estimate_count": len(estimates),
+        "estimate_count": estimate_count,
         "estimates": [
             {
                 "id": e.id,

@@ -13,7 +13,6 @@ interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null
-  token: string | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
@@ -23,7 +22,6 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user,    setUser]    = useState<AuthUser | null>(null)
-  const [token,   setToken]   = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Hydrate from HttpOnly cookie-backed session.
@@ -34,11 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await api.get<AuthUser>('/auth/me')
         if (!active) return
         setUser(res.data)
-        setToken(null)
       } catch {
         if (!active) return
         setUser(null)
-        setToken(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -57,19 +53,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
 
-    const { access_token, user: userData } = res.data as { access_token?: string; user: AuthUser }
-    setToken(access_token ?? null)
+    const { user: userData } = res.data as { access_token?: string; user: AuthUser }
     setUser(userData)
   }, [])
 
   const logout = useCallback(() => {
-    void api.post('/auth/logout').catch(() => {})
-    setToken(null)
+    void api.post('/auth/logout').catch((err) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Logout request failed', err)
+      }
+    })
     setUser(null)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

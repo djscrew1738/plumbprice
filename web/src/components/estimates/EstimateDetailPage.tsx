@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { History, Pencil } from 'lucide-react'
@@ -84,6 +84,42 @@ export function EstimateDetailPage() {
   const [proposalSending,  setProposalSending]  = useState(false)
   const [proposalError,    setProposalError]    = useState<string | null>(null)
   const [proposalShareUrl, setProposalShareUrl] = useState<string | null>(null)
+
+  // ── Persist proposal draft to sessionStorage ────────────────────────────────
+  const proposalDraftKey = useMemo(() => `pp_proposal_draft_${id}`, [id])
+
+  useEffect(() => {
+    if (!id) return
+    try {
+      const saved = sessionStorage.getItem(proposalDraftKey)
+      if (saved) {
+        const draft = JSON.parse(saved) as { email: string; name: string; msg: string }
+        setProposalEmail(draft.email ?? '')
+        setProposalName(draft.name ?? '')
+        setProposalMsg(draft.msg ?? '')
+      }
+    } catch { /* ignore corrupt storage */ }
+  }, [id, proposalDraftKey])
+
+  useEffect(() => {
+    if (!id) return
+    if (proposalEmail || proposalName || proposalMsg) {
+      sessionStorage.setItem(proposalDraftKey, JSON.stringify({
+        email: proposalEmail,
+        name: proposalName,
+        msg: proposalMsg,
+      }))
+    } else {
+      sessionStorage.removeItem(proposalDraftKey)
+    }
+  }, [proposalEmail, proposalName, proposalMsg, id, proposalDraftKey])
+
+  const clearProposalDraft = useCallback(() => {
+    sessionStorage.removeItem(proposalDraftKey)
+    setProposalEmail('')
+    setProposalName('')
+    setProposalMsg('')
+  }, [proposalDraftKey])
   const [historyOpen, setHistoryOpen] = useState(false)
   const [diffOpen, setDiffOpen] = useState(false)
   const [diffV1, setDiffV1] = useState('')
@@ -380,9 +416,7 @@ export function EstimateDetailPage() {
           setProposalError(null)
           if (proposalShareUrl) {
             setProposalShareUrl(null)
-            setProposalEmail('')
-            setProposalName('')
-            setProposalMsg('')
+            clearProposalDraft()
           }
         }}
         onEmailChange={setProposalEmail}

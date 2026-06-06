@@ -5,6 +5,8 @@ from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.models.labor import LaborTemplate, MaterialAssembly, MarkupRule
 from app.models.documents import UploadedDocument, DocumentChunk
 from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection, BlueprintDetectionFeedback
+from app.models.blueprint_rooms import BlueprintRoom
+from app.models.blueprint_pipe_runs import BlueprintPipeRun
 from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
 from app.models.pricing_rules import PermitCostRule, CityZoneMultiplier, TripChargeRule
@@ -19,6 +21,18 @@ from app.models.vision_mappings import VisionItemMapping
 from app.models.feature_flags import FeatureFlag
 from app.models.job_costs import EstimateActuals, JobCostEntry
 from app.models.public_agent_audit import PublicAgentAudit
+from app.models.agent_tool_calls import AgentToolCall
+from app.models.market_adjustments import MarketAdjustment
+from app.models.supplier_webhooks import SupplierWebhook
+# v4.1 models
+from app.models.ml_models import MLModel
+from app.models.photo_sessions import PhotoSession
+from app.models.pricing_intelligence import (
+    SupplierPriceAlert,
+    PricingRecommendation,
+    PricingAdjustment,
+    PushSubscription,
+)
 
 __all__ = [
     "User", "Organization", "UserInvite",
@@ -28,6 +42,7 @@ __all__ = [
     "LaborTemplate", "MaterialAssembly", "MarkupRule",
     "UploadedDocument", "DocumentChunk",
     "BlueprintJob", "BlueprintPage", "BlueprintDetection", "BlueprintDetectionFeedback",
+    "BlueprintRoom", "BlueprintPipeRun",
     "AuditLog", "AssumptionLog",
     "TaxRate",
     "PermitCostRule", "CityZoneMultiplier", "TripChargeRule",
@@ -43,4 +58,14 @@ __all__ = [
     "EstimateActuals",
     "JobCostEntry",
     "PublicAgentAudit",
+    "AgentToolCall",
+    "MarketAdjustment",
+    "SupplierWebhook",
+    # v4.1
+    "MLModel",
+    "PhotoSession",
+    "SupplierPriceAlert",
+    "PricingRecommendation",
+    "PricingAdjustment",
+    "PushSubscription",
 ]

@@ -15,5 +15,6 @@ set -a
 source "$ENV_FILE"
 set +a
 
-cd "$ROOT/worker"
-exec "$ROOT/api/.venv/bin/celery" -A worker.app worker --loglevel="${LOG_LEVEL}" --pool=solo
+cd "$ROOT"
+exec env PYTHONPATH="$ROOT/api${PYTHONPATH:+:$PYTHONPATH}" \
+  "$ROOT/api/.venv/bin/celery" -A worker.worker worker --loglevel="${LOG_LEVEL}" --pool=solo

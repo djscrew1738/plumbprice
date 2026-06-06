@@ -20,6 +20,7 @@ import {
   type OrgUser,
   type OrgInvite,
 } from '@/lib/hooks'
+import { formatDateMedium } from '@/lib/formatters'
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -31,19 +32,6 @@ const ROLE_BADGE_VARIANT: Record<string, 'accent' | 'info' | 'neutral'> = {
   admin: 'accent',
   estimator: 'info',
   viewer: 'neutral',
-}
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date(dateStr))
-  } catch {
-    return dateStr
-  }
 }
 
 export function AdminUsersPage() {
@@ -147,7 +135,7 @@ export function AdminUsersPage() {
       className: 'hidden sm:table-cell',
       render: (row) => (
         <span className="text-xs text-[color:var(--muted-ink)]">
-          {formatDate(row.last_login_at)}
+          {formatDateMedium(row.last_login_at)}
         </span>
       ),
     },
@@ -208,7 +196,7 @@ export function AdminUsersPage() {
                     {inv.email}
                   </p>
                   <p className="text-xs text-[color:var(--muted-ink)]">
-                    {inv.role} · expires {formatDate(inv.expires_at)}
+                    {inv.role} · expires {formatDateMedium(inv.expires_at)}
                   </p>
                 </div>
                 <Button

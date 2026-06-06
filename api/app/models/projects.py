@@ -38,7 +38,7 @@ class Project(Base):
     zip_code = Column(String(10))
     notes = Column(Text)
     organization_id = Column(Integer, ForeignKey("organizations.id"), index=True)
-    created_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(Integer, ForeignKey("users.id"), index=True)
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), index=True)

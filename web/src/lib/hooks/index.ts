@@ -68,7 +68,6 @@ export {
   useCloneSession,
   sessionKeys,
 } from './useSessions'
-
 export {
   useEstimateStats,
   useOutcomes,
@@ -114,3 +113,5 @@ export {
 export { useWebSocket } from './useWebSocket'
 export { useSafeQuery } from './useSafeQuery'
 export { useFeatureFlags, useFlag, featureFlagsKey } from './useFeatureFlags'
+export { useSessionExpiry } from './useSessionExpiry'
+

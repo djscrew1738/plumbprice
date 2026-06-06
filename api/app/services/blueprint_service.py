@@ -1,10 +1,10 @@
 """Blueprint Service — Phase 4 implementation."""
 
 import structlog
-from typing import Optional, List, Dict
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.blueprints import BlueprintJob, BlueprintPage, BlueprintDetection
+from app.models.blueprint_pipe_runs import BlueprintPipeRun
 
 logger = structlog.get_logger()
 
@@ -94,12 +94,33 @@ class BlueprintService:
                 for r in review_q.all()
             ]
 
+            # Pipe runs (v4.1 takeoff editor)
+            pipe_runs_q = await db.execute(
+                select(BlueprintPipeRun)
+                .where(BlueprintPipeRun.blueprint_job_id == job_id)
+                .order_by(BlueprintPipeRun.id)
+            )
+            pipe_runs = [
+                {
+                    "id": pr.id,
+                    "page_id": None,
+                    "from_fixture": getattr(pr, "from_fixture", None),
+                    "to_fixture": getattr(pr, "to_fixture", None),
+                    "material_type": getattr(pr, "material_type", None) or pr.pipe_type,
+                    "estimated_footage": pr.length_ft,
+                    "routing_json": getattr(pr, "routing_json", None),
+                    "needs_review": False,
+                }
+                for pr in pipe_runs_q.scalars().all()
+            ]
+
             return {
                 "job_id": job_id,
                 "status": "complete",
                 "fixtures": fixtures,
                 "pages": pages,
                 "needs_review": review_items,
+                "pipe_runs": pipe_runs,
             }
             
         except Exception as e:

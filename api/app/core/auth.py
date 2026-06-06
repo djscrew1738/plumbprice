@@ -75,3 +75,33 @@ async def get_current_admin(current_user: User = Depends(get_current_user)) -> U
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return current_user
+
+
+# ── v4.1: Role guards ─────────────────────────────────────────────────────────
+
+# Roles that can create estimates via any method (chat, photo, voice)
+ESTIMATOR_ROLES = {"admin", "estimator", "field_tech"}
+# Roles with full admin access
+ADMIN_ROLES = {"admin"}
+# Roles restricted to field-only workflow (/field routes, photo/voice only)
+FIELD_ONLY_ROLES = {"field_tech"}
+
+
+async def get_current_field_tech(current_user: User = Depends(get_current_user)) -> User:
+    """Require field_tech or admin role."""
+    if current_user.role not in ("field_tech", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Field tech access required",
+        )
+    return current_user
+
+
+async def get_current_estimator(current_user: User = Depends(get_current_user)) -> User:
+    """Require any estimating role (admin, estimator, or field_tech)."""
+    if current_user.role not in ESTIMATOR_ROLES and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Estimator access required",
+        )
+    return current_user

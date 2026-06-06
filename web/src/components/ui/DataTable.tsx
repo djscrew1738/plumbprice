@@ -267,6 +267,9 @@ export function DataTable<T>({
                 rowClassName?.(row),
               )}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row) } } : undefined}
+              role={onRowClick ? 'button' : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
             >
               {columns.map((col) => (
                 <div key={col.key} className="flex items-start justify-between gap-2">

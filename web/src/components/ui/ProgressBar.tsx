@@ -102,18 +102,6 @@ export function ProgressBar({
         )}
       </div>
 
-      {/* Indeterminate keyframes */}
-      {indeterminate && (
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes pp-indeterminate {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(400%); }
-          }
-          .animate-indeterminate {
-            animation: pp-indeterminate 1.5s ease-in-out infinite;
-          }
-        `}} />
-      )}
     </div>
   )
 }

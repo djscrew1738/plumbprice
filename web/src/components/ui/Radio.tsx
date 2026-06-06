@@ -91,6 +91,7 @@ export function RadioGroup({
         <div
           role="radiogroup"
           aria-label={label}
+          tabIndex={-1}
           onKeyDown={handleKeyDown}
           className={cn(
             'flex',

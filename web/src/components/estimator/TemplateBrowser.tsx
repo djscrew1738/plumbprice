@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { LayoutGrid, List } from 'lucide-react'
 import { templatesApi, type PricingTemplateSummary } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
@@ -18,21 +19,18 @@ interface TemplateBrowserProps {
 type ViewMode = 'grid' | 'list'
 
 export function TemplateBrowser({ open, onClose, onSelect }: TemplateBrowserProps) {
-  const [templates, setTemplates] = useState<PricingTemplateSummary[]>([])
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
-  useEffect(() => {
-    if (!open) return
-    let active = true
-    setLoading(true)
-    templatesApi.list()
-      .then(res => { if (active) setTemplates(res.data) })
-      .catch(() => {})
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [open])
+  const { data: templates = [], isLoading: loading } = useQuery({
+    queryKey: ['templates', 'pricing'],
+    queryFn: async () => {
+      const res = await templatesApi.list()
+      return res.data
+    },
+    staleTime: 15 * 60_000,
+    enabled: open,
+  })
 
   const filtered = search
     ? templates.filter(t =>

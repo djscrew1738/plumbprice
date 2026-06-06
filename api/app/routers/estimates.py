@@ -95,6 +95,7 @@ async def create_service_estimate(
             created_by=current_user.id,
             organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
         )
+        await db.commit()
 
         return EstimateResponse(
             id=estimate.id,
@@ -163,6 +164,7 @@ async def create_construction_estimate(
             organization_id=current_user.organization_id if hasattr(current_user, "organization_id") else None,
             source="construction",
         )
+        await db.commit()
 
         return EstimateResponse(
             id=estimate.id,

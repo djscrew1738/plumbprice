@@ -7,8 +7,8 @@ import EstimatorRoute from './page'
 
 const pendingWorkspace = new Promise(() => {})
 
-vi.mock('@/components/estimator/EstimatorPage', () => ({
-  EstimatorPage: function MockEstimatorPage() {
+vi.mock('@/components/estimator-v3/EstimatorPageV3', () => ({
+  EstimatorPageV3: function MockEstimatorPageV3() {
     throw pendingWorkspace
   },
 }))

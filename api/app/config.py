@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # App
     app_name: str = "PlumbPrice AI"
-    version: str = "2.5.1"
+    version: str = "4.1.0"
     environment: str = "development"
     log_level: str = "INFO"
     debug: bool = False
@@ -129,12 +129,33 @@ class Settings(BaseSettings):
     construct_api_url: Optional[str] = None
     price_cache_ttl_hours: int = 24
 
-    # Ferguson Trade API (Phase 2 live pricing)
+    # Ferguson Trade API (v4.1 live pricing — OAuth2 client credentials)
     # Obtain via Ferguson Trade Partner Program: https://www.ferguson.com/content/website-info/api-overview
     ferguson_api_key: Optional[str] = None
     ferguson_api_base_url: str = "https://api.ferguson.com/v1"
+    ferguson_client_id: Optional[str] = None
+    ferguson_client_secret: Optional[str] = None
     # Alert when live price deviates more than this fraction from stored cost
     price_change_alert_threshold: float = 0.10
+
+    # Scraper live mode toggles (v4.1) — default off (simulation mode)
+    moore_supply_enabled: bool = False
+    apex_supply_enabled: bool = False
+
+    # Vision provider (v4.1): "openai" uses GPT-4V; "ollama" uses local vision model
+    vision_provider: str = "ollama"
+    # Confidence threshold below which a detection is flagged for manual review
+    vision_detection_review_threshold: float = 0.60
+
+    # Web Push notifications (VAPID keys — generate with pywebpush)
+    vapid_public_key: Optional[str] = None
+    vapid_private_key: Optional[str] = None
+    vapid_subscriber_email: str = "admin@ctlplumbingllc.com"
+
+    # LLM Fine-tuning (v4.1)
+    ml_finetune_min_samples: int = 50
+    ml_shadow_traffic_pct: int = 10  # % of classify calls routed to shadow model
+    ml_finetune_enabled: bool = False  # master switch; set True when data volume is ready
 
     # Celery
     celery_broker_url: str = "redis://localhost:6379/0"
