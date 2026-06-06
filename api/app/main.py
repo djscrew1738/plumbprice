@@ -26,7 +26,7 @@ if settings.sentry_dsn:
     )
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import init_db, AsyncSessionLocal, get_db
-from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, admin_pricing, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift
+from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, admin_pricing, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift, adobe
 from app.routers.v3 import chat as chat_v3, estimates as estimates_v3, market_pricing as market_pricing_v3, suppliers as suppliers_v3, agent_trace as agent_trace_v3, blueprints as blueprints_v3
 from app.routers.v3 import geo as geo_v3, push_notifications as push_v3, photo_sessions as photo_sessions_v3
 from app.routers.v3 import variance_analytics as variance_analytics_v3, ml_models as ml_models_v3
@@ -442,6 +442,7 @@ app.include_router(jobcost.router,           prefix="/api/v1/estimates", tags=["
 app.include_router(doc_generation.router,    prefix="/api/v1/estimates", tags=["docs"])
 app.include_router(price_drift.router,       prefix="/api/v1/admin/supplier-prices", tags=["admin"])
 app.include_router(health.router,    tags=["health"])
+app.include_router(adobe.router,     prefix="/api/v1/adobe",  tags=["adobe"])
 
 # v3 API routers
 app.include_router(chat_v3.router,           prefix="/api/v3/chat",         tags=["chat-v3"])

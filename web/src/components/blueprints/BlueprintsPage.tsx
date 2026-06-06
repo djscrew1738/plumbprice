@@ -20,6 +20,7 @@ import { blueprintsApi } from '@/lib/api'
 import { blueprintApiV3, type BlueprintTakeoffV3 } from '@/lib/api-v3'
 import { useBlueprints, useUploadBlueprint, useDeleteBlueprint, type JobStatus, type BlueprintJob } from '@/lib/hooks'
 import { BLUEPRINT_POLL_INTERVAL_MS, MAX_BLUEPRINT_SIZE_MB } from '@/lib/constants'
+import { AdobeCloudPicker } from '@/components/blueprints/AdobeCloudPicker'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -536,6 +537,19 @@ export function BlueprintsPage() {
 
         {/* Drop zone */}
         <DropZone onFiles={handleFiles} isUploading={uploadMutation.isPending} />
+
+        {/* Adobe Cloud import */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-white/[0.06]" />
+          <span className="text-[11px] text-zinc-600 font-medium">or import from</span>
+          <div className="flex-1 h-px bg-white/[0.06]" />
+        </div>
+        <AdobeCloudPicker
+          onImported={() => {
+            queryClient.invalidateQueries({ queryKey: ['blueprints'] })
+          }}
+          className="w-full justify-center"
+        />
 
         {/* Capabilities preview */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

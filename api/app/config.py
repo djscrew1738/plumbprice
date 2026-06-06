@@ -123,6 +123,14 @@ class Settings(BaseSettings):
     public_agent_rate_per_minute: int = 10
     public_agent_rate_per_day: int = 80
 
+    # Adobe Document Cloud integration (OAuth 2.0)
+    # Register at: https://developer.adobe.com/console → create project → OAuth credential
+    # Redirect URI must be set to: {frontend_url}/api/v1/adobe/auth/callback
+    adobe_client_id: Optional[str] = None
+    adobe_client_secret: Optional[str] = None
+    adobe_redirect_uri: str = "https://app.ctlplumbingllc.com/api/v1/adobe/auth/callback"
+    adobe_scopes: str = "openid,AdobeID,DCAPI,files.read"
+
     # External price data sources
     apify_token: Optional[str] = None
     apify_actor_id: str = "apify/website-content-crawler"

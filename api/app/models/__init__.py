@@ -18,6 +18,7 @@ from app.models.notifications import Notification
 from app.models.agent_memory import AgentMemory
 from app.models.photos import Photo
 from app.models.vision_mappings import VisionItemMapping
+from app.models.adobe_oauth import AdobeOAuthToken
 from app.models.feature_flags import FeatureFlag
 from app.models.job_costs import EstimateActuals, JobCostEntry
 from app.models.public_agent_audit import PublicAgentAudit
