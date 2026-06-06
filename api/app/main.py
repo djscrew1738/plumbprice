@@ -317,6 +317,13 @@ from app.observability import init_sentry, init_otel
 init_sentry()
 init_otel(app)
 
+# Prometheus metrics endpoint — exposed at /metrics (no auth, scrape from localhost only)
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator as _Instrumentator
+    _Instrumentator().instrument(app).expose(app, include_in_schema=False)
+except ImportError:
+    pass  # prometheus-fastapi-instrumentator not installed; metrics endpoint disabled
+
 # Compress responses larger than 500 bytes — saves significant bandwidth on estimate payloads
 app.add_middleware(GZipMiddleware, minimum_size=500)
 

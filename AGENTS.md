@@ -8,7 +8,7 @@ This file is the canonical reference for AI coding agents working in this reposi
 
 PlumbPrice AI is an autonomous plumbing pricing and estimating platform for DFW-area plumbing contractors. It replaces spreadsheet-based estimating with a chat-driven interface that produces itemized, line-level quotes backed by real supplier pricing data. The system guarantees that every price shown can be traced directly to a supplier SKU and a labor template — the LLM extracts intent and maps it to canonical line items, but all dollar math happens in pure Python with no LLM involvement.
 
-Current version: **2.5.1**
+Current version: **4.1.0**
 
 ---
 
@@ -237,17 +237,22 @@ npx playwright test --ui    # Interactive UI mode
 Browser (Next.js 15, port 3000)
     │ HTTPS / REST
     ▼
-FastAPI (port 8000) — /api/v1/*
+FastAPI (port 8000) — /api/v1/* and /api/v3/*
     │ async DB queries           │ enqueue tasks
     ▼                            ▼
 PostgreSQL + pgvector      Redis (broker + cache)
                                 │
                                 ▼
-                         Celery Worker
+                         Celery Worker (default queue)
                          - supplier_refresh (daily beat)
                          - document_processing
                          - blueprint_analysis
                          - privacy.purge_expired_uploads
+                         - price_forecast (weekly beat)  ← v4.1
+                                │
+                         Celery Worker ML (ml queue)    ← v4.1
+                         - finetune.run_finetune
+                         - finetune.poll_finetune_job
                                 │
                                 ▼
                          MinIO (object storage)
@@ -261,8 +266,11 @@ PostgreSQL + pgvector      Redis (broker + cache)
 3. **Confidence transparency** — Estimates surface a 0.0–1.0 confidence score and a human-readable label (High / Medium / Low / Estimate-Only).
 4. **Async-first API** — SQLAlchemy async sessions + asyncpg for I/O-bound endpoints.
 5. **Background tasks via Celery** — Slow operations (AI inference, PDF rendering, file processing) are pushed to the worker. The API returns task IDs for polling when needed.
-6. **pgvector for semantic search** — Document embeddings are stored as vectors in PostgreSQL for similarity search.
+6. **pgvector for semantic search** — Document embeddings are stored as vectors in PostgreSQL for similarity search (HNSW index added in v4.1 for O(log n) ANN queries).
 7. **MinIO for file storage** — S3-compatible; production can swap to AWS S3 with a config change.
+8. **Fine-tuned models shadow-deploy first** — `ml_models` table tracks model versions. Shadow mode routes 10% of traffic; promotion requires ≥100 calls and >5pp match-rate improvement. See `api/app/services/model_ab.py`.
+9. **Variance closes the loop** — Actual job costs (`EstimateOutcome.actual_total`) feed the `pricing_corrections.py` engine, which emits advisory `PricingRecommendation` records. Admin approval required before any correction is applied.
+10. **Offline-first for field** — `/field/*` routes use service worker pre-caching and `outbox.ts` IndexedDB queue for offline estimate creation and background sync.
 
 ### Database Migrations
 
