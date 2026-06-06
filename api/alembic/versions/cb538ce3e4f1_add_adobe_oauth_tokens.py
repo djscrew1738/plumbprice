@@ -1,6 +1,6 @@
 """add adobe oauth tokens
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: cb538ce3e4f1
 Revises: f0ab4eb1db5b
 Create Date: 2026-06-06
 
@@ -8,7 +8,7 @@ Create Date: 2026-06-06
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a1b2c3d4e5f6'
+revision = 'cb538ce3e4f1'
 down_revision = 'f0ab4eb1db5b'
 branch_labels = None
 depends_on = None
