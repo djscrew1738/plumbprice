@@ -5,7 +5,11 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$ROOT/deploy/runtime.env"
 BUILD_DIR="$ROOT/web/.next"
+# Next.js standalone output mirrors the absolute path; find the actual server.js.
 STANDALONE_SERVER="$BUILD_DIR/standalone/server.js"
+if [[ ! -f "$STANDALONE_SERVER" ]]; then
+  STANDALONE_SERVER="$(find "$BUILD_DIR/standalone" -name "server.js" -not -path "*/node_modules/*" | head -1)"
+fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing runtime env at $ENV_FILE" >&2
@@ -40,5 +44,5 @@ for f in "${PATCH_FILES[@]}"; do
   " "$f"
 done
 
-cd "$ROOT/web"
+cd "$(dirname "$STANDALONE_SERVER")"
 exec env PORT="${WEB_PORT}" HOSTNAME=0.0.0.0 node "$STANDALONE_SERVER"
