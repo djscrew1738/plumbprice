@@ -178,11 +178,46 @@ services:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    command: celery -A worker.worker worker --loglevel=info --concurrency=4
+    command: celery -A worker.worker worker --loglevel=info --concurrency=4 --queues=default
     deploy:
       resources:
         limits:
           memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - plumbprice-net
+    volumes:
+      - .:/app
+
+  worker-ml:
+    image: plumbprice-backend:latest
+    container_name: plumbprice_worker_ml
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-plumbprice}:${POSTGRES_PASSWORD:-plumbprice_dev}@postgres:5432/${POSTGRES_DB:-plumbprice}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - PYTHONPATH=/app/api
+      - HERMES_ENDPOINT_URL=${HERMES_ENDPOINT_URL:-http://localhost:11434/v1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # ML worker: single concurrency to avoid GPU/memory contention on fine-tuning + forecast tasks
+    command: celery -A worker.worker worker --loglevel=info --concurrency=1 --queues=ml --hostname=worker-ml@%h
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     logging:
       driver: "json-file"
       options:

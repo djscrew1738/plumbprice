@@ -1,4 +1,11 @@
-"""Celery application configuration."""
+"""Celery application configuration.
+
+Queues
+------
+default     — general tasks (document processing, blueprint analysis, privacy)
+high        — latency-sensitive tasks (notifications, photo session finalisation)
+ml          — compute-heavy ML tasks (fine-tuning, price forecast); concurrency=1
+"""
 
 from celery import Celery
 import os
@@ -14,6 +21,8 @@ app = Celery(
         "worker.tasks.document_processing",
         "worker.tasks.blueprint_analysis",
         "worker.tasks.privacy",
+        "worker.tasks.finetune",
+        "worker.tasks.price_forecast",
     ],
 )
 
@@ -23,6 +32,15 @@ app.conf.update(
     result_serializer="json",
     timezone="America/Chicago",
     enable_utc=True,
+    # Route tasks to appropriate queues
+    task_routes={
+        "worker.tasks.finetune.*": {"queue": "ml"},
+        "worker.tasks.price_forecast.*": {"queue": "ml"},
+        "worker.tasks.supplier_refresh.*": {"queue": "default"},
+        "worker.tasks.document_processing.*": {"queue": "default"},
+        "worker.tasks.blueprint_analysis.*": {"queue": "default"},
+        "worker.tasks.privacy.*": {"queue": "default"},
+    },
     beat_schedule={
         "refresh-supplier-prices-daily": {
             "task": "worker.tasks.supplier_refresh.refresh_all_suppliers",
@@ -31,6 +49,10 @@ app.conf.update(
         "purge-expired-uploads-daily": {
             "task": "worker.tasks.privacy.purge_expired_uploads",
             "schedule": 86400.0,  # every 24 hours
+        },
+        "compute-price-forecast-weekly": {
+            "task": "worker.tasks.price_forecast.compute_price_trends",
+            "schedule": 7 * 86400.0,  # every 7 days
         },
     },
 )

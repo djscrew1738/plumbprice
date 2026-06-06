@@ -24,6 +24,15 @@ from app.models.public_agent_audit import PublicAgentAudit
 from app.models.agent_tool_calls import AgentToolCall
 from app.models.market_adjustments import MarketAdjustment
 from app.models.supplier_webhooks import SupplierWebhook
+# v4.1 models
+from app.models.ml_models import MLModel
+from app.models.photo_sessions import PhotoSession
+from app.models.pricing_intelligence import (
+    SupplierPriceAlert,
+    PricingRecommendation,
+    PricingAdjustment,
+    PushSubscription,
+)
 
 __all__ = [
     "User", "Organization", "UserInvite",
@@ -52,4 +61,11 @@ __all__ = [
     "AgentToolCall",
     "MarketAdjustment",
     "SupplierWebhook",
+    # v4.1
+    "MLModel",
+    "PhotoSession",
+    "SupplierPriceAlert",
+    "PricingRecommendation",
+    "PricingAdjustment",
+    "PushSubscription",
 ]

@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import init_db, AsyncSessionLocal, get_db
 from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, admin_pricing, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift
 from app.routers.v3 import chat as chat_v3, estimates as estimates_v3, market_pricing as market_pricing_v3, suppliers as suppliers_v3, agent_trace as agent_trace_v3, blueprints as blueprints_v3
+from app.routers.v3 import geo as geo_v3, push_notifications as push_v3, photo_sessions as photo_sessions_v3
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -440,7 +441,11 @@ app.include_router(estimates_v3.router,      prefix="/api/v3/estimates",    tags
 app.include_router(market_pricing_v3.router, prefix="/api/v3/market-pricing", tags=["market-pricing-v3"])
 app.include_router(suppliers_v3.router,      prefix="/api/v3/suppliers",    tags=["suppliers-v3"])
 app.include_router(agent_trace_v3.router,    prefix="/api/v3/agent-trace",  tags=["agent-trace-v3"])
-app.include_router(blueprints_v3.router,      prefix="/api/v3/blueprints",   tags=["blueprints-v3"])
+app.include_router(blueprints_v3.router,     prefix="/api/v3/blueprints",   tags=["blueprints-v3"])
+# v4.1 routers
+app.include_router(geo_v3.router,            prefix="/api/v3",              tags=["geo"])
+app.include_router(push_v3.router,           prefix="/api/v3",              tags=["push"])
+app.include_router(photo_sessions_v3.router, prefix="/api/v3",              tags=["photo-sessions"])
 
 
 @app.get("/health")

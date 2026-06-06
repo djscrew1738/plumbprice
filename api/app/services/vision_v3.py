@@ -29,15 +29,75 @@ def _get_vision_client() -> httpx.AsyncClient:
 
 
 class VisionServiceV3:
-    """v3 vision pipeline with spatial intelligence."""
+    """v3 vision pipeline with spatial intelligence.
+
+    v4.1 upgrade: supports GPT-4V (VISION_PROVIDER=openai) with Ollama as fallback.
+    Detection confidence < VISION_DETECTION_REVIEW_THRESHOLD is flagged for review.
+    """
 
     def __init__(self):
         self.endpoint = settings.hermes_endpoint_url.replace("/v1", "/api/generate")
         self.model = settings.llm_vision_model
 
-    # ── Internal helper ───────────────────────────────────────────────────────
+    # ── Internal helpers ──────────────────────────────────────────────────────
 
     async def _call_vision(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        timeout: float = 120.0,
+    ) -> Optional[Dict[str, Any]]:
+        """Call the configured vision provider with a prompt and image.
+
+        Routes to GPT-4V when VISION_PROVIDER=openai; falls back to Ollama.
+        """
+        if settings.vision_provider == "openai" and settings.openai_api_key:
+            return await self._call_gpt4v(image_bytes, prompt, timeout=timeout)
+        return await self._call_ollama(image_bytes, prompt, timeout=timeout)
+
+    async def _call_gpt4v(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        timeout: float = 120.0,
+    ) -> Optional[Dict[str, Any]]:
+        """Call GPT-4V via the OpenAI Chat Completions API with image_url format."""
+        try:
+            import openai
+
+            image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+            client = openai.AsyncOpenAI(
+                api_key=settings.openai_api_key,
+                timeout=timeout,
+            )
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_b64}",
+                                    "detail": "high",
+                                },
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }
+                ],
+                max_tokens=2048,
+            )
+            raw = response.choices[0].message.content or "{}"
+            return json.loads(raw)
+        except Exception as exc:
+            logger.warning("vision_v3.gpt4v_failed", error=str(exc))
+            # Fall back to Ollama
+            return await self._call_ollama(image_bytes, prompt, timeout=timeout)
+
+    async def _call_ollama(
         self,
         image_bytes: bytes,
         prompt: str,
@@ -63,7 +123,7 @@ class VisionServiceV3:
             raw = data.get("response", "{}")
             return json.loads(raw)
         except Exception as exc:
-            logger.warning("vision_v3.call_failed", error=str(exc), model=self.model)
+            logger.warning("vision_v3.ollama_failed", error=str(exc), model=self.model)
             return None
 
     # ── Sheet classification (unchanged from v1) ──────────────────────────────
@@ -125,7 +185,8 @@ class VisionServiceV3:
         if result is None:
             return {"fixtures": [], "error": "vision call failed"}
 
-        # Validate and sanitize
+        # Validate, sanitize, and flag low-confidence detections for review
+        review_threshold = settings.vision_detection_review_threshold
         fixtures = []
         for f in result.get("fixtures", []):
             fixture_type = str(f.get("type", "")).lower().strip()
@@ -147,6 +208,7 @@ class VisionServiceV3:
                 "count": count,
                 "confidence": confidence,
                 "bounding_box": bbox,
+                "needs_review": confidence < review_threshold,
             })
 
         return {"fixtures": fixtures}
@@ -243,13 +305,16 @@ class VisionServiceV3:
             scale_hint = f"The scale for this sheet is {px_per_ft:.1f} pixels per foot. "
 
         prompt_parts = [
-            "You are analyzing a plumbing plan.",
+            "You are analyzing a plumbing plan (P-plan or plumbing plan sheet).",
             "Identify every visible pipe run (solid or dashed lines connecting fixtures).",
             "For each pipe run, determine:",
-            "  - pipe_type: copper_3_4 | copper_1 | pvc_4 | pvc_6 | pex_1 | pex_3_4 | gas_1 | drain_4 | other",
+            "  - pipe_type: copper_3_4 | copper_1 | pvc_4 | pvc_6 | pex_1 | pex_3_4 | gas_1 | drain_4 | abs_3 | abs_4 | other",
+            "  - from_fixture: the plumbing fixture or element where this run originates (e.g. 'toilet', 'lavatory', 'water_heater', 'drain_stack')",
+            "  - to_fixture: the plumbing fixture or element where this run terminates",
+            "  - material_type: copper | pvc | pex | abs | galvanized | cast_iron | other",
             "  - start_point: {x, y} pixel coordinates of the pipe start",
             "  - end_point: {x, y} pixel coordinates of the pipe end",
-            "  - length_ft: approximate length in feet (use the scale if visible)",
+            "  - length_ft: approximate length in feet (use the scale if visible, or your best estimate from the image)",
             "  - bounding_box: {x, y, w, h} enclosing the pipe run",
             "Be very conservative. Only include clearly visible, continuous pipe runs.",
             "Do NOT guess pipe sizes — use 'other' if unsure.",
@@ -260,6 +325,7 @@ class VisionServiceV3:
             prompt_parts.append(f"Native PDF text (pipe schedule, notes): {ocr_hint[:1500]}")
         prompt_parts.append(
             'Return ONLY valid JSON: {"pipe_runs":[{"pipe_type": string,'
+            '"from_fixture": string,"to_fixture": string,"material_type": string,'
             '"start_point": {"x": int,"y": int},"end_point": {"x": int,"y": int},'
             '"length_ft": float|null,"bounding_box": {"x": int,"y": int,"w": int,"h": int},'
             '"confidence": float}]}'
@@ -269,6 +335,7 @@ class VisionServiceV3:
         if result is None:
             return {"pipe_runs": [], "error": "vision call failed"}
 
+        review_threshold = settings.vision_detection_review_threshold
         pipe_runs = []
         for pr in result.get("pipe_runs", []):
             pipe_type = str(pr.get("pipe_type", "other")).lower().strip()
@@ -291,11 +358,22 @@ class VisionServiceV3:
 
             pipe_runs.append({
                 "pipe_type": pipe_type,
+                "from_fixture": pr.get("from_fixture"),
+                "to_fixture": pr.get("to_fixture"),
+                "material_type": pr.get("material_type", "other"),
                 "start_point": _parse_point(start_point),
                 "end_point": _parse_point(end_point),
                 "length_ft": length_ft,
                 "bounding_box": bbox if isinstance(bbox, dict) else None,
                 "confidence": confidence,
+                "needs_review": confidence < review_threshold,
+                # routing_json: structured for blueprint_pipe_runs.routing_json column
+                "routing_json": {
+                    "from_fixture": pr.get("from_fixture"),
+                    "to_fixture": pr.get("to_fixture"),
+                    "material_type": pr.get("material_type", "other"),
+                    "pipe_type": pipe_type,
+                },
             })
 
         return {"pipe_runs": pipe_runs}

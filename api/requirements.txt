@@ -26,3 +26,4 @@ pymupdf
 sentry-sdk[fastapi]
 resend
 weasyprint
+pywebpush
