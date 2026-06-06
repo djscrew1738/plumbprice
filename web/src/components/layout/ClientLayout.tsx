@@ -153,7 +153,7 @@ export function ClientLayout({
         </div>
       )}
       <ShortcutsDialog />
-      <CommandPalette />
+      {!hideAppEnhancements && <CommandPalette />}
       {!hideAppEnhancements && <WhatsNewBanner />}
       <RouteAnnouncer />
     </>

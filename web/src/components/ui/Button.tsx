@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
@@ -38,7 +39,7 @@ export interface ButtonProps
   isLoading?: boolean
 }
 
-export function Button({
+export function _ButtonImpl({
   className,
   variant,
   size,
@@ -71,4 +72,7 @@ export function Button({
   )
 }
 
-export { buttonVariants }
+// Memo prevents re-renders when the parent re-renders with identical props.
+const Button = React.memo(_ButtonImpl)
+Button.displayName = 'Button'
+export { Button, buttonVariants }

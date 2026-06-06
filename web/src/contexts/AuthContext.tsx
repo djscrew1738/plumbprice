@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '@/lib/api'
 
 interface AuthUser {
@@ -66,8 +66,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }, [])
 
+  // Memoize the context value so consumers only re-render when user or
+  // loading actually changes — not on every unrelated AuthProvider render.
+  const value = useMemo<AuthContextValue>(
+    () => ({ user, loading, login, logout }),
+    [user, loading, login, logout]
+  )
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

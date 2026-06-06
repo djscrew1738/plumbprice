@@ -163,6 +163,25 @@ html {
   color-scheme: light;
 }
 
+/* Eliminate iOS Safari's 300ms tap delay on all interactive elements.
+   touch-action: manipulation signals that double-tap-to-zoom is not
+   expected, allowing the browser to fire click immediately on tap. */
+button,
+a,
+input,
+textarea,
+select,
+label,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"] {
+  touch-action: manipulation;
+}
+
 body {
   background:
     radial-gradient(circle at top, hsl(var(--accent-hsl) / 0.11), transparent 32%),
@@ -188,6 +207,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .app-scroll { scroll-behavior: auto; }
 }
+
+/* Login page card entry — CSS keyframe runs on the compositor thread,
+   zero JS overhead. Replaces the Framer Motion motion.div wrapper. */
+@keyframes login-slide-up-fade {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.login-card-entry {
+  animation: login-slide-up-fade 0.28s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-card-entry { animation: none; }
+}
+
 
 ::selection {
   background: hsl(var(--accent-hsl) / 0.18);

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, FormEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Droplets, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,22 +13,39 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const { login } = useAuth()
 
-  const emailRef = useRef<HTMLInputElement>(null)
+  // Uncontrolled inputs — no state update on every keystroke, so React
+  // doesn't reconcile on each character. Values are read only on submit/blur.
+  const emailRef    = useRef<HTMLInputElement>(null)
+  const passwordRef = useRef<HTMLInputElement>(null)
 
-  const [email,    setEmail]    = useState('')
-  const [password, setPassword] = useState('')
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
-  const [touched,  setTouched]  = useState<{ email?: boolean; password?: boolean }>({})
+
+  // Inline validation feedback — only updated on blur, not on every keystroke.
+  const [emailState,    setEmailState]    = useState<'idle' | 'valid' | 'invalid'>('idle')
+  const [passwordState, setPasswordState] = useState<'idle' | 'valid'>('idle')
 
   useEffect(() => { emailRef.current?.focus() }, [])
 
-  const emailValid   = email.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  const passwordValid = password.length >= 1
+  const validateEmail = (v: string) =>
+    v.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+
+  const handleEmailBlur = () => {
+    const v = emailRef.current?.value ?? ''
+    setEmailState(validateEmail(v) ? 'valid' : v.length > 0 ? 'invalid' : 'idle')
+  }
+
+  const handlePasswordBlur = () => {
+    const v = passwordRef.current?.value ?? ''
+    setPasswordState(v.length > 0 ? 'valid' : 'idle')
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    const email    = emailRef.current?.value ?? ''
+    const password = passwordRef.current?.value ?? ''
+    if (!email || !password) return
     setError(null)
     setLoading(true)
     try {
@@ -44,19 +60,26 @@ export function LoginForm() {
     }
   }
 
+  const emailCls = [
+    'input',
+    emailState === 'invalid' ? 'border-[hsl(var(--danger))]' : '',
+    emailState === 'valid'   ? 'ring-1 ring-emerald-500/40'  : '',
+  ].filter(Boolean).join(' ')
+
+  const passwordCls = [
+    'input pr-10',
+    passwordState === 'valid' ? 'ring-1 ring-emerald-500/40' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <div className="min-h-dvh bg-[#060606] flex items-center justify-center p-4">
-      {/* Background glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px]" style={{ background: 'radial-gradient(circle, hsl(var(--accent-hsl) / 0.15) 0%, transparent 70%)' }} />
+      {/* Background glow — fixed so it never re-renders with form state */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] bg-[radial-gradient(circle,hsl(24_78%_52%_/_0.15)_0%,transparent_70%)]" />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-sm"
-      >
+      {/* CSS-animated wrapper — no JS animation overhead per re-render */}
+      <div className="login-card-entry w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-600/30 mb-4">
@@ -80,11 +103,10 @@ export function LoginForm() {
                 type="email"
                 required
                 autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                defaultValue=""
+                onBlur={handleEmailBlur}
                 placeholder="you@company.com"
-                className={`input ${error && touched.email ? 'border-[hsl(var(--danger))]' : ''} ${touched.email && emailValid ? 'ring-1 ring-emerald-500/40' : ''}`}
+                className={emailCls}
               />
             </div>
 
@@ -96,14 +118,14 @@ export function LoginForm() {
               <div className="relative">
                 <input
                   id="password"
+                  ref={passwordRef}
                   type={showPw ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                  defaultValue=""
+                  onBlur={handlePasswordBlur}
                   placeholder="••••••••"
-                  className={`input pr-10 ${error && touched.password ? 'border-[hsl(var(--danger))]' : ''} ${touched.password && passwordValid ? 'ring-1 ring-emerald-500/40' : ''}`}
+                  className={passwordCls}
                 />
                 <button
                   type="button"
@@ -118,13 +140,9 @@ export function LoginForm() {
 
             {/* Error */}
             {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs text-[hsl(var(--danger))] bg-[hsl(var(--danger)/0.1)] border border-[hsl(var(--danger)/0.2)] rounded-xl px-3 py-2"
-              >
+              <p className="text-xs text-[hsl(var(--danger))] bg-[hsl(var(--danger)/0.1)] border border-[hsl(var(--danger)/0.2)] rounded-xl px-3 py-2">
                 {error}
-              </motion.p>
+              </p>
             )}
 
             {/* Submit */}
@@ -133,7 +151,6 @@ export function LoginForm() {
               variant="primary"
               size="md"
               isLoading={loading}
-              disabled={!email || !password}
               className="w-full justify-center py-2.5 mt-2"
             >
               Sign in
@@ -149,7 +166,7 @@ export function LoginForm() {
         </p>
 
         <BrandFooter className="mt-5" />
-      </motion.div>
+      </div>
     </div>
   )
 }
