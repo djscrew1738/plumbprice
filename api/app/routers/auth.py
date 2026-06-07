@@ -153,6 +153,63 @@ async def login(
     }
 
 
+GUEST_EMAIL = "guest@plumbprice.local"
+GUEST_FULL_NAME = "Guest User"
+GUEST_ROLE = "estimator"
+
+
+@router.post("/guest-login", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def guest_login(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Login as a shared demo/guest user. Creates the account if it does not exist."""
+    result = await db.execute(
+        select(User).where(User.email == GUEST_EMAIL, User.deleted_at.is_(None))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        # Create a shared guest account with a random password hash.
+        # Password is intentionally unrecoverable — guest login is gated by this endpoint.
+        user = User(
+            email=GUEST_EMAIL,
+            hashed_password=get_password_hash(secrets.token_urlsafe(32)),
+            full_name=GUEST_FULL_NAME,
+            role=GUEST_ROLE,
+            is_active=True,
+            is_admin=False,
+        )
+        db.add(user)
+        await db.flush()
+
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(user)
+
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
+    )
+    _set_auth_cookie(response, access_token)
+
+    logger.info("guest_login_success", guest_user_id=user.id, ip=request.client.host)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "is_admin": user.is_admin,
+        },
+    }
+
+
 @router.post("/register", response_model=TokenResponse)
 @limiter.limit("5/minute")
 async def register(

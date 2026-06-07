@@ -75,8 +75,14 @@ export function useUploadBlueprint() {
 
   return useMutation({
     mutationFn: async (file: File) => {
-      const res = await blueprintsApi.upload(file)
-      return res.data as { id: string; filename: string; pages?: number; status: JobStatus; uploaded_at: string }
+      const { data } = await blueprintsApi.upload(file)
+      return {
+        id: String(data.id),
+        filename: data.filename,
+        pages: data.page_count ?? 0,
+        status: data.status as JobStatus,
+        uploaded_at: data.created_at,
+      }
     },
     onMutate: async (file) => {
       await queryClient.cancelQueries({ queryKey: blueprintKeys.all })

@@ -15,6 +15,7 @@ interface AuthContextValue {
   user: AuthUser | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  loginAsGuest: () => Promise<void>
   logout: () => void
 }
 
@@ -57,6 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData)
   }, [])
 
+  const loginAsGuest = useCallback(async () => {
+    const res = await api.post('/auth/guest-login')
+    const { user: userData } = res.data as { access_token?: string; user: AuthUser }
+    setUser(userData)
+  }, [])
+
   const logout = useCallback(() => {
     void api.post('/auth/logout').catch((err) => {
       if (process.env.NODE_ENV === 'development') {
@@ -69,8 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Memoize the context value so consumers only re-render when user or
   // loading actually changes — not on every unrelated AuthProvider render.
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, logout }),
-    [user, loading, login, logout]
+    () => ({ user, loading, login, loginAsGuest, logout }),
+    [user, loading, login, loginAsGuest, logout]
   )
 
   return (

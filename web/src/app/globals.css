@@ -5,6 +5,98 @@
 @layer base {
   :root {
     color-scheme: light;
+
+    /* ═══════════════════════════════════════════════════════════════
+       DESIGN TOKENS v5.1 — Look & Feel Overhaul
+       Consolidated canonical token set. Backward-compatible aliases
+       below for legacy components during migration.
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* ── Canvas & Surfaces ── */
+    --canvas: #f4efe6;
+    --canvas-gradient-start: #f8f4ec;
+    --canvas-gradient-end: #f1ebdf;
+    --panel: rgba(255, 252, 247, 0.92);
+    --panel-solid: #fffcf7;
+    --panel-strong: #f5f0e8;
+    --panel-elevated: #ffffff;
+    --panel-hsl: 36 36% 98%;
+
+    /* ── Ink (text) ── */
+    --ink: #1f2933;
+    --ink-secondary: #4a5568;
+    --muted-ink: #667085;
+    --ink-inverse: #f4efe6;
+
+    /* ── Accent (burnt rust) ── */
+    --accent: #c26a32;
+    --accent-hover: #d67a3e;
+    --accent-strong: #8d4b24;
+    --accent-soft: rgba(194, 106, 50, 0.14);
+    --accent-glow: rgba(194, 106, 50, 0.22);
+    --accent-hsl: 24 78% 52%;
+
+    /* ── Semantic Status ── */
+    --success: #26845e;
+    --success-soft: rgba(38, 132, 94, 0.14);
+    --warning: #c9870e;
+    --warning-soft: rgba(201, 135, 14, 0.14);
+    --danger: #bf4040;
+    --danger-soft: rgba(191, 64, 64, 0.14);
+    --info: #2563eb;
+    --info-soft: rgba(37, 99, 235, 0.14);
+
+    /* ── Borders ── */
+    --line: rgba(31, 41, 51, 0.08);
+    --line-strong: rgba(31, 41, 51, 0.16);
+    --line-subtle: rgba(31, 41, 51, 0.04);
+
+    /* ── Shadows (warm brown tint) ── */
+    --shadow-sm: 0 1px 2px rgba(52, 40, 28, 0.06), 0 1px 3px rgba(52, 40, 28, 0.04);
+    --shadow-md: 0 4px 12px rgba(52, 40, 28, 0.08), 0 2px 4px rgba(52, 40, 28, 0.04);
+    --shadow-lg: 0 18px 40px rgba(52, 40, 28, 0.10), 0 6px 16px rgba(52, 40, 28, 0.06);
+    --shadow-xl: 0 28px 60px rgba(52, 40, 28, 0.14), 0 10px 24px rgba(52, 40, 28, 0.08);
+    --shadow-glow: 0 0 40px rgba(194, 106, 50, 0.15);
+
+    /* ── Radius ── */
+    --radius-xs: 0.5rem;
+    --radius-sm: 0.75rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.25rem;
+    --radius-xl: 1.5rem;
+    --radius-2xl: 1.75rem;
+    --radius-full: 9999px;
+
+    /* ── Spacing ── */
+    --space-page-x: clamp(1rem, 3vw, 2rem);
+    --space-page-y: clamp(1rem, 2.5vw, 1.75rem);
+    --space-section: clamp(1.25rem, 2vw, 2rem);
+    --space-card: clamp(1rem, 1.5vw, 1.5rem);
+    --space-gap: clamp(0.75rem, 1vw, 1rem);
+
+    /* ── Motion ── */
+    --duration-instant: 0.08s;
+    --duration-fast: 0.15s;
+    --duration-normal: 0.25s;
+    --duration-slow: 0.4s;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ── Layout ── */
+    --sidebar-rail: 64px;
+    --sidebar-expanded: 248px;
+    --sidebar-current: var(--sidebar-rail);
+    --header-height: 64px;
+    --mobile-nav-height: 80px;
+    --content-max-width: 1440px;
+    --workspace-rail-width: 360px;
+
+    /* ═══════════════════════════════════════════════════════════════
+       BACKWARD-COMPATIBLE ALIASES (legacy components)
+       These map the old HSL token names to the new system.
+       Migrate components to use --panel, --ink, etc. over time.
+       ═══════════════════════════════════════════════════════════════ */
     --background: 36 38% 96%;
     --foreground: 24 16% 13%;
     --card: 0 0% 100%;
@@ -23,52 +115,35 @@
     --radius: 0.95rem;
     --content-max-width: 1280px;
     --sidebar-width: 248px;
-    --sidebar-rail: 64px;
-    --sidebar-current: var(--sidebar-rail);
-    --header-height: 64px;
-    --mobile-nav-height: 80px;
     --sat: env(safe-area-inset-top);
     --sar: env(safe-area-inset-right);
     --sab: env(safe-area-inset-bottom);
     --sal: env(safe-area-inset-left);
 
-    --panel: hsl(36 36% 98%);
-    --panel-strong: hsl(34 27% 92%);
-    --line: hsl(30 18% 83%);
-    --ink: hsl(24 16% 13%);
-    --muted-ink: hsl(24 10% 42%);
-    --accent: hsl(24 78% 52%);
-    --accent-hsl: 24 78% 52%;
-    --accent-strong: hsl(24 66% 33%);
-    --accent-soft: hsl(24 100% 94%);
-    --panel-hsl: 36 36% 98%;
-
-    /* Semantic status colors */
-    --success: 160 55% 38%;
+    /* Legacy semantic status (HSL format) */
+    --success-hsl: 160 55% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 40 96% 50%;
+    --warning-hsl: 40 96% 50%;
     --warning-foreground: 24 16% 13%;
-    --danger: 0 72% 51%;
+    --danger-hsl: 0 72% 51%;
     --danger-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --info-hsl: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
+    /* Legacy stage colors */
     --stage-lead: 30 7% 40%;
     --stage-sent: 24 78% 52%;
     --stage-won: 160 55% 38%;
     --stage-lost: 0 68% 50%;
 
-    /* Motion tokens */
-    --duration-fast: 0.15s;
-    --duration-normal: 0.2s;
-    --duration-slow: 0.35s;
-    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Legacy motion tokens */
+    --duration-fast-legacy: 0.15s;
+    --duration-normal-legacy: 0.2s;
+    --duration-slow-legacy: 0.35s;
+    --ease-out-legacy: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring-legacy: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    /* ── New design tokens (v2.6 polish) ──
-     * Additive: existing tokens above are preserved for backwards-compat.
-     * New components should consume these for consistent surfaces and shadows.
-     */
+    /* Legacy surface tokens */
     --surface-1: hsl(36 36% 98%);
     --surface-2: hsl(34 27% 95%);
     --surface-3: hsl(34 24% 91%);
@@ -77,26 +152,66 @@
     --border-strong: hsl(30 18% 76%);
     --ring-focus: hsl(24 78% 52%);
 
-    --radius-xs: 0.375rem;
-    --radius-sm: 0.5rem;
-    --radius-md: 0.75rem;
-    --radius-lg: 0.95rem;
-    --radius-xl: 1.25rem;
-    --radius-2xl: 1.5rem;
-
-    --shadow-sm: 0 1px 2px rgba(84, 60, 39, 0.06), 0 1px 3px rgba(84, 60, 39, 0.04);
-    --shadow-md: 0 4px 12px rgba(84, 60, 39, 0.08), 0 2px 4px rgba(84, 60, 39, 0.04);
-    --shadow-lg: 0 18px 40px rgba(84, 60, 39, 0.10), 0 6px 16px rgba(84, 60, 39, 0.06);
-    --shadow-xl: 0 28px 60px rgba(84, 60, 39, 0.14), 0 10px 24px rgba(84, 60, 39, 0.08);
-
-    --space-page-x: clamp(1rem, 3vw, 2rem);
-    --space-page-y: clamp(1rem, 2.5vw, 1.75rem);
-    --space-section: clamp(1.25rem, 2vw, 2rem);
-    --space-card: clamp(1rem, 1.5vw, 1.5rem);
+    /* Legacy shadows */
+    --shadow-sm-legacy: 0 1px 2px rgba(84, 60, 39, 0.06), 0 1px 3px rgba(84, 60, 39, 0.04);
+    --shadow-md-legacy: 0 4px 12px rgba(84, 60, 39, 0.08), 0 2px 4px rgba(84, 60, 39, 0.04);
+    --shadow-lg-legacy: 0 18px 40px rgba(84, 60, 39, 0.10), 0 6px 16px rgba(84, 60, 39, 0.06);
+    --shadow-xl-legacy: 0 28px 60px rgba(84, 60, 39, 0.14), 0 10px 24px rgba(84, 60, 39, 0.08);
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+     DARK MODE
+     ═══════════════════════════════════════════════════════════════ */
   .dark {
     color-scheme: dark;
+
+    /* ── Canvas & Surfaces (dark) ── */
+    --canvas: #121212;
+    --canvas-gradient-start: #1a1a1a;
+    --canvas-gradient-end: #0f0f0f;
+    --panel: rgba(28, 28, 30, 0.92);
+    --panel-solid: #1c1c1e;
+    --panel-strong: #2c2c2e;
+    --panel-elevated: #3a3a3c;
+    --panel-hsl: 24 16% 10%;
+
+    /* ── Ink (dark) ── */
+    --ink: #f4f4f5;
+    --ink-secondary: #a1a1aa;
+    --muted-ink: #71717a;
+    --ink-inverse: #1f2933;
+
+    /* ── Accent (dark — slightly brighter) ── */
+    --accent: #d67a3e;
+    --accent-hover: #e08a52;
+    --accent-strong: #f0a070;
+    --accent-soft: rgba(214, 122, 62, 0.18);
+    --accent-glow: rgba(214, 122, 62, 0.25);
+    --accent-hsl: 24 78% 55%;
+
+    /* ── Semantic Status (dark) ── */
+    --success: #34d399;
+    --success-soft: rgba(52, 211, 153, 0.14);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.14);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.14);
+    --info: #60a5fa;
+    --info-soft: rgba(96, 165, 250, 0.14);
+
+    /* ── Borders (dark) ── */
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.14);
+    --line-subtle: rgba(255, 255, 255, 0.04);
+
+    /* ── Shadows (dark — cooler, less warm) ── */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.18);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.38), 0 2px 4px rgba(0, 0, 0, 0.20);
+    --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25);
+    --shadow-xl: 0 28px 60px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.30);
+    --shadow-glow: 0 0 40px rgba(214, 122, 62, 0.18);
+
+    /* Legacy aliases (dark) */
     --background: 24 16% 8%;
     --foreground: 0 0% 98%;
     --card: 0 0% 10%;
@@ -115,25 +230,13 @@
     --radius: 0.95rem;
     --sidebar-width: 248px;
 
-    --panel: hsl(24 16% 10%);
-    --panel-strong: hsl(24 16% 13%);
-    --line: hsl(0 0% 18%);
-    --ink: hsl(0 0% 95%);
-    --muted-ink: hsl(0 0% 60%);
-    --accent: hsl(24 78% 55%);
-    --accent-hsl: 24 78% 55%;
-    --accent-strong: hsl(24 78% 68%);
-    --accent-soft: hsl(24 60% 18%);
-    --panel-hsl: 24 16% 10%;
-
-    /* Semantic status colors (dark) */
-    --success: 160 84% 39%;
+    --success-hsl: 160 84% 39%;
     --success-foreground: 0 0% 100%;
-    --warning: 40 96% 56%;
+    --warning-hsl: 40 96% 56%;
     --warning-foreground: 24 16% 8%;
-    --danger: 0 72% 55%;
+    --danger-hsl: 0 72% 55%;
     --danger-foreground: 0 0% 100%;
-    --info: 217 91% 65%;
+    --info-hsl: 217 91% 65%;
     --info-foreground: 0 0% 100%;
 
     --stage-lead: 0 0% 50%;
@@ -141,7 +244,6 @@
     --stage-won: 160 84% 39%;
     --stage-lost: 0 72% 51%;
 
-    /* New design tokens (dark) */
     --surface-1: hsl(24 16% 11%);
     --surface-2: hsl(24 16% 14%);
     --surface-3: hsl(24 16% 17%);
@@ -150,10 +252,10 @@
     --border-strong: hsl(0 0% 26%);
     --ring-focus: hsl(24 78% 55%);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.18);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.38), 0 2px 4px rgba(0, 0, 0, 0.20);
-    --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25);
-    --shadow-xl: 0 28px 60px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.30);
+    --shadow-sm-legacy: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.18);
+    --shadow-md-legacy: 0 4px 12px rgba(0, 0, 0, 0.38), 0 2px 4px rgba(0, 0, 0, 0.20);
+    --shadow-lg-legacy: 0 18px 40px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25);
+    --shadow-xl-legacy: 0 28px 60px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.30);
   }
 }
 
@@ -163,9 +265,24 @@ html {
   color-scheme: light;
 }
 
-/* Eliminate iOS Safari's 300ms tap delay on all interactive elements.
-   touch-action: manipulation signals that double-tap-to-zoom is not
-   expected, allowing the browser to fire click immediately on tap. */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0ms;
+}
+
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-duration: 300ms;
+  transition-timing-function: var(--ease-smooth);
+}
+
+/* Eliminate iOS Safari's 300ms tap delay on all interactive elements. */
 button,
 a,
 input,
@@ -184,32 +301,34 @@ label,
 
 body {
   background:
-    radial-gradient(circle at top, hsl(var(--accent-hsl) / 0.11), transparent 32%),
-    linear-gradient(180deg, hsl(36 40% 98%) 0%, hsl(var(--background)) 50%, hsl(34 34% 95%) 100%);
+    radial-gradient(circle at top, hsl(var(--accent-hsl) / 0.08), transparent 32%),
+    linear-gradient(180deg, var(--canvas-gradient-start) 0%, var(--canvas) 50%, var(--canvas-gradient-end) 100%);
   color: var(--ink);
-  font-family: 'Plus Jakarta Sans', 'Helvetica Neue', system-ui, sans-serif;
+  font-family: var(--font-sans), 'Helvetica Neue', system-ui, sans-serif;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   min-height: 100dvh;
   overscroll-behavior: none;
 }
 
-/* Inner-scroll container used by the app shell. Critical for smooth
-   mobile scrolling: enables iOS momentum, contains overscroll so the
-   page doesn't bounce-then-stick, and forces vertical pan touch action
-   so child elements (motion.div, links, charts) can't accidentally
-   swallow scroll gestures. */
+.dark body {
+  background:
+    radial-gradient(circle at top, hsl(var(--accent-hsl) / 0.06), transparent 32%),
+    linear-gradient(180deg, var(--canvas-gradient-start) 0%, var(--canvas) 50%, var(--canvas-gradient-end) 100%);
+}
+
+/* Inner-scroll container used by the app shell */
 .app-scroll {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   touch-action: pan-y;
   scroll-behavior: smooth;
 }
+
 @media (prefers-reduced-motion: reduce) {
   .app-scroll { scroll-behavior: auto; }
 }
 
-/* Login page card entry — CSS keyframe runs on the compositor thread,
-   zero JS overhead. Replaces the Framer Motion motion.div wrapper. */
+/* Login page card entry */
 @keyframes login-slide-up-fade {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -221,10 +340,14 @@ body {
   .login-card-entry { animation: none; }
 }
 
-
 ::selection {
   background: hsl(var(--accent-hsl) / 0.18);
-  color: hsl(var(--foreground));
+  color: var(--ink);
+}
+
+.dark ::selection {
+  background: hsl(var(--accent-hsl) / 0.25);
+  color: var(--ink);
 }
 
 .pt-safe { padding-top: env(safe-area-inset-top); }
@@ -239,7 +362,10 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(120, 88, 57, 0.32); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(120, 88, 57, 0.48); }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
 * { scrollbar-width: thin; scrollbar-color: rgba(120, 88, 57, 0.32) transparent; }
+.dark * { scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
 
 /* ── Icon Size Scale ──────────────────────────────
  * 11-12px  — inline/compact (badges, timestamps)
@@ -250,32 +376,134 @@ body {
  */
 
 @layer components {
+  /* ═══════════════════════════════════════════════════════════════
+     v5.1 SHELL COMPONENT CLASSES
+     These are the canonical component classes for the new design.
+     ═══════════════════════════════════════════════════════════════ */
+
   .shell-panel {
-    @apply rounded-[1.5rem] border border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_18px_50px_rgba(84,60,39,0.08)];
+    @apply rounded-[1.5rem] border border-[color:var(--line)] bg-[color:var(--panel)];
+    box-shadow: var(--shadow-lg);
   }
 
   .shell-panel-strong {
-    @apply rounded-[1.5rem] border border-[color:var(--line)] bg-[color:var(--panel-strong)] shadow-[0_18px_44px_rgba(84,60,39,0.1)];
+    @apply rounded-[1.5rem] border border-[color:var(--line)] bg-[color:var(--panel-strong)];
+    box-shadow: var(--shadow-lg);
+  }
+
+  .shell-card {
+    @apply rounded-[1.25rem] border border-[color:var(--line)] bg-[color:var(--panel-solid)];
+    box-shadow: var(--shadow-md);
+  }
+
+  .shell-card-strong {
+    @apply rounded-[1.25rem] border border-[color:var(--line-strong)] bg-[color:var(--panel-strong)];
+    box-shadow: var(--shadow-md);
   }
 
   .shell-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-1 text-xs font-medium text-[color:var(--muted-ink)];
+    @apply inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-solid)] px-3 py-1 text-xs font-medium text-[color:var(--muted-ink)];
   }
+
+  .shell-chip-active {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent)] bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-strong)];
+  }
+
+  .shell-input {
+    @apply w-full rounded-[1.25rem] border border-[color:var(--line)] bg-[color:var(--panel-solid)] px-4 py-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] transition-all;
+    transition-duration: var(--duration-fast);
+  }
+  .shell-input:focus {
+    @apply outline-none border-[color:var(--accent)];
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .shell-input:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .shell-textarea {
+    @apply w-full rounded-[1.25rem] border border-[color:var(--line)] bg-[color:var(--panel-solid)] px-4 py-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] transition-all resize-none;
+    transition-duration: var(--duration-fast);
+  }
+  .shell-textarea:focus {
+    @apply outline-none border-[color:var(--accent)];
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .shell-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-[1.25rem] px-5 py-3 text-sm font-semibold text-white transition-all cursor-pointer;
+    background: linear-gradient(135deg, var(--accent) 0%, color-mix(in hsl, var(--accent), var(--accent-strong) 30%) 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 4px 12px var(--accent-glow);
+    transition-duration: var(--duration-fast);
+  }
+  .shell-button-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--accent-hover) 0%, color-mix(in hsl, var(--accent-hover), var(--accent-strong) 20%) 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 6px 16px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+  .shell-button-primary:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+  .shell-button-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .shell-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-[1.25rem] border border-[color:var(--line)] bg-[color:var(--panel-solid)] px-5 py-3 text-sm font-semibold text-[color:var(--ink)] transition-all cursor-pointer;
+    transition-duration: var(--duration-fast);
+  }
+  .shell-button-secondary:hover:not(:disabled) {
+    @apply bg-[color:var(--panel-strong)] border-[color:var(--line-strong)];
+    transform: translateY(-1px);
+  }
+  .shell-button-secondary:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+  .shell-button-secondary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .shell-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[1.25rem] px-3 py-2 text-sm font-medium text-[color:var(--muted-ink)] transition-all cursor-pointer;
+    transition-duration: var(--duration-fast);
+  }
+  .shell-ghost:hover:not(:disabled) {
+    @apply bg-[color:var(--panel-strong)] text-[color:var(--ink)];
+  }
+  .shell-ghost:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .shell-ghost-danger {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[1.25rem] px-3 py-2 text-sm font-medium text-[color:var(--danger)] transition-all cursor-pointer;
+    transition-duration: var(--duration-fast);
+  }
+  .shell-ghost-danger:hover:not(:disabled) {
+    @apply bg-[color:var(--danger-soft)];
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     LEGACY COMPONENT CLASSES (preserved for backward compatibility)
+     These will be deprecated and removed in a future release.
+     ═══════════════════════════════════════════════════════════════ */
 
   .glass {
     @apply border border-[color:var(--line)] bg-white/70 backdrop-blur-xl;
   }
 
   .glass-card {
-    @apply rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_18px_40px_rgba(84,60,39,0.07)];
+    @apply rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel-solid)];
+    box-shadow: var(--shadow-lg-legacy);
   }
 
   .card {
-    @apply rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_16px_32px_rgba(84,60,39,0.05)];
+    @apply rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel-solid)];
+    box-shadow: 0 16px 32px rgba(84, 60, 39, 0.05);
   }
 
   .card-sm {
-    @apply rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_12px_24px_rgba(84,60,39,0.04)];
+    @apply rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-solid)];
+    box-shadow: 0 12px 24px rgba(84, 60, 39, 0.04);
   }
 
   .card-inset {
@@ -298,7 +526,7 @@ body {
   }
 
   .btn-secondary {
-    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink)] transition-all duration-150 hover:bg-[color:var(--panel-strong)] active:bg-[color:var(--panel-strong)] active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-solid)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink)] transition-all duration-150 hover:bg-[color:var(--panel-strong)] active:bg-[color:var(--panel-strong)] active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-ghost {
@@ -306,11 +534,11 @@ body {
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center rounded-xl p-2 text-[color:var(--muted-ink)] transition-all duration-150 hover:bg-[hsl(var(--danger)/0.1)] hover:text-[hsl(var(--danger))];
+    @apply inline-flex items-center justify-center rounded-xl p-2 text-[color:var(--muted-ink)] transition-all duration-150 hover:bg-[hsl(var(--danger-hsl)/0.1)] hover:text-[hsl(var(--danger-hsl))];
   }
 
   .input {
-    @apply min-h-[40px] w-full rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-3.5 py-2.5 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] transition-all focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)];
+    @apply min-h-[40px] w-full rounded-xl border border-[color:var(--line)] bg-[color:var(--panel-solid)] px-3.5 py-2.5 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)] transition-all focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)];
   }
 
   .badge {
@@ -318,15 +546,15 @@ body {
   }
 
   .badge-high {
-    @apply border-[hsl(var(--success)/0.2)] bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))];
+    @apply border-[hsl(var(--success-hsl)/0.2)] bg-[hsl(var(--success-hsl)/0.1)] text-[hsl(var(--success-hsl))];
   }
 
   .badge-medium {
-    @apply border-[hsl(var(--warning)/0.2)] bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning-foreground))];
+    @apply border-[hsl(var(--warning-hsl)/0.2)] bg-[hsl(var(--warning-hsl)/0.1)] text-[hsl(var(--warning-foreground))];
   }
 
   .badge-low {
-    @apply border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))];
+    @apply border-[hsl(var(--danger-hsl)/0.2)] bg-[hsl(var(--danger-hsl)/0.1)] text-[hsl(var(--danger-hsl))];
   }
 
   .badge-service {
@@ -336,9 +564,15 @@ body {
   .badge-construction {
     @apply border-violet-500/20 bg-violet-500/10 text-violet-700;
   }
+  .dark .badge-construction {
+    @apply border-violet-400/20 bg-violet-400/10 text-violet-300;
+  }
 
   .badge-commercial {
     @apply border-orange-500/20 bg-orange-500/10 text-orange-700;
+  }
+  .dark .badge-commercial {
+    @apply border-orange-400/20 bg-orange-400/10 text-orange-300;
   }
 
   .nav-section-label {
@@ -346,8 +580,12 @@ body {
   }
 
   .bottom-sheet {
-    @apply rounded-t-3xl border-t border-[color:var(--line)] bg-[color:var(--panel)] shadow-[0_-20px_50px_rgba(84,60,39,0.12)];
+    @apply rounded-t-3xl border-t border-[color:var(--line)] bg-[color:var(--panel-solid)];
+    box-shadow: 0 -20px 50px rgba(84, 60, 39, 0.12);
     padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  }
+  .dark .bottom-sheet {
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.35);
   }
 
   .content-container {
@@ -355,14 +593,22 @@ body {
   }
 }
 
+/* Chat bubbles */
 .chat-bubble-user {
-  @apply ml-auto max-w-[85%] rounded-[1.25rem] rounded-tr-[0.25rem] bg-[color:var(--accent)] px-4 py-3 text-white shadow-[0_8px_24px_hsl(var(--accent-hsl)/0.15)];
+  @apply ml-auto max-w-[85%] rounded-[1.25rem] rounded-tr-[0.25rem] text-white;
+  background: linear-gradient(135deg, var(--accent) 0%, color-mix(in hsl, var(--accent), var(--accent-strong) 20%) 100%);
+  box-shadow: 0 8px 24px hsl(var(--accent-hsl) / 0.15);
+  padding: 0.75rem 1rem;
 }
 
 .chat-bubble-assistant {
-  @apply max-w-[90%] rounded-[1.25rem] rounded-tl-[0.25rem] border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3 text-[color:var(--ink)] shadow-sm;
+  @apply max-w-[90%] rounded-[1.25rem] rounded-tl-[0.25rem] border border-[color:var(--line)] text-[color:var(--ink)];
+  background: var(--panel-solid);
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem 1rem;
 }
 
+/* Animations */
 @keyframes slideUp {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -383,9 +629,18 @@ body {
   to { width: var(--target-width, 100%); }
 }
 
-.animate-slide-up { animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.animate-slide-up { animation: slideUp 0.35s var(--ease-spring); }
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
-.animate-grow { animation: growWidth 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-grow { animation: growWidth 0.6s var(--ease-out) forwards; }
+.animate-shake { animation: shake 0.4s ease-in-out; }
 
 .skeleton {
   background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.08) 50%, hsl(var(--muted)) 75%);
@@ -394,7 +649,8 @@ body {
 }
 
 .typing-dot {
-  @apply h-2 w-2 rounded-full bg-[color:var(--accent)];
+  @apply h-2 w-2 rounded-full;
+  background: var(--accent);
   animation: typingBounce 1.2s ease-in-out infinite;
 }
 
@@ -412,21 +668,29 @@ body {
 .chat-prose code { @apply rounded bg-[color:var(--accent-soft)] px-1.5 py-0.5 font-mono text-xs text-[color:var(--accent-strong)]; }
 
 *:focus-visible {
-  @apply ring-2 ring-[color:var(--accent)] ring-offset-2 ring-offset-[hsl(var(--background))] outline-none;
+  @apply outline-none;
+  box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 4px var(--accent);
 }
 
-.stage-lead { @apply border-t-2 border-t-zinc-500; }
-.stage-sent { @apply border-t-2 border-t-[color:var(--accent)]; }
-.stage-won { @apply border-t-2 border-t-emerald-500; }
-.stage-lost { @apply border-t-2 border-t-red-500; }
+.dark *:focus-visible {
+  box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 4px var(--accent);
+}
+
+.stage-lead { @apply border-t-2; border-color: hsl(var(--stage-lead)); }
+.stage-sent { @apply border-t-2; border-color: hsl(var(--stage-sent)); }
+.stage-won { @apply border-t-2; border-color: hsl(var(--stage-won)); }
+.stage-lost { @apply border-t-2; border-color: hsl(var(--stage-lost)); }
 
 .cost-bar {
-  @apply h-1.5 rounded-full transition-all duration-700;
-  animation: growWidth 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  @apply h-1.5 rounded-full transition-all;
+  transition-duration: var(--duration-slow);
+  animation: growWidth 0.7s var(--ease-out) forwards;
 }
 
 .offline-banner {
-  @apply fixed top-0 inset-x-0 z-[100] flex items-center justify-center gap-2 bg-[hsl(var(--warning))] px-4 py-2 text-sm font-medium text-[hsl(var(--warning-foreground))];
+  @apply fixed top-0 inset-x-0 z-[100] flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium;
+  background: var(--warning);
+  color: hsl(var(--warning-foreground));
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
@@ -436,7 +700,6 @@ body {
   }
 }
 
-/* Mobile gets a slimmer header. */
 @media (max-width: 640px) {
   :root {
     --header-height: 56px;
@@ -466,7 +729,6 @@ body {
 }
 
 @media print {
-  /* Hide navigation and UI chrome */
   .sticky,
   [role="navigation"],
   button[title="Open in Estimator"],
@@ -474,53 +736,43 @@ body {
   button[title="Export CSV"],
   button[title="Print / Save as PDF"],
   button[title="Delete estimate"],
-  .text-right > div:first-child { /* header total */
+  .text-right > div:first-child {
     display: none !important;
   }
 
-  /* Optimize text rendering for print */
   body {
-    background: white;
-    color: #000;
+    background: white !important;
+    color: #000 !important;
     font-size: 11pt;
     line-height: 1.5;
   }
 
-  /* Card and container styles for print */
-  .card,
-  .card-sm,
-  [class*="card"] {
+  .card, .card-sm, [class*="card"], .shell-card, .shell-panel, .shell-panel-strong {
     break-inside: avoid;
     page-break-inside: avoid;
-    border: 1px solid #ddd;
-    box-shadow: none;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
     margin-bottom: 0.5cm;
+    background: white !important;
   }
 
-  /* Table-like content breaks */
   .divide-y > div {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  /* Ensure badges print with clear colors */
   .badge {
-    border: 1px solid #ccc;
+    border: 1px solid #ccc !important;
   }
 
-  /* Optimize spacing for print */
   .space-y-4 > * {
     margin-bottom: 0.8cm;
   }
 
-  /* Hide animations in print */
-  [class*="animate"],
-  [class*="motion"],
-  [style*="animation"] {
+  [class*="animate"], [class*="motion"], [style*="animation"] {
     animation: none !important;
   }
 
-  /* Optimize layout for print (single column) */
   .grid {
     display: block !important;
   }
@@ -529,22 +781,11 @@ body {
     margin-bottom: 0.5cm;
   }
 
-  /* Preserve semantic colors without gradients */
-  [class*="bg-"] {
-    background: white !important;
-  }
-
-  /* Ensure text is readable */
   * {
     background-color: transparent !important;
     color: #000 !important;
   }
 
-  .text-\[color\:var\(--\*\)\] {
-    color: #000 !important;
-  }
-
-  /* Print page setup */
   @page {
     margin: 1cm;
     size: A4;

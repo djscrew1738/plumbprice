@@ -48,7 +48,24 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const breadcrumb = buildBreadcrumb(pathname)
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // Scroll-aware shadow: use IntersectionObserver on a sentinel at top
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setScrolled(!entry.isIntersecting)
+      },
+      { threshold: 0, rootMargin: '-1px 0px 0px 0px' }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -95,10 +112,15 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header
-      className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[color:var(--panel)]/90 backdrop-blur-xl"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
-    >
+    <>
+      {/* Sentinel for scroll detection — placed in document flow before sticky header */}
+      <div ref={sentinelRef} className="h-px" aria-hidden="true" />
+      <header
+        className={`sticky top-0 z-20 border-b border-[color:var(--line)] bg-[color:var(--panel)]/90 backdrop-blur-xl transition-shadow duration-fast ${
+          scrolled ? 'shadow-elev-2' : ''
+        }`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
       <div className="flex h-[var(--header-height)] items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <button
           onClick={onMenuClick}
@@ -214,6 +236,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
       </div>
-    </header>
+      </header>
+    </>
   )
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'pp_theme'
 
-type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark'
 
 const listeners = new Set<() => void>()
 
@@ -37,6 +37,21 @@ function subscribe(callback: () => void) {
   return () => { listeners.delete(callback) }
 }
 
+/**
+ * Temporarily adds the `theme-transitioning` class to the HTML element
+ * to enable smooth CSS transitions between light/dark modes.
+ * The class is removed after the transition completes.
+ */
+function withTransition(fn: () => void) {
+  const html = document.documentElement
+  html.classList.add('theme-transitioning')
+  fn()
+  // Remove after the CSS transition duration (300ms + buffer)
+  window.setTimeout(() => {
+    html.classList.remove('theme-transitioning')
+  }, 350)
+}
+
 export function useTheme(): {
   theme: Theme
   toggle: () => void
@@ -46,7 +61,7 @@ export function useTheme(): {
 
   const setTheme = useCallback((t: Theme) => {
     localStorage.setItem(STORAGE_KEY, t)
-    applyTheme(t)
+    withTransition(() => applyTheme(t))
   }, [])
 
   const toggle = useCallback(() => {
@@ -58,7 +73,7 @@ export function useTheme(): {
     const handler = (e: MediaQueryListEvent) => {
       // Only follow system preference if user hasn't set an explicit choice
       if (!localStorage.getItem(STORAGE_KEY)) {
-        applyTheme(e.matches ? 'dark' : 'light')
+        withTransition(() => applyTheme(e.matches ? 'dark' : 'light'))
       }
     }
     mq.addEventListener('change', handler)

@@ -9,6 +9,7 @@ const apiOrigin =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: process.cwd(),
   experimental: {
     // Tree-shake these heavy libraries by importing only what we use.
     // Without this, e.g. `import { X } from 'lucide-react'` pulls in 1k+ icons.

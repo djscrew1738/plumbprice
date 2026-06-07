@@ -8,12 +8,9 @@ import { chatApi, estimatesApi, sessionsApi, templatesApi, type EstimateDetailRe
 import { useToast } from '@/components/ui/Toast'
 import type { ChatMessage, EstimateBreakdown as EstimateBreakdownType, LineItem } from '@/types'
 import { WorkspaceEntryBar, type WorkspaceEntryMode } from '@/components/workspace/WorkspaceEntryBar'
-// EstimateBreakdownRail role is fulfilled by WorkspaceSummaryRail, which wraps
-// EstimateBreakdown.tsx with desktop aside + mobile bottom-sheet behaviour.
-// Creating a separate EstimateBreakdownRail would duplicate that logic, so we
-// reuse WorkspaceSummaryRail directly.
 import { WorkspaceSummaryRail } from '@/components/workspace/WorkspaceSummaryRail'
-import { SuggestionGrid } from './SuggestionGrid'
+import { WorkspaceModeSwitcher, type WorkspaceMode } from '@/components/workspace/WorkspaceModeSwitcher'
+import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState'
 import { SuggestionChipBar } from './SuggestionChipBar'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatInputBar } from './ChatInputBar'
@@ -100,10 +97,11 @@ export function EstimatorPage() {
   const [loading, setLoading] = useState(false)
   const [county, setCounty] = useState('Dallas')
   const [entryMode, setEntryMode] = useState<WorkspaceEntryMode>(() => normalizeEntryMode(entryParam))
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('repair')
   const [selectedEstimate, setSelectedEstimate] = useState<ChatMessage | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [activeSuggestion, setActiveSuggestion] = useState(0)
+  const [, setActiveSuggestion] = useState(0)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   const [sessionId, setSessionId] = useState<number | null>(null)
@@ -130,6 +128,25 @@ export function EstimatorPage() {
   useEffect(() => {
     setEntryMode(normalizeEntryMode(entryParam))
   }, [entryParam])
+
+  // Sync workspace mode with entry mode
+  useEffect(() => {
+    if (entryMode === 'upload-job-files') {
+      setWorkspaceMode('blueprint')
+    } else {
+      setWorkspaceMode('repair')
+    }
+  }, [entryMode])
+
+  // Handle workspace mode changes
+  const handleModeChange = useCallback((mode: WorkspaceMode) => {
+    setWorkspaceMode(mode)
+    if (mode === 'blueprint') {
+      setEntryMode('upload-job-files')
+    } else {
+      setEntryMode('quick-quote')
+    }
+  }, [])
 
   useEffect(() => {
     resumeErrorRef.current = error
@@ -538,6 +555,10 @@ export function EstimatorPage() {
 
   return (
     <div className="flex flex-col" style={{ height: `calc(100dvh - var(--header-height) - ${keyboardOffset}px)` }}>
+      <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+        <WorkspaceModeSwitcher mode={workspaceMode} onChange={handleModeChange} />
+      </div>
+
       <WorkspaceEntryBar
         county={county}
         counties={COUNTIES}
@@ -626,10 +647,10 @@ export function EstimatorPage() {
                 )}
 
                 {messages.length === 0 && (
-                  <SuggestionGrid
+                  <WorkspaceEmptyState
+                    mode={workspaceMode}
                     suggestions={SUGGESTIONS}
-                    activeSuggestion={activeSuggestion}
-                    onSelect={(text) => void sendMessage(text)}
+                    onSuggestionClick={(text) => void sendMessage(text)}
                   />
                 )}
 

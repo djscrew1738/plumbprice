@@ -1,103 +1,118 @@
 'use client'
 
 import { memo } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from './Skeleton'
 
-/* ── Variant styles ──────────────────────────────── */
-
-const iconVariants = cva(
-  'size-9 rounded-xl flex items-center justify-center shrink-0',
-  {
-    variants: {
-      variant: {
-        default: 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
-        accent: 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
-        success: 'bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))]',
-        warning: 'bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))]',
-        danger: 'bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))]',
-      },
-    },
-    defaultVariants: { variant: 'default' },
-  },
-)
-
-/* ── Types ───────────────────────────────────────── */
-
-export interface StatCardProps extends VariantProps<typeof iconVariants> {
-  icon: React.ElementType
+interface StatCardProps {
   label: string
   value: string | number
+  change?: number
+  changeLabel?: string
   trend?: { value: number; label?: string }
+  icon?: LucideIcon | React.ElementType
+  variant?: 'default' | 'accent' | 'success' | 'warning' | 'danger'
+  size?: 'sm' | 'md' | 'lg'
   loading?: boolean
   className?: string
 }
 
-/* ── StatCard ────────────────────────────────────── */
-
 export const StatCard = memo(function StatCard({
-  icon: Icon,
   label,
   value,
+  change,
+  changeLabel,
   trend,
+  icon: Icon,
+  variant = 'default',
+  size = 'md',
   loading = false,
-  variant,
   className,
 }: StatCardProps) {
-  const isPositive = trend && trend.value >= 0
+  const effectiveChange = change ?? trend?.value
+  const effectiveChangeLabel = changeLabel ?? trend?.label
+  const changePositive = effectiveChange != null && effectiveChange > 0
+  const changeNegative = effectiveChange != null && effectiveChange < 0
+  const changeNeutral = effectiveChange != null && effectiveChange === 0
+
+  const variantStyles = {
+    default: 'bg-[color:var(--panel-solid)] border-[color:var(--line)]',
+    accent: 'bg-[color:var(--accent-soft)]/20 border-[color:var(--accent-soft)]',
+    success: 'bg-[color:var(--success-soft)]/20 border-[color:var(--success-soft)]',
+    warning: 'bg-[color:var(--warning-soft)]/20 border-[color:var(--warning-soft)]',
+    danger: 'bg-[color:var(--danger-soft)]/20 border-[color:var(--danger-soft)]',
+  }
+
+  const sizeStyles = {
+    sm: 'p-3',
+    md: 'p-4',
+    lg: 'p-5',
+  }
+
+  const valueSize = {
+    sm: 'text-lg',
+    md: 'text-2xl',
+    lg: 'text-3xl',
+  }
+
+  const iconBgStyles = {
+    default: 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
+    accent: 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
+    success: 'bg-[hsl(var(--success-hsl)/0.1)] text-[hsl(var(--success-hsl))]',
+    warning: 'bg-[hsl(var(--warning-hsl)/0.1)] text-[hsl(var(--warning-hsl))]',
+    danger: 'bg-[hsl(var(--danger-hsl)/0.1)] text-[hsl(var(--danger-hsl))]',
+  }
+
+  if (loading) {
+    return (
+      <div className={cn('rounded-[1.25rem] border border-[color:var(--line)] bg-[color:var(--panel-solid)] p-4', className)}>
+        <Skeleton className="h-3 w-16 rounded" />
+        <Skeleton className="mt-2 h-7 w-24 rounded" />
+      </div>
+    )
+  }
 
   return (
     <div
       className={cn(
-        'rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-3 shadow-[0_16px_32px_rgba(84,60,39,0.05)]',
-        className,
+        'rounded-[1.25rem] border transition-all duration-fast hover:shadow-elev-2',
+        variantStyles[variant],
+        sizeStyles[size],
+        className
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className={cn(iconVariants({ variant }))}>
-          <Icon className="h-4 w-4" aria-hidden="true" />
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <p className="text-caption text-[color:var(--muted-ink)]">{label}</p>
+          <p className={cn('mt-1 font-bold text-[color:var(--ink)] font-display', valueSize[size])}>
+            {value}
+          </p>
         </div>
-
-        <div className="min-w-0 flex-1">
-          {loading ? (
-            <div className="space-y-1.5">
-              <Skeleton variant="text" className="h-3 w-16" />
-              <Skeleton variant="text" className="h-5 w-24" />
-            </div>
-          ) : (
-            <>
-              <p className="text-[11px] font-medium text-[color:var(--muted-ink)] truncate">
-                {label}
-              </p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-sm font-semibold text-[color:var(--ink)]">
-                  {value}
-                </p>
-                {trend && (
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-0.5 text-[11px] font-medium',
-                      isPositive ? 'text-emerald-500' : 'text-red-500',
-                    )}
-                  >
-                    {isPositive ? (
-                      <TrendingUp className="h-3 w-3" aria-hidden="true" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3" aria-hidden="true" />
-                    )}
-                    {Math.abs(trend.value)}%
-                    {trend.label && (
-                      <span className="text-[color:var(--muted-ink)] ml-0.5">{trend.label}</span>
-                    )}
-                  </span>
-                )}
-              </div>
-            </>
+        {Icon && (
+          <div className={cn('flex size-9 items-center justify-center rounded-[1rem] shrink-0', iconBgStyles[variant])}>
+            <Icon size={18} aria-hidden="true" />
+          </div>
+        )}
+      </div>
+      {effectiveChange != null && (
+        <div className="mt-2 flex items-center gap-1.5">
+          {changePositive && <TrendingUp size={14} className="text-[color:var(--success)]" />}
+          {changeNegative && <TrendingDown size={14} className="text-[color:var(--danger)]" />}
+          {changeNeutral && <Minus size={14} className="text-[color:var(--muted-ink)]" />}
+          <span className={cn(
+            'text-xs font-semibold',
+            changePositive ? 'text-[color:var(--success)]' :
+            changeNegative ? 'text-[color:var(--danger)]' :
+            'text-[color:var(--muted-ink)]'
+          )}>
+            {changePositive ? '+' : ''}{effectiveChange}%
+          </span>
+          {effectiveChangeLabel && (
+            <span className="text-xs text-[color:var(--muted-ink)]">{effectiveChangeLabel}</span>
           )}
         </div>
-      </div>
+      )}
     </div>
   )
 })

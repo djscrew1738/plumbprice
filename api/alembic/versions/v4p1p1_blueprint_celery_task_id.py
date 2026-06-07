@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "v4p1p1_blueprint_additions"
-down_revision: Union[str, Sequence[str], None] = "f0ab4eb1db5b"
+down_revision: Union[str, Sequence[str], None] = "cb538ce3e4f1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

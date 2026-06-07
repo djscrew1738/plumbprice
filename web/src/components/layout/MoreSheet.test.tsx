@@ -12,6 +12,13 @@ vi.mock('next/link', () => ({
     createElement('a', { href, ...props }, children),
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { full_name: 'Test User', email: 'test@example.com', role: 'admin' },
+    logout: vi.fn(),
+  }),
+}))
+
 describe('MoreSheet', () => {
   it('renders the utility destinations when opened', () => {
     render(<MoreSheet open onClose={() => {}} />)

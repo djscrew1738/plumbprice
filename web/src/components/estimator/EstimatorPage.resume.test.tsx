@@ -4,6 +4,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { EstimatorPage } from './EstimatorPage'
 
@@ -42,6 +43,13 @@ vi.mock('@/components/ui/Toast', () => ({
     info: vi.fn(),
   }),
 }))
+
+function createWrapper() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client: qc }, children)
+  }
+}
 
 describe('EstimatorPage resume behavior', () => {
   beforeEach(() => {
@@ -85,7 +93,7 @@ describe('EstimatorPage resume behavior', () => {
       },
     })
 
-    render(createElement(EstimatorPage))
+    render(createElement(EstimatorPage), { wrapper: createWrapper() })
 
     await waitFor(() => expect(estimateGetMock).toHaveBeenCalledWith(138))
     expect(await screen.findByText(/loaded estimate #138/i)).toBeInTheDocument()
@@ -136,7 +144,7 @@ describe('EstimatorPage resume behavior', () => {
       }
     })
 
-    const { rerender } = render(createElement(EstimatorPage))
+    const { rerender } = render(createElement(EstimatorPage), { wrapper: createWrapper() })
 
     await waitFor(() => expect(estimateGetMock).toHaveBeenCalledWith(138))
     expect(await screen.findByText(/loaded estimate #138/i)).toBeInTheDocument()
@@ -169,7 +177,7 @@ describe('EstimatorPage resume behavior', () => {
       },
     })
 
-    const { rerender } = render(createElement(EstimatorPage))
+    const { rerender } = render(createElement(EstimatorPage), { wrapper: createWrapper() })
 
     await waitFor(() => expect(estimateGetMock).toHaveBeenCalled())
     const callCountAfterInitialLoad = estimateGetMock.mock.calls.length

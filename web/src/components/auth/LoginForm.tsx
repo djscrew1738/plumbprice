@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, FormEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Droplets, Eye, EyeOff } from 'lucide-react'
+import { Droplets, Eye, EyeOff, UserCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { BrandFooter } from '@/components/layout/BrandFooter'
@@ -11,7 +11,7 @@ import { BrandFooter } from '@/components/layout/BrandFooter'
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login } = useAuth()
+  const { login, loginAsGuest } = useAuth()
 
   // Uncontrolled inputs — no state update on every keystroke, so React
   // doesn't reconcile on each character. Values are read only on submit/blur.
@@ -20,6 +20,7 @@ export function LoginForm() {
 
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
+  const [guestLoading, setGuestLoading] = useState(false)
   const [error,    setError]    = useState<string | null>(null)
 
   // Inline validation feedback — only updated on blur, not on every keystroke.
@@ -41,6 +42,11 @@ export function LoginForm() {
     setPasswordState(v.length > 0 ? 'valid' : 'idle')
   }
 
+  const redirectAfterLogin = () => {
+    const redirect = searchParams.get('redirect') || '/'
+    router.replace(redirect)
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const email    = emailRef.current?.value ?? ''
@@ -50,13 +56,26 @@ export function LoginForm() {
     setLoading(true)
     try {
       await login(email.trim(), password)
-      const redirect = searchParams.get('redirect') || '/pipeline'
-      router.replace(redirect)
+      redirectAfterLogin()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setError(msg ?? 'Invalid email or password')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGuestLogin = async () => {
+    setError(null)
+    setGuestLoading(true)
+    try {
+      await loginAsGuest()
+      redirectAfterLogin()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(msg ?? 'Unable to start guest session. Please try again.')
+    } finally {
+      setGuestLoading(false)
     }
   }
 
@@ -154,6 +173,29 @@ export function LoginForm() {
               className="w-full justify-center py-2.5 mt-2"
             >
               Sign in
+            </Button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-white/[0.08]" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-[#0f0f0f] px-2 text-[10px] font-medium uppercase tracking-wider text-zinc-600">
+                  or
+                </span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              isLoading={guestLoading}
+              onClick={handleGuestLogin}
+              className="w-full justify-center py-2.5"
+            >
+              <UserCircle size={18} aria-hidden="true" />
+              Continue as Guest
             </Button>
           </form>
         </div>

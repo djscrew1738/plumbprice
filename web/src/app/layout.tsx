@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { cookies } from 'next/headers'
-import { Plus_Jakarta_Sans } from 'next/font/google'
+import { Plus_Jakarta_Sans, Fraunces } from 'next/font/google'
 import { Providers } from '@/components/layout/Providers'
 import { ClientLayout } from '@/components/layout/ClientLayout'
 import './globals.css'
@@ -13,11 +13,19 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
 })
 
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  style: ['normal'],
+  variable: '--font-display',
+  display: 'swap',
+})
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#d4702c',
+  themeColor: '#c26a32',
 }
 
 export const metadata: Metadata = {
@@ -39,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const hasSessionCookie = Boolean(cookieStore.get('pp_token')?.value)
 
   return (
-    <html lang="en" className={plusJakartaSans.variable} suppressHydrationWarning>
+    <html lang="en" className={`${plusJakartaSans.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <head>
         {/* Dark mode init — must run before first paint to avoid flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('pp_theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}})();` }} />
