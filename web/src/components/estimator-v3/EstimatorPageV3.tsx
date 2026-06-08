@@ -40,10 +40,40 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const messagesRef = useRef<ChatMessageV3[]>([])
+  const sessionIdRef = useRef<string | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
+
+  // Restore session_id from sessionStorage on mount + auto-focus input
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('v3_chat_session_id')
+      if (stored) {
+        sessionIdRef.current = stored
+      }
+    } catch {
+      // sessionStorage may be unavailable
+    }
+    // Auto-focus the input on mount
+    inputRef.current?.focus()
+  }, [])
+
+  /** Reset conversation — clear messages, close sheet, and remove session_id
+   *  so the next message starts a brand-new session. */
+  const handleNewConversation = useCallback(() => {
+    setMessages([])
+    setSelectedMessage(null)
+    setSheetOpen(false)
+    setBlueprintSummary(null)
+    sessionIdRef.current = null
+    try {
+      sessionStorage.removeItem('v3_chat_session_id')
+    } catch { /* noop */ }
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }, [])
 
   const sendMessage = useCallback(async (text?: string) => {
     const message = text ?? input
@@ -81,6 +111,7 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
     const body: ChatPriceRequestV3 = {
       message,
       county,
+      session_id: sessionIdRef.current ? Number(sessionIdRef.current) : null,
       history: messagesRef.current
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .slice(-6)
@@ -109,6 +140,12 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
             existing.latency_ms = event.latency_ms || existing.latency_ms
           }
         } else if (event.type === 'pricing') {
+          // Persist session_id for conversation continuity
+          if (event.session_id != null) {
+            const sid = String(event.session_id)
+            sessionIdRef.current = sid
+            try { sessionStorage.setItem('v3_chat_session_id', sid) } catch { /* noop */ }
+          }
           // Render estimate immediately — don't wait for narrative
           estimateData = event.estimate as NonNullable<ChatMessageV3['estimate']>
           confidence = event.confidence
@@ -326,6 +363,7 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
               aria-label="Upload blueprint image"
             />
             <textarea
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
@@ -380,7 +418,7 @@ export function EstimatorPageV3({ projectId }: EstimatorPageV3Props) {
             {messages.length > 0 ? (
               <button
                 type="button"
-                onClick={() => { setMessages([]); setSelectedMessage(null); setSheetOpen(false); }}
+                onClick={handleNewConversation}
                 className="inline-flex items-center gap-1.5 text-[11px] text-[color:var(--muted-ink)] transition-colors hover:text-[color:var(--ink)]"
               >
                 <RotateCcw size={11} />
