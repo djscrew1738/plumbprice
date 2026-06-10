@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Eye, Flag } from 'lucide-react'
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Eye, Flag, Upload, Activity, Database } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { Button } from '@/components/ui/Button'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { useAdminTemplates, useAdminMarkups, useAdminItems, useAdminStats, useSaveMarkup, useSaveItem, type MarkupRule } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
-import { PageIntro } from '@/components/layout/PageIntro'
+import { PageShell, PageHeader } from '@/components/layout/shell'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { TabsRoot, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { LaborTemplatesTab } from './LaborTemplatesTab'
@@ -18,16 +20,23 @@ import { AdminUsersPage } from './UsersPage'
 import { AnalyticsTab } from './AnalyticsTab'
 import { VisionMappingsTab } from './VisionMappingsTab'
 import { FeatureFlagsTab } from './FeatureFlagsTab'
+import { BulkImportPanel } from './BulkImportPanel'
+import { CatalogBrowser } from './CatalogBrowser'
+import { FeedStatusDashboard } from './FeedStatusDashboard'
 
 const SUPPLIERS = ['ferguson', 'moore_supply', 'apex'] as const
 type SupplierSlug = typeof SUPPLIERS[number]
 
 type EditValues = Record<SupplierSlug, Partial<CanonicalItemSupplier>>
 
-export function AdminPage() {
+const VALID_ADMIN_TABS = ['labor', 'markup', 'prices', 'stats', 'jobs', 'users', 'analytics', 'vision', 'flags', 'import', 'catalog', 'feeds'] as const
+
+function AdminPageInner() {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab') ?? 'labor'
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState('labor')
+  const [tab, setTab] = useState(VALID_ADMIN_TABS.includes(initialTab as typeof VALID_ADMIN_TABS[number]) ? initialTab : 'labor')
   const [markupRules, setMarkupRules] = useState<MarkupRule[]>([])
   const [saveOk, setSaveOk] = useState(false)
   const [confirmSave, setConfirmSave] = useState(false)
@@ -183,27 +192,35 @@ export function AdminPage() {
     setEditValues(prev => ({ ...prev, [slug]: { ...prev[slug], [field]: value } }))
   }, [])
 
+  const handleTabChange = useCallback((value: string) => {
+    setTab(value)
+    // Update URL query param so the tab is bookmarkable
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', value)
+    window.history.replaceState({}, '', url)
+  }, [])
+
   return (
-    <div className="min-h-full">
-      <div className="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
-        <PageIntro
-          eyebrow="Admin Controls"
-          title="Tune pricing rules and template baselines."
-          description="Manage labor templates, markup settings, and estimator health stats from one control surface."
-          actions={(
-            <button
+    <PageShell width="narrow">
+      <PageHeader
+        eyebrow="Admin Controls"
+        title="Tune pricing rules and template baselines."
+        description="Manage labor templates, markup settings, and estimator health stats from one control surface."
+        actions={(
+          <Button
+              variant="secondary"
+              size="sm"
               onClick={refreshCurrentTab}
-              className="btn-secondary min-h-0 px-3 py-2"
-              disabled={loading}
+              isLoading={loading}
               aria-label="Refresh"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={14} />
               <span className="hidden sm:inline">Refresh</span>
-            </button>
+            </Button>
           )}
         />
 
-        <TabsRoot value={tab} onChange={setTab} className="mt-4">
+        <TabsRoot value={tab} onChange={handleTabChange} className="mt-4">
           <TabsList>
             <TabsTrigger value="labor" icon={Wrench}>Labor Templates</TabsTrigger>
             <TabsTrigger value="markup" icon={DollarSign}>Markup Rules</TabsTrigger>
@@ -214,6 +231,9 @@ export function AdminPage() {
             <TabsTrigger value="analytics" icon={TrendingUp}>Analytics</TabsTrigger>
             <TabsTrigger value="vision" icon={Eye}>Vision Map</TabsTrigger>
             <TabsTrigger value="flags" icon={Flag}>Feature Flags</TabsTrigger>
+            <TabsTrigger value="import" icon={Upload}>Bulk Import</TabsTrigger>
+            <TabsTrigger value="catalog" icon={Database}>Catalog</TabsTrigger>
+            <TabsTrigger value="feeds" icon={Activity}>Feeds</TabsTrigger>
           </TabsList>
 
           <div className="mt-4">
@@ -290,9 +310,28 @@ export function AdminPage() {
             <TabsContent value="flags">
               <FeatureFlagsTab />
             </TabsContent>
+
+            <TabsContent value="import">
+              <BulkImportPanel />
+            </TabsContent>
+
+            <TabsContent value="catalog">
+              <CatalogBrowser />
+            </TabsContent>
+
+            <TabsContent value="feeds">
+              <FeedStatusDashboard />
+            </TabsContent>
           </div>
         </TabsRoot>
-      </div>
-    </div>
+    </PageShell>
+  )
+}
+
+export function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60dvh] p-4">Loading admin…</div>}>
+      <AdminPageInner />
+    </Suspense>
   )
 }

@@ -54,6 +54,9 @@ class LaborTemplateData:
     })
     applicable_assemblies: list = field(default_factory=list)
     notes: str = ""
+    tags: list = field(default_factory=list)
+    difficulty_rating: int = 2  # 1-5 scale, 2 = standard residential
+    required_certifications: list = field(default_factory=list)
 
     def calculate_labor_cost(
         self,

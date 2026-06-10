@@ -26,6 +26,11 @@ class LaborTemplate(Base):
     # Disposal
     disposal_hours = Column(Float, default=0.0)
 
+    # Taxonomy & classification
+    tags = Column(JSON, nullable=True)  # ["smart", "commercial", "medical"]
+    difficulty_rating = Column(Integer, nullable=True)  # 1-5 scale
+    required_certifications = Column(JSON, nullable=True)  # ["backflow", "medical_gas"]
+
     # Access multipliers and other config stored as JSON
     config_json = Column(JSON, nullable=True)
     # Example:

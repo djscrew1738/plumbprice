@@ -200,6 +200,133 @@ export function useSaveItem() {
   })
 }
 
+// ─── Bulk Import ─────────────────────────────────────────────────────────────
+
+export interface BulkImportResult {
+  dry_run: boolean
+  total_rows: number
+  created: number
+  updated: number
+  skipped: number
+  errors: number
+  rows: Array<{
+    row_number: number
+    status: string
+    canonical_item?: string | null
+    code?: string | null
+    message: string
+    details?: Record<string, unknown>
+  }>
+}
+
+export function useBulkImportProducts() {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+
+  return useMutation({
+    mutationFn: async ({ file, dryRun }: { file: File; dryRun: boolean }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await api.post(`/admin/pricing/bulk-import/products?dry_run=${dryRun}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return res.data as BulkImportResult
+    },
+    onSuccess: (data) => {
+      if (!data.dry_run) {
+        void queryClient.invalidateQueries({ queryKey: adminKeys.items() })
+        toast.success(`Import complete: ${data.created} created, ${data.updated} updated`)
+      }
+    },
+    onError: () => toast.error('Import failed'),
+  })
+}
+
+export function useAdminCatalog(
+  search?: string,
+  category?: string,
+  supplier?: string,
+  options?: Partial<UseQueryOptions<AdminCatalogItem[]>>,
+) {
+  return useQuery({
+    queryKey: ['admin', 'catalog', search, category, supplier],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (search) params.append('search', search)
+      if (category) params.append('category', category)
+      if (supplier) params.append('supplier', supplier)
+      const res = await api.get(`/admin/pricing/catalog?${params.toString()}`)
+      return (res.data?.items ?? []) as AdminCatalogItem[]
+    },
+    ...options,
+  })
+}
+
+export interface AdminCatalogItem {
+  id: number
+  canonical_item: string
+  name: string
+  sku: string | null
+  supplier: string
+  cost: number
+  msrp: number | null
+  manufacturer: string | null
+  category: string | null
+  sub_category: string | null
+  in_stock: boolean
+  lead_time: string | null
+  tags: string[] | null
+  confidence_score: number
+  last_verified: string | null
+}
+
+export function useAdminFeedHealth(
+  options?: Partial<UseQueryOptions<FeedHealthItem[]>>,
+) {
+  return useQuery({
+    queryKey: ['admin', 'feed-health'],
+    queryFn: async () => {
+      const res = await api.get('/admin/pricing/feeds/health')
+      return (res.data?.feeds ?? []) as FeedHealthItem[]
+    },
+    refetchInterval: 30000,
+    ...options,
+  })
+}
+
+export interface FeedHealthItem {
+  name: string
+  status: string
+  last_sync: string | null
+  items_synced: number
+  error_count: number
+  error_message: string | null
+  response_time_ms: number | null
+}
+
+export function useBulkImportLabor() {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+
+  return useMutation({
+    mutationFn: async ({ file, dryRun }: { file: File; dryRun: boolean }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await api.post(`/admin/pricing/bulk-import/labor?dry_run=${dryRun}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return res.data as BulkImportResult
+    },
+    onSuccess: (data) => {
+      if (!data.dry_run) {
+        void queryClient.invalidateQueries({ queryKey: adminKeys.templates() })
+        toast.success(`Import complete: ${data.created} created, ${data.updated} updated`)
+      }
+    },
+    onError: () => toast.error('Import failed'),
+  })
+}
+
 export function useSaveTemplate() {
   const queryClient = useQueryClient()
   const toast = useToast()

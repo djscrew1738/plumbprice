@@ -32,10 +32,17 @@ export {
   useSaveMarkup,
   useSaveItem,
   useSaveTemplate,
+  useBulkImportProducts,
+  useBulkImportLabor,
+  useAdminCatalog,
+  useAdminFeedHealth,
   adminKeys,
   type LaborTemplate,
   type MarkupRule,
   type AdminStats,
+  type BulkImportResult,
+  type AdminCatalogItem,
+  type FeedHealthItem,
 } from './useAdmin'
 
 export {

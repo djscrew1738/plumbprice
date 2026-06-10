@@ -84,6 +84,10 @@ async def seed():
                     existing.cost = data["cost"]
                     existing.name = data["name"]
                     existing.sku = data.get("sku")
+                    existing.manufacturer = data.get("manufacturer", existing.manufacturer)
+                    existing.category = data.get("category", existing.category)
+                    existing.sub_category = data.get("sub_category", existing.sub_category)
+                    existing.tags = data.get("tags", existing.tags)
                 else:
                     product = SupplierProduct(
                         supplier_id=supplier_ids[slug],
@@ -91,6 +95,10 @@ async def seed():
                         sku=data.get("sku"),
                         name=data["name"],
                         cost=data["cost"],
+                        manufacturer=data.get("manufacturer"),
+                        category=data.get("category"),
+                        sub_category=data.get("sub_category"),
+                        tags=data.get("tags"),
                         unit="ea",
                         is_active=True,
                         confidence_score=1.0,
@@ -115,6 +123,9 @@ async def seed():
                 "helper_rate": tmpl.helper_rate,
                 "helper_hours": tmpl.helper_hours,
                 "disposal_hours": tmpl.disposal_hours,
+                "tags": tmpl.tags if tmpl.tags else None,
+                "difficulty_rating": tmpl.difficulty_rating if hasattr(tmpl, "difficulty_rating") else 2,
+                "required_certifications": tmpl.required_certifications if hasattr(tmpl, "required_certifications") else None,
                 "is_active": True,
                 "config_json": {
                     "access_multipliers": tmpl.access_multipliers,

@@ -9,7 +9,7 @@ from app.models.blueprint_rooms import BlueprintRoom
 from app.models.blueprint_pipe_runs import BlueprintPipeRun
 from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
-from app.models.pricing_rules import PermitCostRule, CityZoneMultiplier, TripChargeRule
+from app.models.pricing_rules import MaterialCategory, PermitCostRule, CityZoneMultiplier, TripChargeRule
 from app.models.pricing_template import PricingTemplate
 from app.models.sessions import ChatSession, ChatMessage, ChatAttachment
 from app.models.outcomes import EstimateOutcome
@@ -46,7 +46,7 @@ __all__ = [
     "BlueprintRoom", "BlueprintPipeRun",
     "AuditLog", "AssumptionLog",
     "TaxRate",
-    "PermitCostRule", "CityZoneMultiplier", "TripChargeRule",
+    "MaterialCategory", "PermitCostRule", "CityZoneMultiplier", "TripChargeRule",
     "PricingTemplate",
     "ChatSession", "ChatMessage", "ChatAttachment",
     "EstimateOutcome",

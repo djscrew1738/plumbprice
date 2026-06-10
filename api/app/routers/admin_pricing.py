@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, UploadFile, File, Query, Response
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from app.database import get_db
@@ -6,9 +7,17 @@ from app.core.auth import get_current_admin
 from app.core.cache import cache_get, cache_set, cache_invalidate
 from app.models.pricing_rules import PermitCostRule, CityZoneMultiplier, TripChargeRule
 from app.models.tax import TaxRate
+from app.models.suppliers import SupplierProduct, Supplier
 from app.schemas import pricing_rules as schemas
 from app.schemas import tax as tax_schemas
 from app.services.pricing_config_service import pricing_config_service
+from app.services.catalog_importer import (
+    import_supplier_products,
+    import_labor_templates,
+    generate_product_csv_template,
+    generate_labor_csv_template,
+)
+from app.services.price_feed_adapter import registry
 import structlog
 
 logger = structlog.get_logger()
@@ -152,3 +161,165 @@ async def delete_trip_charge(charge_id: int, db: AsyncSession = Depends(get_db),
     await cache_invalidate("admin:trip-charges")
     await pricing_config_service.refresh_cache()
     return None
+
+
+# ─── Bulk Import ─────────────────────────────────────────────────────────────
+
+class BulkImportResponse(BaseModel):
+    dry_run: bool
+    total_rows: int
+    created: int
+    updated: int
+    skipped: int
+    errors: int
+    rows: list[dict]
+
+
+@router.post("/bulk-import/products", response_model=BulkImportResponse)
+async def bulk_import_products(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(False, description="Preview changes without writing to DB"),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    """Bulk import supplier products from a CSV file.
+
+    Required columns: canonical_item, supplier_slug, name, cost
+    Optional columns: sku, unit, manufacturer, category, sub_category, tags, in_stock, lead_time, msrp, list_price
+    """
+    content = await file.read()
+    result = await import_supplier_products(db, content, dry_run=dry_run)
+    if not dry_run:
+        await pricing_config_service.refresh_cache()
+    return result.to_dict()
+
+
+@router.post("/bulk-import/labor", response_model=BulkImportResponse)
+async def bulk_import_labor(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(False, description="Preview changes without writing to DB"),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    """Bulk import labor templates from a CSV file.
+
+    Required columns: code, name, category, base_hours
+    Optional columns: lead_rate, helper_required, helper_rate, helper_hours, disposal_hours, tags, difficulty_rating, required_certifications, min_hours, max_hours
+    """
+    content = await file.read()
+    result = await import_labor_templates(db, content, dry_run=dry_run)
+    if not dry_run:
+        await pricing_config_service.refresh_cache()
+    return result.to_dict()
+
+
+@router.get("/bulk-import/products/template")
+async def download_product_template(_=Depends(get_current_admin)):
+    """Download a CSV template for supplier product imports."""
+    csv_data = generate_product_csv_template()
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=product_import_template.csv"},
+    )
+
+
+@router.get("/bulk-import/labor/template")
+async def download_labor_template(_=Depends(get_current_admin)):
+    """Download a CSV template for labor template imports."""
+    csv_data = generate_labor_csv_template()
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=labor_import_template.csv"},
+    )
+
+
+# ─── Feed Health ─────────────────────────────────────────────────────────────
+
+@router.get("/feeds/health")
+async def get_feed_health(_=Depends(get_current_admin)):
+    """Return health status for all registered price feed adapters."""
+    health_map = await registry.health_all()
+    return {
+        "feeds": [
+            {
+                "name": h.name,
+                "status": h.status,
+                "last_sync": h.last_sync.isoformat() if h.last_sync else None,
+                "items_synced": h.items_synced,
+                "error_count": h.error_count,
+                "error_message": h.error_message,
+                "response_time_ms": h.response_time_ms,
+            }
+            for h in health_map.values()
+        ]
+    }
+
+
+# ─── Catalog Browser ─────────────────────────────────────────────────────────
+
+@router.get("/catalog")
+async def list_catalog(
+    search: str | None = None,
+    category: str | None = None,
+    supplier: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    """Searchable catalog of all supplier products with filters."""
+    from sqlalchemy import select, func, or_
+
+    stmt = (
+        select(
+            SupplierProduct,
+            Supplier.slug.label("supplier_slug"),
+            Supplier.name.label("supplier_name"),
+        )
+        .join(Supplier, SupplierProduct.supplier_id == Supplier.id)
+        .where(SupplierProduct.is_active == True)
+    )
+
+    if search:
+        stmt = stmt.where(
+            or_(
+                SupplierProduct.canonical_item.ilike(f"%{search}%"),
+                SupplierProduct.name.ilike(f"%{search}%"),
+                SupplierProduct.sku.ilike(f"%{search}%"),
+                SupplierProduct.manufacturer.ilike(f"%{search}%"),
+            )
+        )
+
+    if category:
+        stmt = stmt.where(SupplierProduct.category == category)
+
+    if supplier:
+        stmt = stmt.where(Supplier.slug == supplier)
+
+    stmt = stmt.order_by(SupplierProduct.canonical_item, Supplier.slug)
+    stmt = stmt.limit(500)
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    items = []
+    for product, slug, _ in rows:
+        items.append({
+            "id": product.id,
+            "canonical_item": product.canonical_item,
+            "name": product.name,
+            "sku": product.sku,
+            "supplier": slug,
+            "cost": product.cost,
+            "msrp": product.msrp,
+            "manufacturer": product.manufacturer,
+            "category": product.category,
+            "sub_category": product.sub_category,
+            "in_stock": product.in_stock,
+            "lead_time": product.lead_time,
+            "tags": product.tags,
+            "confidence_score": product.confidence_score,
+            "last_verified": product.last_verified.isoformat() if product.last_verified else None,
+        })
+
+    return {"count": len(items), "items": items}

@@ -2,6 +2,106 @@
 
 All notable changes to PlumbPrice are documented here.
 
+## 5.8.0 — Pricing Engine Expansion (2026-06-09)
+
+### Expanded Catalog (300+ new SKUs)
+- **7 new categories**: commercial_fixture, smart_plumbing, medical_healthcare, restaurant_kitchen, industrial, outdoor_irrigation, piping_fittings
+- **182 new canonical items** seeded across 3 DFW suppliers (Ferguson, Moore Supply, Apex)
+- **59 new labor templates** covering commercial, smart plumbing, medical, restaurant, industrial, and outdoor work
+- **Schema additions**: `in_stock`, `lead_time`, `manufacturer`, `msrp`, `category`, `sub_category`, `tags` on `supplier_products`; `tags`, `difficulty_rating`, `required_certifications` on `labor_templates`; new `material_categories` taxonomy table
+
+### Bulk CSV Import
+- **Admin bulk import** for supplier products and labor templates with drag-drop CSV upload
+- **Dry-run mode** previews all changes before committing to the database
+- **Row-level validation** with clear error messages and row numbers
+- **Downloadable templates** for both product and labor imports
+- **Endpoints**: `POST /admin/pricing/bulk-import/products`, `POST /admin/pricing/bulk-import/labor`
+
+### Price Feed Adapters
+- **Generic `PriceFeedAdapter` framework** with central registry for pluggable external feeds
+- **Ferguson adapter** — wraps existing OAuth2 API scraper with simulation fallback
+- **Kohler scraper** — MSRP scraping from kohler.com with 60% wholesale estimate
+- **Moen scraper** — MSRP scraping from moen.com with 60% wholesale estimate
+- **AO Smith scraper** — wholesale price scraping from aosmithatlowes.com
+- **Hourly sync task** `worker.tasks.price_feed_sync` runs all adapters and updates the database
+- **Feed health dashboard** `GET /admin/pricing/feeds/health` shows real-time adapter status
+
+### Admin UI
+- **Catalog Browser** tab — searchable, filterable SKU catalog with inventory badges, category filters, and supplier filters
+- **Feed Status** tab — cards per feed showing health (green/yellow/red), last sync, items synced, errors
+- **Bulk Import** tab — drag-drop CSV upload with dry-run toggle and validation preview
+
+## 5.7.0 — Mobile Phone UI/UX Improvements (2026-06-09)
+
+### v3 Estimator Mobile Rescue
+- **Keyboard avoidance** — Ported `visualViewport` tracking from v2 to v3 so the soft keyboard no longer covers the input textarea on iOS/Android.
+- **Auto-scroll** — New messages and streaming responses now automatically scroll into view.
+- **Bottom nav clearance** — Input area gets safe-area-aware bottom padding so the send button is never hidden by the mobile nav or iOS home indicator.
+- **Copy button visibility** — Copy action is now always visible on touch devices (was hover-only, making it invisible on phones).
+- **Suggestion chip tap targets** — Chips now wrap properly and meet 44×44px minimum touch target size.
+- **Image preview lightbox** — Tapping the 48×48 blueprint preview opens a full-size modal with Remove/Send actions.
+
+### Mobile Data Presentation
+- **LineItemsTable** — Removed CSS override that forced the desktop table on mobile; the existing `DataTable` mobile card view now renders correctly.
+- **EstimateEditor** — Added a mobile-first card layout (`lg:hidden`) with stacked label/input pairs for each line item. Desktop table unchanged.
+- **PublicQuotePage** — Line items now render as cards on narrow viewports (`sm:hidden`) while keeping the table for desktop. Totals grid adapts to 2 columns on mobile.
+
+### Native Mobile Feel
+- **Haptic feedback** wired across the app using the existing `lib/haptics.ts` utility:
+  - `MobileNav` tab presses, `MoreSheet` item selection, send/stop buttons, copy actions, estimate card actions, field voice recording, field quick-action tiles.
+- **`usePullToRefresh` hook** — New reusable hook with touch-event tracking, spring-release animation, and haptic feedback on trigger. Ready to be wired into lists.
+
+### Field Route Polish
+- **Field voice** — Haptic feedback on mic press (tap), recording start (selection), recording stop (warning), and estimate generation (success/error).
+- **Field home** — Haptic feedback on quick-action tile presses.
+
+### Accessibility
+- Touch target audit on all modified components — every interactive element meets or exceeds 44×44px.
+- Fixed `jsx-a11y/label-has-associated-control` errors in `EstimateEditor` mobile cards.
+- Removed `aria-hidden="true"` from `StatusDropdown` wrapper in `EstimatesListPage` — the status changer is now visible to screen readers.
+
+### Polish & Bug Fixes
+- **Code quality** — Consolidated duplicate `lucide-react` imports; extracted `buildMessage()` helper to eliminate 3× duplicated send logic in `EstimatorPageV3`.
+- **`usePullToRefresh` hook** — Refactored to use refs for mutable callback state, eliminating constant DOM listener attach/detach cycles. Added multi-touch safety via `touch.identifier` tracking.
+- **Field voice race condition** — Moved `MediaRecorder.onstop` assignment before calling `.stop()` to prevent missing the stop event.
+- **Field voice stuck recording** — Added `onPointerCancel` and `onPointerLeave` handlers so recording stops if the user scrolls away or the OS cancels the touch.
+- **EstimateEditor key collision** — Replaced module-level `_keySeq` singleton with a `useRef` inside the component so multiple editors and HMR no longer share/collide keys.
+- **CSV export memory leak** — Added `URL.revokeObjectURL()` after triggering the estimates CSV download in `EstimatesListPage`.
+- **StatusDropdown click propagation** — Restructured to stop propagation on individual interactive elements instead of a wrapper div, eliminating an `aria-hidden` anti-pattern.
+
+---
+
+## 5.2.0 — Subtle Animation System (2026-06-07)
+
+### UI Motion
+- Centralized animation primitives in `src/components/ui/Motion.tsx`: `FadeIn`, `BlurFade`,
+  `SlideUp`, `ScaleIn`, `Reveal`, `Pressable`, `CountUp`, `StaggerContainer`, `StaggerItem`,
+  `SlideIn`, `SmoothPresence`, `Pulse`, `HeightAuto`, `Shimmer`, plus `MOTION` constants.
+- Every primitive respects `prefers-reduced-motion` via `useReducedMotion()`; no motion is
+  essential for comprehension.
+- Interactive component polish:
+  - `Button` — spring `whileTap` feedback and loading cross-fade.
+  - `Tabs` — animated active indicator via `layoutId` spring.
+  - `Select` — dropdown enter/exit with `AnimatePresence`.
+  - `Toast` — standardized slide/fade spring transitions.
+  - `StatCard` — hover lift and `CountUp` value animation.
+- Page choreography:
+  - Public home (`/`) — staggered badge, headline, CTA, and value-prop cards.
+  - Launcher home (`/`) — `PageShell` fade, hero/KPI/activity/insights reveal stagger,
+    `CountUp` KPI strip, smooth height on insights chart.
+- Workspace polish:
+  - `WorkspaceArtifactCard` — mount fade + hover lift.
+  - `WorkspaceEmptyState` — icon/text staggered reveal + suggestion hover feedback.
+
+### Utilities
+- `parseCurrencyValue()` in `src/lib/utils.ts` parses formatted currency strings back to numbers
+  for `CountUp` animations.
+
+### Performance
+- No new animation dependencies; reuses existing Framer Motion `^12.37.0`.
+- All routes remain within First Load JS budgets (`docs/PERFORMANCE_BUDGET.md` refreshed with
+  v5.2.0 baseline). Largest increase is +3 kB on `/`, `/settings`, and `/suppliers`.
+
 ## 4.1.0 — AI Intelligence Overhaul + Mobile PWA (2026-06-06)
 
 ### Live Supplier Pricing Intelligence

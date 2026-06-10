@@ -37,8 +37,19 @@ class SupplierProduct(Base):
 
     cost = Column(Float, nullable=False)
     list_price = Column(Float, nullable=True)
+    msrp = Column(Float, nullable=True)
     last_verified = Column(DateTime(timezone=True), nullable=True)
     confidence_score = Column(Float, default=1.0)
+
+    # Inventory & sourcing
+    manufacturer = Column(String(100), nullable=True)
+    in_stock = Column(Boolean, default=True)
+    lead_time = Column(String(50), nullable=True)  # e.g. "same day", "2-3 days"
+
+    # Taxonomy
+    category = Column(String(100), nullable=True)
+    sub_category = Column(String(100), nullable=True)
+    tags = Column(JSON, nullable=True)  # ["smart", "ada", "commercial"]
 
     is_active = Column(Boolean, default=True)
     is_preferred = Column(Boolean, default=False)

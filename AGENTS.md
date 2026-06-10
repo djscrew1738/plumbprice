@@ -8,7 +8,7 @@ This file is the canonical reference for AI coding agents working in this reposi
 
 PlumbPrice AI is an autonomous plumbing pricing and estimating platform for DFW-area plumbing contractors. It replaces spreadsheet-based estimating with a chat-driven interface that produces itemized, line-level quotes backed by real supplier pricing data. The system guarantees that every price shown can be traced directly to a supplier SKU and a labor template — the LLM extracts intent and maps it to canonical line items, but all dollar math happens in pure Python with no LLM involvement.
 
-Current version: **4.1.0**
+Current version: **5.8.0**
 
 ---
 
@@ -362,7 +362,7 @@ PostgreSQL + pgvector      Redis (broker + cache)
 | `REDIS_URL` | Redis connection string |
 | `MINIO_ENDPOINT` | MinIO host:port |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | MinIO credentials |
-| `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` | At least one AI provider key |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `DEEPSEEK_API_KEY` | At least one AI provider key |
 
 ### Optional / Important
 
@@ -370,7 +370,7 @@ PostgreSQL + pgvector      Redis (broker + cache)
 |---|---|---|
 | `ENVIRONMENT` | `development` | `development` or `production` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `DEFAULT_LLM_PROVIDER` | `openai` | `openai` or `anthropic` |
+| `DEFAULT_LLM_PROVIDER` | `openai` | `openai`, `anthropic`, or `deepseek` |
 | `DEFAULT_LLM_MODEL` | `gpt-4o-mini` | Model name |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | JWT access token lifetime |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | JWT refresh token lifetime |
@@ -384,6 +384,17 @@ PostgreSQL + pgvector      Redis (broker + cache)
 ---
 
 ## Conventions & Patterns
+
+### Pricing Engine (v5.8.0 Expansion)
+
+The pricing engine now supports **500+ SKUs** across 7 categories and **150+ labor templates**:
+
+- **Categories**: commercial_fixture, smart_plumbing, medical_healthcare, restaurant_kitchen, industrial, outdoor_irrigation, piping_fittings
+- **Bulk Import**: Admins can upload CSVs via `POST /admin/pricing/bulk-import/products` and `/labor` with dry-run preview
+- **Price Feeds**: Generic `PriceFeedAdapter` framework with Ferguson (OAuth2/simulation), Kohler, Moen, and AO Smith scrapers
+- **Feed Health**: `GET /admin/pricing/feeds/health` returns adapter status
+- **Catalog Browser**: `GET /admin/pricing/catalog` with search, filter by category/supplier
+- **Seed Scripts**: `api/scripts/seed_expanded_catalog.py` populates expanded catalog from JSON data files
 
 ### Adding a New API Endpoint
 
@@ -419,7 +430,7 @@ PostgreSQL + pgvector      Redis (broker + cache)
 
 ### Performance Budget
 
-The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`. Each route has a First Load JS ceiling (roughly +10% over the 2.5.1 baseline). PRs that exceed a route budget must justify the increase or land an offsetting reduction. Refresh the baseline with `cd web && npm run build`.
+The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`. Each route has a First Load JS ceiling (roughly +10% over the 2.5.1 baseline). PRs that exceed a route budget must justify the increase or land an offsetting reduction. Refresh the baseline with `cd web && npm run build:prod`.
 
 ---
 
