@@ -263,6 +263,8 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   color-scheme: light;
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-height) + 1rem);
 }
 
 html.dark {
@@ -483,8 +485,9 @@ body {
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     LEGACY COMPONENT CLASSES (preserved for backward compatibility)
-     These will be deprecated and removed in a future release.
+     LEGACY COMPONENT CLASSES — DEPRECATED
+     Scheduled for removal during the UI cleanup. Do not use in new
+     components; migrate existing consumers to src/components/ui primitives.
      ═══════════════════════════════════════════════════════════════ */
 
   .glass {
@@ -726,6 +729,24 @@ body {
 }
 .animate-indeterminate {
   animation: pp-indeterminate 1.5s ease-in-out infinite;
+}
+
+/* ── Field Mode: large touch targets, high contrast ── */
+.field-mode .chat-input-field,
+.field-mode input,
+.field-mode textarea {
+  font-size: 18px !important;
+  padding: 1rem !important;
+  min-height: 56px !important;
+}
+
+.field-mode button {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.field-mode .chat-message {
+  padding: 1rem !important;
 }
 
 @media print {

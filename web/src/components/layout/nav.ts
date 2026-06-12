@@ -9,10 +9,8 @@ import {
   MessageSquare,
   MoreHorizontal,
   Package,
-  RefreshCw,
   Settings,
   SlidersHorizontal,
-  Users,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -29,23 +27,25 @@ export interface PageMeta {
 
 export const PRIMARY_NAV: AppNavItem[] = [
   { href: '/', label: 'Home', icon: House },
-  { href: '/estimates', label: 'Jobs', icon: FileText },
+  { href: '/estimates', label: 'Estimates', icon: FileText },
   { href: '/pipeline', label: 'Pipeline', icon: BriefcaseBusiness },
 ]
 
 export const SECONDARY_NAV: AppNavItem[] = [
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/sessions', label: 'Chat History', icon: MessageSquare },
+  { href: '/sessions', label: 'History', icon: MessageSquare },
   { href: '/suppliers', label: 'Suppliers', icon: Package },
   { href: '/documents', label: 'Documents', icon: FileStack },
+]
+
+export const SYSTEM_NAV: AppNavItem[] = [
   { href: '/admin', label: 'Admin', icon: Settings },
   { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ]
 
 export const MORE_LINKS: AppNavItem[] = [
   ...SECONDARY_NAV,
-  { href: '/admin/users', label: 'Team', icon: Users },
-  { href: '/admin/jobs', label: 'Failed Jobs', icon: RefreshCw },
+  ...SYSTEM_NAV,
   { href: '/blueprints', label: 'Blueprints', icon: Layers },
   { href: '/proposals', label: 'Proposals', icon: FileOutput },
 ]

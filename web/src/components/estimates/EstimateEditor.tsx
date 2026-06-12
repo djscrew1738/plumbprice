@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Plus, Save, Trash2, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { estimatesApi } from '@/lib/api'
@@ -22,9 +22,6 @@ export interface EstimateEditorProps {
   onSaved: () => void
 }
 
-let _keySeq = 0
-const nextKey = () => `row_${++_keySeq}`
-
 export function EstimateEditor({
   estimateId,
   initialLineItems,
@@ -34,6 +31,8 @@ export function EstimateEditor({
 }: EstimateEditorProps) {
   const toast = useToast()
   const queryClient = useQueryClient()
+  const keySeqRef = useRef(0)
+  const nextKey = () => `row_${++keySeqRef.current}`
   const [rows, setRows] = useState<EditableLine[]>(() =>
     initialLineItems.map(li => ({ ...li, _key: nextKey() })),
   )
@@ -136,7 +135,8 @@ export function EstimateEditor({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-left text-[color:var(--muted-ink)]">
             <tr>
@@ -205,7 +205,7 @@ export function EstimateEditor({
                     type="button"
                     onClick={() => removeRow(r._key)}
                     disabled={saving}
-                    className="text-[color:var(--muted-ink)] hover:text-[color:var(--danger)]"
+                    className="text-[color:var(--muted-ink)] hover:text-[color:var(--danger)] min-h-[44px] min-w-[44px] flex items-center justify-center"
                     aria-label="Remove line"
                   >
                     <Trash2 size={13} />
@@ -215,6 +215,83 @@ export function EstimateEditor({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-3">
+        {rows.map(r => (
+          <div key={r._key} className="rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] p-3 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <select
+                value={r.line_type}
+                onChange={e => updateRow(r._key, { line_type: e.target.value })}
+                className="input text-xs"
+              >
+                {LINE_TYPES.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => removeRow(r._key)}
+                disabled={saving}
+                className="text-[color:var(--muted-ink)] hover:text-[color:var(--danger)] min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-[color:var(--panel-strong)] transition-colors"
+                aria-label="Remove line"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div>
+              <span className="text-[10px] font-medium text-[color:var(--muted-ink)] uppercase tracking-wider mb-1 block">Description</span>
+              <input
+                type="text"
+                value={r.description}
+                onChange={e => updateRow(r._key, { description: e.target.value })}
+                className="input text-xs w-full"
+                placeholder="Item description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="text-[10px] font-medium text-[color:var(--muted-ink)] uppercase tracking-wider mb-1 block">Qty</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={r.quantity}
+                  onChange={e => updateRow(r._key, { quantity: Number(e.target.value) })}
+                  className="input text-xs w-full"
+                />
+              </div>
+              <div>
+                <span className="text-[10px] font-medium text-[color:var(--muted-ink)] uppercase tracking-wider mb-1 block">Unit</span>
+                <input
+                  type="text"
+                  value={r.unit}
+                  onChange={e => updateRow(r._key, { unit: e.target.value })}
+                  className="input text-xs w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="text-[10px] font-medium text-[color:var(--muted-ink)] uppercase tracking-wider mb-1 block">Unit Cost</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={r.unit_cost}
+                  onChange={e => updateRow(r._key, { unit_cost: Number(e.target.value) })}
+                  className="input text-xs w-full"
+                />
+              </div>
+              <div>
+                <span className="text-[10px] font-medium text-[color:var(--muted-ink)] uppercase tracking-wider mb-1 block">Total</span>
+                <div className="input text-xs w-full bg-[color:var(--panel-strong)] flex items-center tabular-nums">
+                  {formatCurrencyDecimal(r.total_cost ?? 0)}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <button

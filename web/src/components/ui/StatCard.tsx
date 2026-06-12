@@ -1,9 +1,12 @@
 'use client'
 
 import { memo } from 'react'
+import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Minus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from './Skeleton'
+import { CountUp } from './Motion'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 interface StatCardProps {
   label: string
@@ -30,11 +33,16 @@ export const StatCard = memo(function StatCard({
   loading = false,
   className,
 }: StatCardProps) {
+  const reduce = useReducedMotion()
   const effectiveChange = change ?? trend?.value
   const effectiveChangeLabel = changeLabel ?? trend?.label
   const changePositive = effectiveChange != null && effectiveChange > 0
   const changeNegative = effectiveChange != null && effectiveChange < 0
   const changeNeutral = effectiveChange != null && effectiveChange === 0
+  const numericValue = typeof value === 'number' ? value : null
+  const displayValue = numericValue !== null ? (
+    <CountUp value={numericValue} formatter={(n) => n.toLocaleString()} />
+  ) : value
 
   const variantStyles = {
     default: 'bg-[color:var(--panel-solid)] border-[color:var(--line)]',
@@ -74,19 +82,22 @@ export const StatCard = memo(function StatCard({
   }
 
   return (
-    <div
+    <motion.div
       className={cn(
         'rounded-[1.25rem] border transition-all duration-fast hover:shadow-elev-2',
         variantStyles[variant],
         sizeStyles[size],
         className
       )}
+      whileHover={reduce ? undefined : { y: -2 }}
+      whileTap={reduce ? undefined : { scale: 0.99 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           <p className="text-caption text-[color:var(--muted-ink)]">{label}</p>
           <p className={cn('mt-1 font-bold text-[color:var(--ink)] font-display', valueSize[size])}>
-            {value}
+            {displayValue}
           </p>
         </div>
         {Icon && (
@@ -113,6 +124,6 @@ export const StatCard = memo(function StatCard({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 })

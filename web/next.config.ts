@@ -10,6 +10,11 @@ const apiOrigin =
 const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: process.cwd(),
+  eslint: {
+    // Don't block production builds on pre-existing lint warnings.
+    // Warnings are still surfaced in `npm run lint` and CI.
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     // Tree-shake these heavy libraries by importing only what we use.
     // Without this, e.g. `import { X } from 'lucide-react'` pulls in 1k+ icons.
@@ -75,6 +80,15 @@ const nextConfig: NextConfig = {
           { key: 'Content-Security-Policy', value: cspReportOnly },
         ],
       },
+    ]
+  },
+  async redirects() {
+    return [
+      // Registration is not a standalone surface; send users to login.
+      { source: '/register', destination: '/login', permanent: true },
+      // Duplicate quick-quote surfaces consolidated under /field/*.
+      { source: '/capture', destination: '/field/photo', permanent: true },
+      { source: '/voice', destination: '/field/voice', permanent: true },
     ]
   },
   async rewrites() {

@@ -3,13 +3,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, MapPin, LogOut, Settings, ChevronRight } from 'lucide-react'
+import { Menu, MapPin, LogOut, Settings, ChevronRight, User } from 'lucide-react'
 import { getPageMeta, PAGE_META } from './nav'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationBell } from './NotificationBell'
 import { OutboxBadge } from './OutboxBadge'
 import { useAuth } from '@/contexts/AuthContext'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { Button } from '@/components/ui/Button'
+import {
+  DropdownMenu,
+  DropdownTrigger,
+  DropdownContent,
+  DropdownItem,
+  DropdownSeparator,
+} from '@/components/ui/DropdownMenu'
 
 function getUserInitials(name: string | undefined, email: string | undefined): string {
   if (name) {
@@ -47,9 +55,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const displayName = user?.full_name ?? user?.email ?? 'User'
   const breadcrumb = buildBreadcrumb(pathname)
 
-  const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Scroll-aware shadow: use IntersectionObserver on a sentinel at top
@@ -67,46 +73,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return () => observer.disconnect()
   }, [])
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!menuOpen) return
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [menuOpen])
-
-  // Close on Escape and handle arrow key navigation
-  useEffect(() => {
-    if (!menuOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setMenuOpen(false)
-        return
-      }
-      if (!menuRef.current) return
-      const items = Array.from(
-        menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]'),
-      )
-      if (items.length === 0) return
-      const idx = items.indexOf(document.activeElement as HTMLElement)
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        items[Math.min(idx + 1, items.length - 1)]?.focus()
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        items[Math.max(idx - 1, 0)]?.focus()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [menuOpen])
-
   const handleLogout = () => {
-    setMenuOpen(false)
     logout()
     router.push('/login')
   }
@@ -122,13 +89,15 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
       <div className="flex h-[var(--header-height)] items-center gap-2 px-3 sm:gap-3 sm:px-4">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onMenuClick}
-          className="flex h-10 w-10 items-center justify-center rounded-[0.85rem] text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] lg:hidden"
           aria-label="Open navigation"
+          className="lg:hidden"
         >
           <Menu size={18} aria-hidden="true" />
-        </button>
+        </Button>
 
         {/* Title + breadcrumb */}
         <div className="min-w-0 flex-1">
@@ -185,55 +154,35 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <OutboxBadge />
           <NotificationBell />
           <ThemeToggle />
-          <div className="relative" ref={menuRef}>
+          <DropdownMenu>
             <Tooltip content={displayName}>
-              <button
-                onClick={() => setMenuOpen(prev => !prev)}
+              <DropdownTrigger
                 aria-label={`Signed in as ${displayName}`}
-                aria-expanded={menuOpen}
-                aria-haspopup="true"
-                className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] cursor-pointer select-none transition-colors hover:bg-[color:var(--accent-strong)] hover:text-white"
+                className="flex size-9 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent-strong)] transition-colors hover:bg-[color:var(--accent-strong)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--canvas)]"
               >
                 {initials}
-              </button>
+              </DropdownTrigger>
             </Tooltip>
-            {menuOpen && (
-              <div role="menu" aria-label="User menu" className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-50">
-                <div className="border-b border-[color:var(--line)] px-4 py-3">
-                  <p className="text-sm font-semibold text-[color:var(--ink)] truncate">{displayName}</p>
-                  {user?.email && (
-                    <p className="text-xs text-[color:var(--muted-ink)] truncate">{user.email}</p>
-                  )}
-                  {user?.role && (
-                    <span className="mt-1 inline-block rounded-full bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--accent-strong)]">
-                      {user.role}
-                    </span>
-                  )}
-                </div>
-                <div className="py-1">
-                  <Link
-                    href="/admin"
-                    role="menuitem"
-                    tabIndex={0}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[color:var(--ink)] transition-colors hover:bg-[color:var(--panel-strong)]"
-                  >
-                    <Settings size={15} aria-hidden="true" />
-                    <span>Settings</span>
-                  </Link>
-                  <button
-                    role="menuitem"
-                    tabIndex={0}
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                  >
-                    <LogOut size={15} aria-hidden="true" />
-                    <span>Sign out</span>
-                  </button>
-                </div>
+            <DropdownContent align="end" className="w-56 overflow-hidden rounded-2xl">
+              <div className="border-b border-[color:var(--line)] px-4 py-3">
+                <p className="truncate text-sm font-semibold text-[color:var(--ink)]">{displayName}</p>
+                {user?.email && (
+                  <p className="truncate text-xs text-[color:var(--muted-ink)]">{user.email}</p>
+                )}
+                {user?.role && (
+                  <span className="mt-1 inline-block rounded-full bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--accent-strong)]">
+                    {user.role}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
+              <DropdownItem icon={Settings} label="Settings" onClick={() => router.push('/settings')} />
+              {user?.role === 'admin' && (
+                <DropdownItem icon={User} label="Admin" onClick={() => router.push('/admin')} />
+              )}
+              <DropdownSeparator />
+              <DropdownItem icon={LogOut} label="Sign out" destructive onClick={handleLogout} />
+            </DropdownContent>
+          </DropdownMenu>
         </div>
       </div>
       </header>

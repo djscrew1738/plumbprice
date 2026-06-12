@@ -9,9 +9,8 @@ import {
   Copy, Check, Printer, FileText, ChevronRight,
   Zap, Download, Send,
 } from 'lucide-react'
-import { format } from 'date-fns'
 import { api, proposalsApi, type ProposalListItem } from '@/lib/api'
-import { formatCurrency, formatCurrencyDecimal, downloadBlob } from '@/lib/utils'
+import { formatCurrency, downloadBlob } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -22,18 +21,7 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { Select } from '@/components/ui/Select'
 import { formatDateLong, formatDateShort } from '@/lib/formatters'
 import { JOB_TYPE_VARIANT, PROPOSAL_STATUS_VARIANT, ESTIMATE_STATUS_VARIANT } from '@/lib/badgeConfig'
-import { PROPOSAL_VALIDITY_DAYS } from '@/lib/constants'
-
-// ─── Company config (override via env when multi-tenant) ──────────────────────
-const COMPANY = {
-  name: process.env.NEXT_PUBLIC_COMPANY_NAME || 'CTL PLUMBING LLC',
-  tagline: process.env.NEXT_PUBLIC_COMPANY_TAGLINE || 'Licensed Master Plumber — DFW Metroplex',
-  license: process.env.NEXT_PUBLIC_COMPANY_LICENSE || 'MPL-44467',
-  taclb: process.env.NEXT_PUBLIC_COMPANY_TACLB || 'TACLB-058513',
-  phone: process.env.NEXT_PUBLIC_COMPANY_PHONE || '(469) 843-4066',
-  email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'estimating@ctlplumbingllc.com',
-  repLabel: process.env.NEXT_PUBLIC_COMPANY_REP_LABEL || 'CTL Plumbing Rep',
-} as const
+import { buildProposalText } from '@/lib/proposal-template'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,8 +60,6 @@ interface EstimateDetail extends Estimate {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-
-
 const STATUS_FILTER_OPTIONS = [
   { value: '',         label: 'All statuses' },
   { value: 'draft',    label: 'Draft' },
@@ -82,103 +68,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'declined', label: 'Declined' },
 ]
-
-// ─── Proposal text generator ──────────────────────────────────────────────────
-
-function buildProposalText(est: EstimateDetail): string {
-  const today = format(new Date(), 'MMMM d, yyyy')
-  const validUntil = format(new Date(Date.now() + PROPOSAL_VALIDITY_DAYS * 86400000), 'MMMM d, yyyy')
-  const jobLabel = est.job_type === 'construction'
-    ? 'New Construction'
-    : est.job_type === 'commercial'
-    ? 'Commercial Service'
-    : 'Residential Service'
-
-  const laborLines = est.line_items?.filter(li => li.line_type === 'labor') ?? []
-  const materialLines = est.line_items?.filter(li => li.line_type === 'material') ?? []
-
-  const laborDesc = laborLines.map(li => `  - ${li.description} (${li.quantity} ${li.unit})`).join('\n') || '  - See estimate breakdown'
-  const materialDesc = materialLines.map(li => `  - ${li.description} (${li.quantity} × ${formatCurrencyDecimal(li.unit_cost)})${li.supplier ? ` [${li.supplier}]` : ''}`).join('\n') || '  - See estimate breakdown'
-
-  return `═══════════════════════════════════════════════════════
-${COMPANY.name}
-${COMPANY.tagline}
-${COMPANY.taclb} | ${COMPANY.license}
-Phone: ${COMPANY.phone}
-Email: ${COMPANY.email}
-═══════════════════════════════════════════════════════
-
-SERVICE PROPOSAL
-───────────────────────────────────────────────────────
-Date:           ${today}
-Proposal #:     PP-${String(est.id).padStart(5, '0')}
-Valid Until:    ${validUntil}
-Job Type:       ${jobLabel}
-County:         ${est.county} County, TX
-───────────────────────────────────────────────────────
-
-CUSTOMER
-───────────────────────────────────────────────────────
-Name:           ________________________________
-Address:        ________________________________
-Phone:          ________________________________
-Email:          ________________________________
-
-SCOPE OF WORK
-───────────────────────────────────────────────────────
-${est.title}
-
-Labor:
-${laborDesc}
-
-Materials & Equipment:
-${materialDesc}
-
-PRICING SUMMARY
-───────────────────────────────────────────────────────
-  Labor                        ${formatCurrency(est.labor_total ?? 0).padStart(10)}
-  Materials                    ${formatCurrency(est.materials_total ?? 0).padStart(10)}
-  Materials Markup             ${formatCurrency(est.markup_total ?? 0).padStart(10)}
-  Misc / Disposal              ${formatCurrency(est.misc_total ?? 0).padStart(10)}
-  Sales Tax (${est.county} Co.) ${formatCurrencyDecimal(est.tax_total ?? 0).padStart(10)}
-  ─────────────────────────────────────────────────
-  TOTAL                        ${formatCurrency(est.grand_total).padStart(10)}
-
-PAYMENT TERMS
-───────────────────────────────────────────────────────
-  • 50% deposit required to schedule work
-  • Remaining balance due upon completion
-  • Accepted: Check, Zelle, Cash
-  • Finance options available (ask for details)
-
-TERMS & CONDITIONS
-───────────────────────────────────────────────────────
-1. This proposal is valid for 30 days from the date above.
-2. Price is based on standard access. Additional charges may
-   apply for unforeseen conditions (slab, tile cuts, etc.).
-3. All work performed per Texas Plumbing Code (TPLA).
-4. Permit fees included unless otherwise noted.
-5. One-year labor warranty on all installations.
-6. Manufacturer warranty applies to equipment/fixtures.
-7. Customer responsible for drywall repair unless quoted.
-8. ${COMPANY.name} is not responsible for pre-existing
-   conditions discovered during work.
-
-ACCEPTANCE
-───────────────────────────────────────────────────────
-By signing below, you authorize ${COMPANY.name} to
-proceed with the work described above.
-
-Customer Signature: ____________________  Date: ________
-
-Printed Name:       ____________________
-
-${COMPANY.repLabel}:   ____________________  Date: ________
-
-═══════════════════════════════════════════════════════
-          Thank you for choosing ${COMPANY.name}!
-═══════════════════════════════════════════════════════`
-}
 
 // ─── Proposal Modal ───────────────────────────────────────────────────────────
 

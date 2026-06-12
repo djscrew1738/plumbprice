@@ -1,19 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Flag, Plus, Trash2 } from 'lucide-react'
 import { adminApi, type FlagRow } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { BLUEPRINT_POLL_INTERVAL_MS } from '@/lib/constants'
+import { featureFlagSchema, type FeatureFlagFormValues } from '@/lib/forms/schemas'
 
 const ADMIN_FLAGS_KEY = ['admin', 'flags'] as const
 
 export function FeatureFlagsTab() {
   const toast = useToast()
   const qc = useQueryClient()
-  const [newKey, setNewKey] = useState('')
-  const [newDesc, setNewDesc] = useState('')
+
+  const flagForm = useForm<FeatureFlagFormValues>({
+    resolver: zodResolver(featureFlagSchema),
+    defaultValues: { key: '', description: '' },
+  })
 
   const { data: flags = [], isLoading, isError } = useQuery({
     queryKey: ADMIN_FLAGS_KEY,
@@ -41,8 +48,7 @@ export function FeatureFlagsTab() {
       adminApi.upsertFlag(body),
     onSuccess: () => {
       toast.success('Flag created')
-      setNewKey('')
-      setNewDesc('')
+      flagForm.reset()
       invalidate()
     },
     onError: () => toast.error('Failed to create flag (key must be lowercase a-z0-9_)'),
@@ -56,6 +62,14 @@ export function FeatureFlagsTab() {
     },
     onError: () => toast.error('Failed to delete flag'),
   })
+
+  const onSubmit = (values: FeatureFlagFormValues) => {
+    upsert.mutate({
+      key: values.key.trim(),
+      enabled: false,
+      description: values.description?.trim() || null,
+    })
+  }
 
   if (isLoading) {
     return <div className="p-6 text-sm text-zinc-400">Loading flags…</div>
@@ -118,16 +132,16 @@ export function FeatureFlagsTab() {
                   </label>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => {
                       if (confirm(`Delete flag "${f.key}"?`)) remove.mutate(f.key)
                     }}
-                    className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-rose-400"
-                    title="Delete flag"
+                    aria-label={`Delete flag ${f.key}`}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -135,37 +149,37 @@ export function FeatureFlagsTab() {
         </table>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
-        <h3 className="text-sm font-semibold text-[color:var(--ink)]">New flag</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
-          <input
-            value={newKey}
-            onChange={(e) => setNewKey(e.target.value.toLowerCase())}
-            placeholder="key_name"
-            className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-[color:var(--ink)] placeholder-zinc-500"
-          />
-          <input
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-            placeholder="What does this flag control?"
-            className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-[color:var(--ink)] placeholder-zinc-500"
-          />
-          <button
-            type="button"
-            disabled={!newKey || upsert.isPending}
-            onClick={() =>
-              upsert.mutate({ key: newKey.trim(), enabled: false, description: newDesc.trim() || null })
-            }
-            className="inline-flex items-center justify-center gap-1 rounded-lg bg-[color:var(--accent-strong)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> Add
-          </button>
+      <form onSubmit={flagForm.handleSubmit(onSubmit)} noValidate>
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
+          <h3 className="text-sm font-semibold text-[color:var(--ink)]">New flag</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
+            <Input
+              placeholder="key_name"
+              aria-label="Flag key"
+              error={flagForm.formState.errors.key?.message}
+              {...flagForm.register('key', { setValueAs: (v: string) => v.toLowerCase() })}
+            />
+            <Input
+              placeholder="What does this flag control?"
+              aria-label="Flag description"
+              error={flagForm.formState.errors.description?.message}
+              {...flagForm.register('description')}
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              isLoading={upsert.isPending}
+            >
+              <Plus className="h-4 w-4" /> Add
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            Keys must match <code className="text-zinc-400">^[a-z][a-z0-9_]*$</code>. New flags start
+            disabled.
+          </p>
         </div>
-        <p className="mt-2 text-xs text-zinc-500">
-          Keys must match <code className="text-zinc-400">^[a-z][a-z0-9_]*$</code>. New flags start
-          disabled.
-        </p>
-      </div>
+      </form>
     </div>
   )
 }

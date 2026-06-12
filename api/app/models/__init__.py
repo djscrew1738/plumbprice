@@ -1,6 +1,6 @@
 from app.models.users import User, Organization, UserInvite
 from app.models.projects import Project
-from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion, Proposal
+from app.models.estimates import Estimate, EstimateLineItem, EstimateVersion, Proposal, EstimateFeedback
 from app.models.suppliers import Supplier, SupplierProduct, SupplierPriceHistory
 from app.models.labor import LaborTemplate, MaterialAssembly, MarkupRule
 from app.models.documents import UploadedDocument, DocumentChunk
@@ -11,7 +11,7 @@ from app.models.audit import AuditLog, AssumptionLog
 from app.models.tax import TaxRate
 from app.models.pricing_rules import MaterialCategory, PermitCostRule, CityZoneMultiplier, TripChargeRule
 from app.models.pricing_template import PricingTemplate
-from app.models.sessions import ChatSession, ChatMessage, ChatAttachment
+from app.models.sessions import ChatSession, ChatMessage, ChatAttachment, ChatEmbedding
 from app.models.outcomes import EstimateOutcome
 from app.models.auth_tokens import PasswordResetToken
 from app.models.notifications import Notification
@@ -38,7 +38,7 @@ from app.models.pricing_intelligence import (
 __all__ = [
     "User", "Organization", "UserInvite",
     "Project",
-    "Estimate", "EstimateLineItem", "EstimateVersion", "Proposal",
+    "Estimate", "EstimateLineItem", "EstimateVersion", "Proposal", "EstimateFeedback",
     "Supplier", "SupplierProduct", "SupplierPriceHistory",
     "LaborTemplate", "MaterialAssembly", "MarkupRule",
     "UploadedDocument", "DocumentChunk",
@@ -48,7 +48,7 @@ __all__ = [
     "TaxRate",
     "MaterialCategory", "PermitCostRule", "CityZoneMultiplier", "TripChargeRule",
     "PricingTemplate",
-    "ChatSession", "ChatMessage", "ChatAttachment",
+    "ChatSession", "ChatMessage", "ChatAttachment", "ChatEmbedding",
     "EstimateOutcome",
     "PasswordResetToken",
     "Notification",

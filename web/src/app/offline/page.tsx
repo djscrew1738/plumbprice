@@ -1,6 +1,7 @@
 'use client'
 
 import { CloudOff } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 export default function OfflinePage() {
   return (
@@ -18,13 +19,13 @@ export default function OfflinePage() {
         </p>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        size="md"
         onClick={() => window.location.reload()}
-        className="rounded-xl bg-[hsl(var(--primary))] px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
       >
         Retry
-      </button>
+      </Button>
     </div>
   )
 }

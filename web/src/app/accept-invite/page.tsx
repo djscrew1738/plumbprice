@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { AcceptInviteForm } from '@/components/auth/AcceptInviteForm'
+import { PublicLayout } from '@/components/layout/PublicLayout'
 
 export const metadata: Metadata = {
   title: 'Accept Invitation – PlumbPrice AI',
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
 export default function AcceptInvitePage() {
   return (
     <Suspense fallback={null}>
-      <AcceptInviteForm />
+      <PublicLayout
+        title="Accept your invitation"
+        subtitle="Set a password to create your account"
+      >
+        <AcceptInviteForm />
+      </PublicLayout>
     </Suspense>
   )
 }

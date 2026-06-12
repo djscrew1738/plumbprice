@@ -218,10 +218,13 @@ export function BulkImportPanel() {
 
       {/* Upload area */}
       <div
+        role="button"
+        tabIndex={0}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
         className={cn(
           'relative cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all',
           isDragging

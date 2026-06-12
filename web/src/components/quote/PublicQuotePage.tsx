@@ -229,7 +229,7 @@ export function PublicQuotePage() {
                     </span>
                   </div>
 
-                  <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1 text-gray-600">
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-gray-600">
                     <div>Labor {usd(t.estimate.labor_total)}</div>
                     <div>Materials {usd(t.estimate.materials_total)}</div>
                     <div>Tax {usd(t.estimate.tax_total)}</div>
@@ -241,28 +241,41 @@ export function PublicQuotePage() {
                     )}
                   </div>
 
-                  {/* Line-item table */}
+                  {/* Line-item table (desktop) / cards (mobile) */}
                   {t.estimate.line_items.length > 0 && (
-                    <table className="mt-3 w-full border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-blue-200 text-left text-gray-500">
-                          <th className="py-1 pr-2">Item</th>
-                          <th className="py-1 pr-2">Qty</th>
-                          <th className="py-1 pr-2 text-right">Unit</th>
-                          <th className="py-1 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {t.estimate.line_items.map((li, liIdx) => (
-                          <tr key={liIdx} className="border-b border-blue-100 last:border-0">
-                            <td className="py-1 pr-2">{li.description}</td>
-                            <td className="py-1 pr-2">{li.quantity}</td>
-                            <td className="py-1 pr-2 text-right">{li.unit}</td>
-                            <td className="py-1 text-right">{usd(li.total_cost)}</td>
+                    <>
+                      <table className="hidden sm:table mt-3 w-full border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-blue-200 text-left text-gray-500">
+                            <th className="py-1 pr-2">Item</th>
+                            <th className="py-1 pr-2">Qty</th>
+                            <th className="py-1 pr-2 text-right">Unit</th>
+                            <th className="py-1 text-right">Total</th>
                           </tr>
+                        </thead>
+                        <tbody>
+                          {t.estimate.line_items.map((li, liIdx) => (
+                            <tr key={liIdx} className="border-b border-blue-100 last:border-0">
+                              <td className="py-1 pr-2">{li.description}</td>
+                              <td className="py-1 pr-2">{li.quantity}</td>
+                              <td className="py-1 pr-2 text-right">{li.unit}</td>
+                              <td className="py-1 text-right">{usd(li.total_cost)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="sm:hidden mt-3 space-y-2">
+                        {t.estimate.line_items.map((li, liIdx) => (
+                          <div key={liIdx} className="rounded-lg border border-blue-200 bg-white p-2.5">
+                            <div className="font-medium text-gray-800">{li.description}</div>
+                            <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                              <span>Qty: {li.quantity} {li.unit}</span>
+                              <span className="font-semibold text-gray-700">{usd(li.total_cost)}</span>
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </>
                   )}
 
                   {/* Assumptions */}

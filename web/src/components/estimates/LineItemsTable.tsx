@@ -232,7 +232,7 @@ export function LineItemsTable({
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={handleSort}
-            className="[&_.hidden.lg\\:block]:!block [&_.lg\\:hidden]:!hidden [&_>div]:!border-0 [&_>div]:!rounded-none [&_>div]:!shadow-none"
+            className="[&_>div]:!border-0 [&_>div]:!rounded-none [&_>div]:!shadow-none"
           />
         </LineItemSection>
       )}
@@ -246,7 +246,7 @@ export function LineItemsTable({
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={handleSort}
-            className="[&_.hidden.lg\\:block]:!block [&_.lg\\:hidden]:!hidden [&_>div]:!border-0 [&_>div]:!rounded-none [&_>div]:!shadow-none"
+            className="[&_>div]:!border-0 [&_>div]:!rounded-none [&_>div]:!shadow-none"
           />
         </LineItemSection>
       )}
@@ -260,7 +260,7 @@ export function LineItemsTable({
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={handleSort}
-            className="[&_.hidden.lg\\:block]:!block [&_.lg\\:hidden]:!hidden [&_>div]:!border-0 [&_>div]:!rounded-none [&_>div]:!shadow-none"
+            className="[&_>div]:!border-0 [&_>div]:!rounded-none [&_>div]:!shadow-none"
           />
         </LineItemSection>
       )}

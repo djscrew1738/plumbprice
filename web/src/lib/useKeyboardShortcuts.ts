@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 const SHORTCUT_HELP = [
   { keys: '⌘K / Ctrl+K', description: 'Open command palette' },
@@ -17,6 +17,7 @@ export { SHORTCUT_HELP }
 
 export function useKeyboardShortcuts() {
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     let sequence = ''
@@ -28,9 +29,14 @@ export function useKeyboardShortcuts() {
 
     function handleKeyDown(event: KeyboardEvent) {
       // Cmd/Ctrl+K opens the command palette regardless of focus context.
+      // On the estimator page, open the estimator-specific palette to avoid
+      // both the global and estimator palettes appearing simultaneously.
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        window.dispatchEvent(new CustomEvent('show-command-palette'))
+        const eventName = pathname?.startsWith('/estimator')
+          ? 'show-estimator-command-palette'
+          : 'show-command-palette'
+        window.dispatchEvent(new CustomEvent(eventName))
         return
       }
 
@@ -84,5 +90,5 @@ export function useKeyboardShortcuts() {
       window.removeEventListener('keydown', handleKeyDown)
       if (sequenceTimer) clearTimeout(sequenceTimer)
     }
-  }, [router])
+  }, [router, pathname])
 }

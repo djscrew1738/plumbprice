@@ -22,7 +22,7 @@ STATIC_DIR="$STANDALONE_DIR/.next/static"
 RELEASES_DIR="$STANDALONE_DIR/.next/static_releases"
 RELEASE_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 
-TARGET_URL="${TARGET_URL:-https://pricing.ctlplumbingllc.com}"
+TARGET_URL="${TARGET_URL:-https://app.ctlplumbingllc.com}"
 HEALTHCHECK_PATH="${HEALTHCHECK_PATH:-/}"
 VALIDATE_PATH="${VALIDATE_PATH:-/login}"
 RETAIN_STATIC_GENERATIONS="${RETAIN_STATIC_GENERATIONS:-5}"
@@ -90,7 +90,7 @@ fi
 
 echo "==> Building Next.js (production)"
 cd "$WEB_DIR"
-npm run build
+npm run build:prod
 
 echo "==> Copying public/ to standalone"
 rm -rf "$STANDALONE_DIR/public"

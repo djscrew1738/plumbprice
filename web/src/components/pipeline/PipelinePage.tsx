@@ -4,11 +4,12 @@ import { useState, useCallback, useMemo, useDeferredValue, useEffect } from 'rea
 import {
   CircleDollarSign, RefreshCw, TrendingUp, Plus, X, GripVertical,
 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { useQueryClient } from '@tanstack/react-query'
 import { type ProjectPipelineItem, type ProjectPipelineResponse } from '@/lib/api'
 import { usePipeline, useMoveProject, pipelineKeys } from '@/lib/hooks'
 import { cn, formatCurrency } from '@/lib/utils'
-import { PageIntro } from '@/components/layout/PageIntro'
+import { PageShell, PageHeader } from '@/components/layout/shell'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -127,60 +128,61 @@ export function PipelinePage() {
   const winRate = closedCount > 0 ? Math.round(((summary['won'] ?? 0) / closedCount) * 100) : null
 
   return (
-    <div className="min-h-full">
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <PageIntro
-          eyebrow="Sales Pipeline"
-          title="Track bid movement from lead to close."
-          description="Watch stage counts, win rate, and total open value in one view."
-          actions={(
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="Refresh pipeline"
-                className="btn-secondary min-h-0 py-2"
-              >
-                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-              <button
-                onClick={() => setShowCreate(true)}
-                aria-label="Create new project"
-                className="btn-primary min-h-0 py-2"
-              >
-                <Plus size={14} />
-                <span className="hidden sm:inline">New Project</span>
-              </button>
-            </div>
-          )}
-        >
-          <div className="flex flex-wrap items-center gap-2.5">
-            {STAGES.map(stage => (
-              <span key={stage.key} className="shell-chip">
-                <span>{stage.label}</span>
-                <span className={cn('font-semibold tabular-nums', stage.countColor)}>
-                  {summary[stage.key] ?? 0}
-                </span>
-              </span>
-            ))}
-            {winRate !== null && (
-              <span className="shell-chip">
-                <TrendingUp size={13} className="text-[hsl(var(--success))]" />
-                <span className="text-[hsl(var(--success))] font-semibold">{winRate}% win rate</span>
-              </span>
-            )}
-            {totalPipelineValue > 0 && (
-              <span className="shell-chip">
-                <CircleDollarSign size={13} className="text-[color:var(--accent-strong)]" />
-                <span className="font-semibold text-[color:var(--ink)]">{formatCurrency(totalPipelineValue)}</span>
-                <span>open pipeline</span>
-              </span>
-            )}
+    <PageShell width="wide">
+      <PageHeader
+        eyebrow="Sales Pipeline"
+        title="Track bid movement from lead to close."
+        description="Watch stage counts, win rate, and total open value in one view."
+        actions={(
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void load()}
+              disabled={loading}
+              isLoading={loading}
+              aria-label="Refresh pipeline"
+            >
+              <RefreshCw size={14} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowCreate(true)}
+              aria-label="Create new project"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">New Project</span>
+            </Button>
           </div>
-        </PageIntro>
+        )}
+      />
+      <div className="flex flex-wrap items-center gap-2.5">
+        {STAGES.map(stage => (
+          <span key={stage.key} className="shell-chip">
+            <span>{stage.label}</span>
+            <span className={cn('font-semibold tabular-nums', stage.countColor)}>
+              {summary[stage.key] ?? 0}
+            </span>
+          </span>
+        ))}
+        {winRate !== null && (
+          <span className="shell-chip">
+            <TrendingUp size={13} className="text-[hsl(var(--success))]" />
+            <span className="text-[hsl(var(--success))] font-semibold">{winRate}% win rate</span>
+          </span>
+        )}
+        {totalPipelineValue > 0 && (
+          <span className="shell-chip">
+            <CircleDollarSign size={13} className="text-[color:var(--accent-strong)]" />
+            <span className="font-semibold text-[color:var(--ink)]">{formatCurrency(totalPipelineValue)}</span>
+            <span>open pipeline</span>
+          </span>
+        )}
+      </div>
 
-        <div className="mt-4">
+      <div className="mt-4">
 
         {/* Filter bar */}
         {!loading && !error && projects.length > 0 && (
@@ -202,13 +204,14 @@ export function PipelinePage() {
                 className="w-44"
               />
               {hasActiveFilters && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={clearFilters}
-                  className="btn-secondary min-h-0 py-2 flex items-center gap-1.5"
                 >
                   <X size={13} />
                   Clear
-                </button>
+                </Button>
               )}
               <span className="text-xs text-[color:var(--muted-ink)] ml-auto tabular-nums whitespace-nowrap">
                 {isFiltered
@@ -272,13 +275,15 @@ export function PipelinePage() {
                 <p className="text-xs text-[color:var(--accent-strong)] font-medium flex-1">
                   Drag cards between columns to move projects through the pipeline.
                 </p>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={dismissDragHint}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[color:var(--accent-strong)] hover:bg-[color:var(--accent)]/10 transition-colors"
                   aria-label="Dismiss hint"
+                  className="text-[color:var(--accent-strong)] hover:bg-[color:var(--accent)]/10"
                 >
                   <X size={13} />
-                </button>
+                </Button>
               </div>
             )}
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-start">
@@ -297,13 +302,12 @@ export function PipelinePage() {
           </>
         )}
         </div>
-      </div>
 
       <CreateProjectModal
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreated={handleProjectCreated}
       />
-    </div>
+    </PageShell>
   )
 }

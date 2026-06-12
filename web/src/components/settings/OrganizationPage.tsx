@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Building2, Users, UserPlus, MoreHorizontal, ShieldCheck } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -22,12 +24,15 @@ import {
 } from '@/lib/hooks'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { formatDateMedium } from '@/lib/formatters'
-
-const ROLE_OPTIONS = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'estimator', label: 'Estimator' },
-  { value: 'viewer', label: 'Viewer' },
-]
+import { useAnnouncer } from '@/components/layout/GlobalAnnouncer'
+import {
+  organizationSchema,
+  inviteUserSchema,
+  ROLE_OPTIONS,
+  normalizeOrganizationValues,
+  type OrganizationFormValues,
+  type InviteUserFormValues,
+} from '@/lib/forms/schemas'
 
 const ROLE_BADGE_VARIANT: Record<string, 'accent' | 'info' | 'neutral'> = {
   admin: 'accent',
@@ -38,6 +43,7 @@ const ROLE_BADGE_VARIANT: Record<string, 'accent' | 'info' | 'neutral'> = {
 export function OrganizationPage() {
   const { user } = useAuth()
   const isAdmin = user?.is_admin ?? false
+  const { announce } = useAnnouncer()
 
   const { data: org, isLoading: orgLoading, isError: orgError, refetch: refetchOrg } = useOrganization()
   const updateOrg = useUpdateOrganization()
@@ -47,54 +53,62 @@ export function OrganizationPage() {
   const updateRole = useUpdateUserRole()
   const removeUser = useRemoveUser()
 
-  const [orgName, setOrgName] = useState('')
-  const [orgAddress, setOrgAddress] = useState('')
-  const [orgPhone, setOrgPhone] = useState('')
-  const [billingEmail, setBillingEmail] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
-  const [defaultTaxRate, setDefaultTaxRate] = useState('')
-  const [defaultMarkupPercent, setDefaultMarkupPercent] = useState('')
-
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState('estimator')
-
   const [removeTarget, setRemoveTarget] = useState<OrgUser | null>(null)
+
+  const orgForm = useForm<OrganizationFormValues>({
+    resolver: zodResolver(organizationSchema),
+    defaultValues: {
+      name: '',
+      address: '',
+      phone: '',
+      billingEmail: '',
+      logoUrl: '',
+      defaultTaxRate: undefined,
+      defaultMarkupPercent: undefined,
+    },
+  })
+
+  const inviteForm = useForm<InviteUserFormValues>({
+    resolver: zodResolver(inviteUserSchema),
+    defaultValues: { email: '', fullName: '', role: 'estimator' },
+  })
 
   useEffect(() => {
     if (org) {
-      setOrgName(org.name ?? '')
-      setOrgAddress(org.address ?? '')
-      setOrgPhone(org.phone ?? '')
-      setBillingEmail(org.billing_email ?? '')
-      setLogoUrl(org.logo_url ?? '')
-      setDefaultTaxRate(org.default_tax_rate != null ? String(org.default_tax_rate * 100) : '')
-      setDefaultMarkupPercent(org.default_markup_percent != null ? String(org.default_markup_percent * 100) : '')
+      orgForm.reset({
+        name: org.name ?? '',
+        address: org.address ?? '',
+        phone: org.phone ?? '',
+        billingEmail: org.billing_email ?? '',
+        logoUrl: org.logo_url ?? '',
+        defaultTaxRate: org.default_tax_rate != null ? String(org.default_tax_rate * 100) : '',
+        defaultMarkupPercent: org.default_markup_percent != null ? String(org.default_markup_percent * 100) : '',
+      })
     }
-  }, [org])
+  }, [org, orgForm])
 
-  const handleSaveOrg = (e: React.FormEvent) => {
-    e.preventDefault()
-    updateOrg.mutate({
-      name: orgName,
-      address: orgAddress,
-      phone: orgPhone,
-      billing_email: billingEmail || undefined,
-      logo_url: logoUrl || undefined,
-      default_tax_rate: defaultTaxRate !== '' ? parseFloat(defaultTaxRate) / 100 : undefined,
-      default_markup_percent: defaultMarkupPercent !== '' ? parseFloat(defaultMarkupPercent) / 100 : undefined,
-    })
+  const onSubmitOrg = (values: OrganizationFormValues) => {
+    updateOrg.mutate(
+      {
+        ...normalizeOrganizationValues(values),
+        billing_email: values.billingEmail || undefined,
+        logo_url: values.logoUrl || undefined,
+      },
+      {
+        onSuccess: () => announce('Organization details saved successfully'),
+      },
+    )
   }
 
-  const handleInvite = (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmitInvite = (values: InviteUserFormValues) => {
     inviteUser.mutate(
-      { email: inviteEmail, role: inviteRole },
+      { email: values.email, role: values.role, full_name: values.fullName?.trim() || undefined },
       {
         onSuccess: () => {
           setInviteOpen(false)
-          setInviteEmail('')
-          setInviteRole('estimator')
+          inviteForm.reset()
+          announce(`Invitation sent to ${values.email}`)
         },
       },
     )
@@ -169,16 +183,17 @@ export function OrganizationPage() {
             align: 'center' as const,
             render: (row: OrgUser) =>
               row.id !== String(user?.id) ? (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation()
                     setRemoveTarget(row)
                   }}
-                  className="rounded-lg p-1.5 text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.1)] transition-colors"
                   aria-label={`Remove ${row.full_name}`}
                 >
                   <MoreHorizontal size={14} />
-                </button>
+                </Button>
               ) : null,
           },
         ]
@@ -211,7 +226,7 @@ export function OrganizationPage() {
   return (
     <div className="space-y-6">
       {/* Organization Info */}
-      <form onSubmit={handleSaveOrg}>
+      <form onSubmit={orgForm.handleSubmit(onSubmitOrg)} noValidate>
         <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-6">
           <div className="flex items-center gap-3 mb-6">
             <Building2 size={18} className="text-[color:var(--accent-strong)]" aria-hidden="true" />
@@ -223,43 +238,43 @@ export function OrganizationPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Organization Name"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
               placeholder="Acme Plumbing LLC"
               disabled={!isAdmin}
+              error={orgForm.formState.errors.name?.message}
+              {...orgForm.register('name')}
             />
             <Input
               label="Phone"
               type="tel"
-              value={orgPhone}
-              onChange={(e) => setOrgPhone(e.target.value)}
               placeholder="(555) 000-0000"
               disabled={!isAdmin}
+              error={orgForm.formState.errors.phone?.message}
+              {...orgForm.register('phone')}
             />
             <div className="sm:col-span-2">
               <Input
                 label="Address"
-                value={orgAddress}
-                onChange={(e) => setOrgAddress(e.target.value)}
                 placeholder="123 Main St, Dallas, TX 75201"
                 disabled={!isAdmin}
+                error={orgForm.formState.errors.address?.message}
+                {...orgForm.register('address')}
               />
             </div>
             <Input
               label="Billing Email"
               type="email"
-              value={billingEmail}
-              onChange={(e) => setBillingEmail(e.target.value)}
               placeholder="billing@company.com"
               disabled={!isAdmin}
+              error={orgForm.formState.errors.billingEmail?.message}
+              {...orgForm.register('billingEmail')}
             />
             <Input
               label="Logo URL"
               type="url"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
               placeholder="https://example.com/logo.png"
               disabled={!isAdmin}
+              error={orgForm.formState.errors.logoUrl?.message}
+              {...orgForm.register('logoUrl')}
             />
             <Input
               label="Default Tax Rate (%)"
@@ -267,11 +282,11 @@ export function OrganizationPage() {
               min={0}
               max={100}
               step={0.01}
-              value={defaultTaxRate}
-              onChange={(e) => setDefaultTaxRate(e.target.value)}
               placeholder="8.25"
               helperText="Default tax rate applied to new estimates (e.g. 8.5 for 8.5%)"
               disabled={!isAdmin}
+              error={orgForm.formState.errors.defaultTaxRate?.message}
+              {...orgForm.register('defaultTaxRate')}
             />
             <Input
               label="Default Markup (%)"
@@ -279,11 +294,11 @@ export function OrganizationPage() {
               min={0}
               max={200}
               step={0.1}
-              value={defaultMarkupPercent}
-              onChange={(e) => setDefaultMarkupPercent(e.target.value)}
               placeholder="20"
               helperText="Default markup applied to new estimates (e.g. 20 for 20%)"
               disabled={!isAdmin}
+              error={orgForm.formState.errors.defaultMarkupPercent?.message}
+              {...orgForm.register('defaultMarkupPercent')}
             />
           </div>
 
@@ -350,20 +365,31 @@ export function OrganizationPage() {
         description="Send an invitation to join your organization."
         size="sm"
       >
-        <form onSubmit={handleInvite} className="space-y-4">
+        <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4" noValidate>
           <Input
             label="Email Address"
             type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="colleague@company.com"
-            required
+            error={inviteForm.formState.errors.email?.message}
+            {...inviteForm.register('email')}
           />
-          <Select
-            label="Role"
-            options={ROLE_OPTIONS}
-            value={inviteRole}
-            onChange={setInviteRole}
+          <Input
+            label="Full Name (optional)"
+            placeholder="Jane Doe"
+            error={inviteForm.formState.errors.fullName?.message}
+            {...inviteForm.register('fullName')}
+          />
+          <Controller
+            control={inviteForm.control}
+            name="role"
+            render={({ field }) => (
+              <Select
+                label="Role"
+                options={ROLE_OPTIONS}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
           />
           <div className="flex justify-end gap-3 pt-2">
             <Button
@@ -376,7 +402,6 @@ export function OrganizationPage() {
             <Button
               type="submit"
               isLoading={inviteUser.isPending}
-              disabled={!inviteEmail}
             >
               Send Invite
             </Button>

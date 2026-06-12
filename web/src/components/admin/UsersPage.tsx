@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { UserPlus, ShieldCheck } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -21,12 +23,7 @@ import {
   type OrgInvite,
 } from '@/lib/hooks'
 import { formatDateMedium } from '@/lib/formatters'
-
-const ROLE_OPTIONS = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'estimator', label: 'Estimator' },
-  { value: 'viewer', label: 'Viewer' },
-]
+import { inviteUserSchema, ROLE_OPTIONS, type InviteUserFormValues } from '@/lib/forms/schemas'
 
 const ROLE_BADGE_VARIANT: Record<string, 'accent' | 'info' | 'neutral'> = {
   admin: 'accent',
@@ -46,10 +43,12 @@ export function AdminUsersPage() {
   const revokeInvite = useRevokeInvite()
 
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState('estimator')
-  const [inviteName, setInviteName] = useState('')
   const [removeTarget, setRemoveTarget] = useState<OrgUser | null>(null)
+
+  const inviteForm = useForm<InviteUserFormValues>({
+    resolver: zodResolver(inviteUserSchema),
+    defaultValues: { email: '', fullName: '', role: 'estimator' },
+  })
 
   if (!isAdmin) {
     return (
@@ -64,16 +63,13 @@ export function AdminUsersPage() {
     )
   }
 
-  const handleInvite = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleInvite = (values: InviteUserFormValues) => {
     inviteUser.mutate(
-      { email: inviteEmail, role: inviteRole, full_name: inviteName || undefined },
+      { email: values.email, role: values.role, full_name: values.fullName?.trim() || undefined },
       {
         onSuccess: () => {
           setInviteOpen(false)
-          setInviteEmail('')
-          setInviteName('')
-          setInviteRole('estimator')
+          inviteForm.reset()
         },
       },
     )
@@ -222,32 +218,37 @@ export function AdminUsersPage() {
         description="Send an email invitation to join your organization."
         size="sm"
       >
-        <form onSubmit={handleInvite} className="space-y-4">
+        <form onSubmit={inviteForm.handleSubmit(handleInvite)} className="space-y-4" noValidate>
           <Input
             label="Email Address"
             type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="colleague@company.com"
-            required
+            error={inviteForm.formState.errors.email?.message}
+            {...inviteForm.register('email')}
           />
           <Input
             label="Full Name (optional)"
-            value={inviteName}
-            onChange={(e) => setInviteName(e.target.value)}
             placeholder="Jane Doe"
+            error={inviteForm.formState.errors.fullName?.message}
+            {...inviteForm.register('fullName')}
           />
-          <Select
-            label="Role"
-            options={ROLE_OPTIONS}
-            value={inviteRole}
-            onChange={setInviteRole}
+          <Controller
+            control={inviteForm.control}
+            name="role"
+            render={({ field }) => (
+              <Select
+                label="Role"
+                options={ROLE_OPTIONS}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
           />
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setInviteOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" isLoading={inviteUser.isPending} disabled={!inviteEmail}>
+            <Button type="submit" isLoading={inviteUser.isPending}>
               Send Invite
             </Button>
           </div>
@@ -259,9 +260,7 @@ export function AdminUsersPage() {
         onClose={() => setRemoveTarget(null)}
         onConfirm={handleRemove}
         title="Deactivate user"
-        description={`Are you sure you want to deactivate ${
-          removeTarget?.full_name || removeTarget?.email || 'this user'
-        }? They will lose access to the organization.`}
+        description={`Are you sure you want to deactivate ${removeTarget?.full_name ?? 'this user'}? They will lose access to the organization.`}
         confirmLabel="Deactivate"
         variant="danger"
         isLoading={removeUser.isPending}

@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { MOBILE_TABS, matchesPathname } from './nav'
 import { useReducedMotion } from '@/lib/useReducedMotion'
+import { haptic } from '@/lib/haptics'
+import { Button } from '@/components/ui/Button'
 
 export const MobileNav = memo(function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
   const pathname = usePathname()
@@ -20,16 +22,20 @@ export const MobileNav = memo(function MobileNav({ onOpenMore }: { onOpenMore: (
         {MOBILE_TABS.map(({ href, icon: Icon, label }) => {
           if (href === '#more') {
             return (
-              <button
+              <Button
                 key={label}
-                type="button"
-                onClick={onOpenMore}
-                className="relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.25rem] text-[11px] font-semibold text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)]"
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  haptic('tap')
+                  onOpenMore()
+                }}
                 aria-label={label}
+                className="relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.25rem] text-[11px] font-semibold text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] h-auto w-auto px-3 py-1.5"
               >
                 <Icon size={20} />
                 <span>{label}</span>
-              </button>
+              </Button>
             )
           }
 
@@ -39,13 +45,14 @@ export const MobileNav = memo(function MobileNav({ onOpenMore }: { onOpenMore: (
             <Link
               key={href}
               href={href}
+              onClick={() => haptic('tap')}
               className="relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.25rem] text-[11px] font-semibold"
               aria-current={active ? 'page' : undefined}
             >
               {active && (
                 <motion.span
                   layoutId={reduce ? undefined : 'mobile-tab-indicator'}
-                  className="absolute inset-x-3 top-0 h-[3px] rounded-full bg-[color:var(--accent)]"
+                  className="absolute inset-x-3 top-0 h-1 rounded-full bg-[color:var(--accent)]"
                   transition={reduce ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
                 />
               )}

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Eye, Flag, Upload, Activity, Database } from 'lucide-react'
+import { RefreshCw, Wrench, DollarSign, BarChart3, Package, Briefcase, Users, TrendingUp, Eye, Flag, Upload, Activity, Database, Bell } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
@@ -23,13 +23,14 @@ import { FeatureFlagsTab } from './FeatureFlagsTab'
 import { BulkImportPanel } from './BulkImportPanel'
 import { CatalogBrowser } from './CatalogBrowser'
 import { FeedStatusDashboard } from './FeedStatusDashboard'
+import { PriceAlertsTab } from './PriceAlertsTab'
 
 const SUPPLIERS = ['ferguson', 'moore_supply', 'apex'] as const
 type SupplierSlug = typeof SUPPLIERS[number]
 
 type EditValues = Record<SupplierSlug, Partial<CanonicalItemSupplier>>
 
-const VALID_ADMIN_TABS = ['labor', 'markup', 'prices', 'stats', 'jobs', 'users', 'analytics', 'vision', 'flags', 'import', 'catalog', 'feeds'] as const
+const VALID_ADMIN_TABS = ['labor', 'markup', 'prices', 'stats', 'jobs', 'users', 'analytics', 'vision', 'flags', 'import', 'catalog', 'feeds', 'alerts'] as const
 
 function AdminPageInner() {
   const searchParams = useSearchParams()
@@ -234,6 +235,7 @@ function AdminPageInner() {
             <TabsTrigger value="import" icon={Upload}>Bulk Import</TabsTrigger>
             <TabsTrigger value="catalog" icon={Database}>Catalog</TabsTrigger>
             <TabsTrigger value="feeds" icon={Activity}>Feeds</TabsTrigger>
+            <TabsTrigger value="alerts" icon={Bell}>Price Alerts</TabsTrigger>
           </TabsList>
 
           <div className="mt-4">
@@ -321,6 +323,10 @@ function AdminPageInner() {
 
             <TabsContent value="feeds">
               <FeedStatusDashboard />
+            </TabsContent>
+
+            <TabsContent value="alerts">
+              <PriceAlertsTab />
             </TabsContent>
           </div>
         </TabsRoot>

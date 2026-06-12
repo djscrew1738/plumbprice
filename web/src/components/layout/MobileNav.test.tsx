@@ -25,7 +25,7 @@ describe('MobileNav', () => {
     render(createElement(MobileNav, { onOpenMore }))
 
     expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /jobs/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /estimates/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /pipeline/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /more/i })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /suppliers/i })).not.toBeInTheDocument()

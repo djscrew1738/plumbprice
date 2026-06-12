@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, X, Keyboard, Smartphone, Camera, Sun } from 'lucide-react'
+import { Sparkles, X, Wand2, Gauge, Palette, Smartphone } from 'lucide-react'
 
-const VERSION = '2.1.1'
+const VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '5.2.0'
 const STORAGE_KEY = `pp-whatsnew-seen-${VERSION}`
 
 const HIGHLIGHTS = [
-  { icon: Smartphone, text: 'Installable PWA — pin PlumbPrice to your home screen' },
-  { icon: Camera, text: 'On-site photo capture with priced quick-quotes' },
-  { icon: Keyboard, text: 'Cmd / Ctrl + K opens the command palette' },
-  { icon: Sun, text: 'Dark mode toggle in the header' },
+  { icon: Wand2, text: 'Subtle animation system — every interaction now has polished motion feedback.' },
+  { icon: Palette, text: 'Centralized Motion.tsx primitives with reduced-motion support built in.' },
+  { icon: Gauge, text: 'CountUp KPIs, staggered reveals, and spring-powered tab indicators.' },
+  { icon: Smartphone, text: 'Public home and launcher home choreographed entrance animations.' },
 ]
 
 export function WhatsNewBanner() {

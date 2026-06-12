@@ -38,13 +38,22 @@ async def record_outcome(
     db: AsyncSession = Depends(get_db),
 ):
     """Record whether an estimate was won, lost, or not bid."""
-    # Verify the estimate belongs to this org
-    est_result = await db.execute(
-        select(Estimate).where(
-            Estimate.id == estimate_id,
-            Estimate.organization_id == current_user.organization_id,
+    # Verify the estimate belongs to this org or user
+    user_org = getattr(current_user, "organization_id", None)
+    if user_org is not None:
+        est_result = await db.execute(
+            select(Estimate).where(
+                Estimate.id == estimate_id,
+                Estimate.organization_id == user_org,
+            )
         )
-    )
+    else:
+        est_result = await db.execute(
+            select(Estimate).where(
+                Estimate.id == estimate_id,
+                Estimate.created_by == current_user.id,
+            )
+        )
     estimate = est_result.scalar_one_or_none()
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
@@ -96,8 +105,9 @@ async def list_outcomes(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return all recorded outcomes for the org, joined with estimate data."""
-    result = await db.execute(
+    """Return all recorded outcomes for the org or user, joined with estimate data."""
+    user_org = getattr(current_user, "organization_id", None)
+    stmt = (
         select(
             EstimateOutcome.id,
             EstimateOutcome.estimate_id,
@@ -113,9 +123,13 @@ async def list_outcomes(
             Estimate.county,
         )
         .join(Estimate, EstimateOutcome.estimate_id == Estimate.id)
-        .where(EstimateOutcome.organization_id == current_user.organization_id)
-        .order_by(EstimateOutcome.updated_at.desc())
     )
+    if user_org is not None:
+        stmt = stmt.where(EstimateOutcome.organization_id == user_org)
+    else:
+        stmt = stmt.where(Estimate.created_by == current_user.id)
+    stmt = stmt.order_by(EstimateOutcome.updated_at.desc())
+    result = await db.execute(stmt)
     rows = result.all()
     return [
         {
@@ -142,7 +156,7 @@ async def outcome_stats(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return win/loss statistics for the current organization.
+    Return win/loss statistics for the current organization or user.
 
     Includes:
     - Total recorded, won, lost, pending, no_bid counts
@@ -152,7 +166,18 @@ async def outcome_stats(
     """
     from sqlalchemy import case, and_
 
-    org_id = current_user.organization_id
+    org_id = getattr(current_user, "organization_id", None)
+
+    if org_id is None:
+        return {
+            "total": 0,
+            "won": 0,
+            "lost": 0,
+            "pending": 0,
+            "no_bid": 0,
+            "win_rate": None,
+            "confidence_breakdown": {},
+        }
 
     # Aggregate outcomes
     result = await db.execute(
@@ -215,9 +240,10 @@ async def winrate_markup(
         raise HTTPException(status_code=400, detail="markup_pct must be a fraction between 0 and 5")
     if band_pp <= 0 or band_pp > 50:
         raise HTTPException(status_code=400, detail="band_pp must be in (0, 50]")
+    user_org = getattr(current_user, "organization_id", None)
     return await winrate_by_markup_band(
         db,
-        organization_id=current_user.organization_id,
+        organization_id=user_org,
         target_markup_pct=markup_pct,
         band_pp=band_pp,
     )
@@ -235,9 +261,10 @@ async def winrate_by_task(
     db: AsyncSession = Depends(get_db),
 ):
     """Per-task-code win-rate. Pass `task_codes` to scope to the current estimate."""
+    user_org = getattr(current_user, "organization_id", None)
     return await winrate_by_task_code(
         db,
-        organization_id=current_user.organization_id,
+        organization_id=user_org,
         task_codes=body.task_codes,
         min_n=body.min_n,
     )
@@ -266,14 +293,25 @@ async def close_job_with_actuals(
     """
     from datetime import datetime, timezone
 
-    estimate = (
-        await db.execute(
-            select(Estimate).where(
-                Estimate.id == estimate_id,
-                Estimate.organization_id == current_user.organization_id,
+    user_org = getattr(current_user, "organization_id", None)
+    if user_org is not None:
+        estimate = (
+            await db.execute(
+                select(Estimate).where(
+                    Estimate.id == estimate_id,
+                    Estimate.organization_id == user_org,
+                )
             )
-        )
-    ).scalar_one_or_none()
+        ).scalar_one_or_none()
+    else:
+        estimate = (
+            await db.execute(
+                select(Estimate).where(
+                    Estimate.id == estimate_id,
+                    Estimate.created_by == current_user.id,
+                )
+            )
+        ).scalar_one_or_none()
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
 
@@ -288,7 +326,7 @@ async def close_job_with_actuals(
         outcome_row = EstimateOutcome(
             estimate_id=estimate_id,
             outcome="won",
-            organization_id=current_user.organization_id,
+            organization_id=user_org,
             recorded_by=current_user.id,
         )
         db.add(outcome_row)

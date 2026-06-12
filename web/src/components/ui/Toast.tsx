@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TOAST_DURATION_MS } from '@/lib/constants'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 type ToastType = 'success' | 'error' | 'info'
 
@@ -40,6 +41,7 @@ const ICONS: Record<ToastType, typeof CheckCircle2> = {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const reduce = useReducedMotion()
 
   const add = useCallback((type: ToastType, title: string, message?: string) => {
     const id = crypto.randomUUID()
@@ -88,9 +90,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             return (
               <motion.div
                 key={t.id}
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0,   scale: 1    }}
-                exit={{   opacity: 0, y: -8,   scale: 0.95 }}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24, scale: 0.96 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, x: 16, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                 className={cn(
                   'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-2xl border shadow-2xl',

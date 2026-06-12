@@ -39,6 +39,8 @@ export interface InputProps
   helperText?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  /** Interactive element rendered inside the input on the right (e.g. password toggle). */
+  rightAction?: React.ReactNode
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -51,6 +53,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       helperText,
       leftIcon,
       rightIcon,
+      rightAction,
       id: idProp,
       ...props
     },
@@ -94,7 +97,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               inputVariants({ size }),
               leftIcon && iconPadding.left[s],
-              rightIcon && iconPadding.right[s],
+              (rightIcon || rightAction) && iconPadding.right[s],
               error &&
                 'border-[hsl(var(--danger))] focus:border-[hsl(var(--danger))] focus:ring-[hsl(var(--danger))]',
               className
@@ -102,7 +105,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
 
-          {rightIcon && (
+          {rightIcon && !rightAction && (
             <span
               aria-hidden="true"
               className={cn(
@@ -111,6 +114,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               )}
             >
               {rightIcon}
+            </span>
+          )}
+          {rightAction && (
+            <span
+              className={cn(
+                'absolute inset-y-0 right-1 flex items-center',
+                iconSize[s]
+              )}
+            >
+              {rightAction}
             </span>
           )}
         </div>

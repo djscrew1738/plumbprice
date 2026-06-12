@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { Button } from '@/components/ui/Button'
 
 type Mapping = {
   id: number | null
@@ -65,12 +66,13 @@ export function VisionMappingsTab() {
           onChange={e => setFilter(e.target.value)}
           className="rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-xs text-zinc-200 w-72"
         />
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => setEditing({ id: null, item_type: '', default_task_code: '', problem_task_code: null, enabled: true, note: null, source: 'db' })}
-          className="rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-2 text-xs font-semibold text-white"
         >
           + New mapping
-        </button>
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
@@ -98,11 +100,18 @@ export function VisionMappingsTab() {
                     : <span className="rounded bg-zinc-500/20 text-zinc-400 px-2 py-0.5">default</span>}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button onClick={() => setEditing({ ...m, source: 'db' })}
-                    className="text-blue-300 hover:text-blue-200 mr-3">Edit</button>
+                  <Button variant="ghost" size="xs" onClick={() => setEditing({ ...m, source: 'db' })}>
+                    Edit
+                  </Button>
                   {m.source === 'db' && (
-                    <button onClick={() => { if (confirm(`Remove override for "${m.item_type}"?`)) void remove.mutate(m.item_type) }}
-                      className="text-red-300 hover:text-red-200">Reset</button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => { if (confirm(`Remove override for "${m.item_type}"?`)) void remove.mutate(m.item_type) }}
+                      className="text-red-300 hover:text-red-200"
+                    >
+                      Reset
+                    </Button>
                   )}
                 </td>
               </tr>
@@ -175,12 +184,14 @@ export function VisionMappingsTab() {
             )}
 
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setEditing(null)}
-                className="rounded-lg bg-white/[0.05] hover:bg-white/[0.08] px-3 py-2 text-xs text-zinc-300">
+              <Button variant="secondary" size="sm" onClick={() => setEditing(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 disabled={!editing.item_type || !editing.default_task_code || upsert.isPending}
+                isLoading={upsert.isPending}
                 onClick={() => upsert.mutate({
                   item_type: editing.item_type,
                   default_task_code: editing.default_task_code,
@@ -188,9 +199,9 @@ export function VisionMappingsTab() {
                   enabled: editing.enabled,
                   note: editing.note || undefined,
                 })}
-                className="rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-2 text-xs font-semibold text-white">
-                {upsert.isPending ? 'Saving…' : 'Save'}
-              </button>
+              >
+                Save
+              </Button>
             </div>
           </div>
         </div>

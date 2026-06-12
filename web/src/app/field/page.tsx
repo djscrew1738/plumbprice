@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, Mic, Wifi, WifiOff, ChevronRight, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { haptic } from '@/lib/haptics'
 
 export default function FieldHomePage() {
   const [syncing, setSyncing] = useState(false)
@@ -129,7 +130,10 @@ function QuickActionTile({
 
   return (
     <button
-      onClick={() => router.push(href)}
+      onClick={() => {
+        haptic('tap')
+        router.push(href)
+      }}
       className={cn(
         'w-full flex items-center gap-4 p-4 rounded-xl border',
         'active:scale-[0.98] transition-transform duration-100',

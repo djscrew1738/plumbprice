@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronsLeft, ChevronsRight, Keyboard, X } from 'lucide-react'
-import { PRIMARY_NAV, SECONDARY_NAV, matchesPathname } from './nav'
+import { PRIMARY_NAV, SECONDARY_NAV, SYSTEM_NAV, matchesPathname } from './nav'
 import { RecentJobsList } from '@/components/workspace/RecentJobsList'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { Button } from '@/components/ui/Button'
 import { OWNER_NAME, PRODUCT_VERSION } from '@/lib/branding'
 import { useSidebarPinned } from '@/lib/useSidebarPinned'
 import { cn } from '@/lib/utils'
@@ -40,7 +41,7 @@ function NavRow({
       aria-label={collapsed ? label : undefined}
       className={cn(
         'group relative flex items-center gap-3 rounded-[1rem] text-sm font-medium transition-colors',
-        collapsed ? 'h-10 w-10 justify-center' : 'px-3 py-2.5',
+        collapsed ? 'h-11 w-11 justify-center' : 'px-3 py-2.5',
         active
           ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]'
           : 'text-[color:var(--muted-ink)] hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]',
@@ -79,7 +80,39 @@ function SidebarContent({
   onTogglePin?: () => void
 }) {
   const pathname = usePathname()
+  const navRef = useRef<HTMLElement>(null)
   const openShortcuts = () => window.dispatchEvent(new Event('show-shortcuts'))
+
+  const handleNavKeyDown = (e: React.KeyboardEvent) => {
+    const nav = navRef.current
+    if (!nav) return
+    const items = Array.from(nav.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
+    if (items.length === 0) return
+    const idx = items.indexOf(document.activeElement as HTMLElement)
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault()
+        items[(idx + 1) % items.length]?.focus()
+        break
+      }
+      case 'ArrowUp': {
+        e.preventDefault()
+        items[(idx - 1 + items.length) % items.length]?.focus()
+        break
+      }
+      case 'Home': {
+        e.preventDefault()
+        items[0]?.focus()
+        break
+      }
+      case 'End': {
+        e.preventDefault()
+        items[items.length - 1]?.focus()
+        break
+      }
+    }
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -111,20 +144,25 @@ function SidebarContent({
           </Link>
         )}
         {onClose && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="rounded-[0.85rem] p-2 text-[color:var(--muted-ink)] lg:hidden"
             aria-label="Close navigation"
+            className="lg:hidden"
           >
             <X size={16} aria-hidden />
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Nav */}
       <div className="flex min-h-0 flex-1 flex-col">
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
         <nav
+          ref={navRef}
           aria-label="Sidebar"
+          onKeyDown={handleNavKeyDown}
           className={cn('flex-1 space-y-5 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}
         >
           <div className="space-y-1">
@@ -148,10 +186,29 @@ function SidebarContent({
           <div className="space-y-1">
             {!collapsed && (
               <p className="px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[color:var(--muted-ink)]">
-                Utilities
+                Tools
               </p>
             )}
             {SECONDARY_NAV.map(({ href, icon: Icon, label }) => (
+              <NavRow
+                key={href}
+                href={href}
+                Icon={Icon}
+                label={label}
+                active={matchesPathname(pathname, href)}
+                collapsed={collapsed}
+                onClick={onClose}
+              />
+            ))}
+          </div>
+
+          <div className="space-y-1">
+            {!collapsed && (
+              <p className="px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[color:var(--muted-ink)]">
+                System
+              </p>
+            )}
+            {SYSTEM_NAV.map(({ href, icon: Icon, label }) => (
               <NavRow
                 key={href}
                 href={href}
@@ -183,8 +240,8 @@ function SidebarContent({
                 aria-label={pinned ? 'Collapse sidebar' : 'Pin sidebar open'}
                 aria-pressed={pinned}
                 className={cn(
-                  'flex items-center gap-2 rounded-[0.85rem] text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]',
-                  collapsed ? 'h-9 w-9 justify-center' : 'w-full px-3 py-2',
+                  'flex items-center gap-2 rounded-[0.85rem] text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]',
+                  collapsed ? 'h-11 w-11 justify-center' : 'w-full px-3 py-2',
                 )}
               >
                 {pinned ? (
@@ -200,8 +257,8 @@ function SidebarContent({
             <button
               onClick={openShortcuts}
               className={cn(
-                'flex items-center gap-2 rounded-[0.85rem] text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]',
-                collapsed ? 'h-9 w-9 justify-center' : 'w-full px-3 py-2',
+                'flex items-center gap-2 rounded-[0.85rem] text-xs text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]',
+                collapsed ? 'h-11 w-11 justify-center' : 'w-full px-3 py-2',
               )}
               aria-label="View keyboard shortcuts"
             >
@@ -234,16 +291,15 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const expandedDesktop = pinned || hovering || focused
   const collapsed = !expandedDesktop
 
-  const railWidth = 64
-  const expandedWidth = 248
-
   // Expose the current rail width to the rest of the app via a CSS var so
   // `ClientLayout` can offset its main column without re-rendering on every
   // hover. Only the *pinned* width is reflected — hover-expand visually
   // overlays the content rather than pushing it.
   useEffect(() => {
-    const root = document.documentElement
-    root.style.setProperty('--sidebar-current', pinned ? `${expandedWidth}px` : `${railWidth}px`)
+    document.documentElement.style.setProperty(
+      '--sidebar-current',
+      pinned ? 'var(--sidebar-expanded)' : 'var(--sidebar-rail)'
+    )
   }, [pinned])
 
   return (
@@ -258,7 +314,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           if (!e.currentTarget.contains(e.relatedTarget as Node)) setFocused(false)
         }}
         style={{
-          width: collapsed ? railWidth : expandedWidth,
+          width: collapsed ? 'var(--sidebar-rail)' : 'var(--sidebar-expanded)',
           transition: 'width var(--duration-normal) var(--ease-out)',
           boxShadow: !pinned && expandedDesktop ? 'var(--shadow-lg)' : 'none',
         }}

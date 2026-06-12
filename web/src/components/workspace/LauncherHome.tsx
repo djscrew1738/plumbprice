@@ -3,12 +3,15 @@
 import { useQueries } from '@tanstack/react-query'
 import Link from 'next/link'
 import { FileUp, MessageSquare, Users } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { BlurFade, StaggerContainer, StaggerItem, MOTION } from '@/components/ui/Motion'
 import { PageShell, Stack } from '@/components/layout/shell'
 import { HomeHero, KpiStrip, ActivityPanel, InsightsPanel, type KpiItem } from './home'
 import { estimatesApi, sessionsApi, outcomesApi, type EstimateListItem } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { RECENT_CUTOFF_MS } from '@/lib/constants'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 /* ── Helpers ─────────────────────────────────────── */
 
@@ -115,28 +118,35 @@ export function LauncherHome() {
 
   return (
     <PageShell>
-      <Stack gap="lg">
-        <HomeHero greeting={greeting} resumeSession={resumeSession} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25 }}
+      >
+        <Stack gap="lg">
+          <HomeHero greeting={greeting} resumeSession={resumeSession} />
 
-        {kpis === null ? (
-          <Skeleton variant="card" className="h-[88px] rounded-[var(--radius-lg)]" />
-        ) : (
-          <KpiStrip items={kpis} />
-        )}
+          {kpis === null ? (
+            <Skeleton variant="card" className="h-[88px] rounded-[var(--radius-lg)]" />
+          ) : (
+            <KpiStrip items={kpis} />
+          )}
 
-        {isEmpty && <GettingStarted />}
+          {isEmpty && <GettingStarted />}
 
-        <ActivityPanel sessions={sessions} isSessionsLoading={sessionsQuery.isLoading} />
+          <ActivityPanel sessions={sessions} isSessionsLoading={sessionsQuery.isLoading} />
 
-        {stats && (
-          <InsightsPanel expiredCount={stats.expired} dailyActivity={dailyActivity} />
-        )}
-      </Stack>
+          {stats && (
+            <InsightsPanel expiredCount={stats.expired} dailyActivity={dailyActivity} />
+          )}
+        </Stack>
+      </motion.div>
     </PageShell>
   )
 }
 
 function GettingStarted() {
+  const reduce = useReducedMotion()
   const cards = [
     {
       icon: MessageSquare,
@@ -158,29 +168,43 @@ function GettingStarted() {
     },
   ]
   return (
-    <section
-      aria-label="Getting started"
-      className="rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] p-4 shadow-[var(--shadow-sm)]"
-    >
-      <h2 className="mb-3 text-sm font-semibold text-[color:var(--ink)]">Getting started</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {cards.map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            className="group flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] p-4 transition-colors hover:bg-[color:var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-focus)]"
-          >
-            <span className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
-              <card.icon size={16} aria-hidden />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-[color:var(--ink)]">{card.title}</p>
-              <p className="mt-0.5 text-xs text-[color:var(--muted-ink)]">{card.description}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
+    <BlurFade delay={0.3} duration={0.4}>
+      <section
+        aria-label="Getting started"
+        className="rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] p-4 shadow-[var(--shadow-sm)]"
+      >
+        <h2 className="mb-3 text-sm font-semibold text-[color:var(--ink)]">Getting started</h2>
+        <StaggerContainer
+          as="div"
+          stagger={0.06}
+          initialDelay={0.32}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          {cards.map((card) => (
+            <StaggerItem key={card.href}>
+              <motion.div
+                whileHover={reduce ? undefined : { y: -2 }}
+                whileTap={reduce ? undefined : { scale: 0.985 }}
+                transition={MOTION.spring}
+              >
+                <Link
+                  href={card.href}
+                  className="group flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] p-4 transition-colors hover:bg-[color:var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-focus)]"
+                >
+                  <span className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                    <card.icon size={16} aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-[color:var(--ink)]">{card.title}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted-ink)]">{card.description}</p>
+                  </div>
+                </Link>
+              </motion.div>
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
+      </section>
+    </BlurFade>
   )
 }
 

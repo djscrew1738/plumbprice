@@ -1,3 +1,4 @@
+<!-- From: /home/djscrew/Projects/Web-Apps/plumbprice/AGENTS.md -->
 # PlumbPrice AI — Agent Guide
 
 This file is the canonical reference for AI coding agents working in this repository. It describes the project structure, build commands, testing strategy, code conventions, and security rules. Read this before making any non-trivial change.
@@ -8,7 +9,8 @@ This file is the canonical reference for AI coding agents working in this reposi
 
 PlumbPrice AI is an autonomous plumbing pricing and estimating platform for DFW-area plumbing contractors. It replaces spreadsheet-based estimating with a chat-driven interface that produces itemized, line-level quotes backed by real supplier pricing data. The system guarantees that every price shown can be traced directly to a supplier SKU and a labor template — the LLM extracts intent and maps it to canonical line items, but all dollar math happens in pure Python with no LLM involvement.
 
-Current version: **5.8.0**
+**Current API version:** 5.9.0 (`api/app/config.py`)  
+**Current Web version:** 5.7.0 (`web/package.json`)
 
 ---
 
@@ -16,15 +18,19 @@ Current version: **5.8.0**
 
 | Layer | Technology |
 |---|---|
-| API | FastAPI (Python 3.12), async-first |
+| API | FastAPI (Python 3.13), async-first |
 | Database | PostgreSQL 16 + pgvector |
 | Cache / Queue broker | Redis 7 |
-| Task worker | Celery 5 (Python) |
+| Task worker | Celery 5 (Python) — default, high, and ml queues |
 | Object storage | MinIO (S3-compatible) |
 | Frontend | Next.js 15 (App Router, TypeScript, React 19) |
 | Styling | Tailwind CSS 3, Framer Motion, Lucide React |
-| AI / LLM | OpenAI GPT-4o, Anthropic Claude, Ollama (local) |
+| AI / LLM | Ollama (local primary, `qwen3:8b` / `hermes3:3b`) with OpenAI / Anthropic / DeepSeek cloud fallback |
 | Auth | JWT (access + refresh tokens), passlib+bcrypt |
+| Observability | Sentry (optional), OpenTelemetry (optional), Prometheus metrics |
+| Proposal PDFs | WeasyPrint |
+| Email | Resend (optional) |
+| Blueprint analysis | Local vision (`llama3.2-vision`) or OpenAI GPT-4V |
 
 ---
 
@@ -34,36 +40,39 @@ Current version: **5.8.0**
 .
 ├── api/                    # FastAPI backend
 │   ├── app/
-│   │   ├── main.py         # FastAPI app factory, middleware, routers
-│   │   ├── config.py       # Pydantic-settings configuration
-│   │   ├── database.py     # SQLAlchemy async engine + session
-│   │   ├── observability.py# Structlog setup, Sentry init
+│   │   ├── main.py         # FastAPI app factory, middleware, router registration, lifespan
+│   │   ├── config.py       # Pydantic-settings configuration (Settings class)
+│   │   ├── database.py     # SQLAlchemy async engine + session, slow-query logging
+│   │   ├── observability.py# Structlog setup, optional Sentry + OTel init
 │   │   ├── models/         # SQLAlchemy ORM models (~30 tables)
-│   │   ├── routers/        # FastAPI route modules (30+ routers)
+│   │   ├── routers/        # FastAPI route modules (v1 + v3 subpackages)
 │   │   ├── schemas/        # Pydantic request/response models
-│   │   ├── services/       # Business logic, external integrations
-│   │   └── core/           # Auth, storage, cache, rate limit, exceptions
-│   ├── alembic/            # Database migrations (Alembic)
-│   ├── tests/              # pytest suite (API + service tests)
+│   │   ├── services/       # Business logic, external integrations, pricing engine
+│   │   └── core/           # Auth, storage, cache, rate limit, exceptions, broker
+│   ├── alembic/            # Database migrations (Alembic, ~44 migration files)
+│   ├── tests/              # pytest suite (routers/, services/, eval/)
 │   ├── scripts/            # Seed script, admin creation
 │   ├── requirements.txt    # Runtime + dev dependencies
-│   ├── Dockerfile          # Python 3.12 slim
+│   ├── Dockerfile          # Python 3.13 slim
 │   └── pyproject.toml      # pytest, coverage config
 │
 ├── web/                    # Next.js frontend
 │   ├── src/
 │   │   ├── app/            # App Router pages (Next.js 15)
-│   │   ├── components/     # React components
-│   │   ├── lib/            # API clients, utilities
+│   │   ├── components/     # React components (by feature: admin, estimator, pipeline, etc.)
+│   │   ├── lib/            # API clients, utilities, hooks, offline outbox
 │   │   ├── contexts/       # React context providers
 │   │   ├── types/          # Shared TypeScript types
-│   │   └── test/           # Vitest setup file
+│   │   └── test/           # Vitest setup file (stubs matchMedia, IndexedDB, URL.createObjectURL)
 │   ├── tests/e2e/          # Playwright end-to-end tests
-│   ├── public/             # Static assets
+│   ├── public/             # Static assets, manifest.json
+│   ├── scripts/            # Bundle budget checker
 │   ├── package.json
-│   ├── next.config.ts      # Standalone output, rewrites, headers, Sentry
+│   ├── next.config.ts      # Standalone output, rewrites, headers, Sentry, bundle analyzer
 │   ├── vitest.config.ts    # Unit test config (jsdom, v8 coverage)
-│   ├── playwright.config.ts# E2E test config
+│   ├── playwright.config.ts# E2E test config (Chromium, baseURL localhost:3200)
+│   ├── tailwind.config.ts  # Custom design tokens, semantic colors, animations
+│   ├── eslint.config.mjs   # next/core-web-vitals, next/typescript, jsx-a11y, react-hooks
 │   └── Dockerfile          # Multi-stage Node 20 build
 │
 ├── worker/                 # Celery background worker
@@ -71,7 +80,9 @@ Current version: **5.8.0**
 │   │   ├── supplier_refresh.py
 │   │   ├── document_processing.py
 │   │   ├── blueprint_analysis.py
-│   │   └── privacy.py
+│   │   ├── privacy.py
+│   │   ├── finetune.py
+│   │   └── price_forecast.py
 │   ├── tests/              # Worker-specific pytest tests
 │   ├── worker.py           # Celery app factory + beat schedule
 │   ├── requirements.txt
@@ -79,12 +90,13 @@ Current version: **5.8.0**
 │
 ├── scripts/                # Host-level deployment & utility scripts
 ├── deploy/                 # Nginx config, runtime.env.example
-├── docs/                   # Architecture, API ref, deployment, privacy, perf budget
-├── docker-compose.yml      # Local dev stack (all services)
-├── docker-compose.prod.yml # Production overrides
+├── docs/                   # Architecture, API ref, deployment, privacy, perf budget, ADRs
+├── docker-compose.yml      # Local dev stack (all services + worker-ml)
+├── docker-compose.prod.yml # Production overrides (restart policies, no volume mounts)
 ├── .env.example            # Required environment variables
-├── pytest.ini              # API test config
-└── pytest-worker.ini       # API + worker combined test config
+├── pytest.ini              # API-only test config
+├── pytest-worker.ini       # API + worker combined test config
+└── AGENTS.md               # This file
 ```
 
 ---
@@ -94,13 +106,13 @@ Current version: **5.8.0**
 ### Docker Compose (recommended for local development)
 
 ```bash
-# Start all services (postgres, redis, minio, api, worker, web)
+# Start all services (postgres, redis, minio, api, worker, web, worker-ml)
 docker compose up -d
 
 # Run migrations inside the API container
 docker compose exec api alembic upgrade head
 
-# Seed the database with demo data
+# Seed the database with demo data (or let auto-seed run on first startup)
 docker compose exec api python -m app.scripts.seed
 
 # Tail logs
@@ -137,6 +149,12 @@ pip install -r requirements.txt
 celery -A worker worker --loglevel=info --concurrency=2
 ```
 
+The worker also defines a `ml` queue for fine-tuning and price-forecast tasks. Run a dedicated ML worker with:
+
+```bash
+celery -A worker.worker worker --loglevel=info --concurrency=1 --queues=ml --hostname=worker-ml@%h
+```
+
 ### Frontend (local Node)
 
 ```bash
@@ -146,7 +164,7 @@ npm install
 # Dev server (Turbopack)
 npm run dev
 
-# Production build
+# Production build (hardcodes https://app.ctlplumbingllc.com as API origin)
 npm run build:prod
 
 # Clean rebuild (archives old node_modules/.next, runs npm ci + build)
@@ -160,22 +178,25 @@ npm run build:prod
 ### API Tests
 
 ```bash
-cd api
-pytest                              # Run all API tests
-pytest -k "substring"              # Run tests matching a name
-pytest tests/routers/test_chat.py  # Run a specific file
+# From repo root — API only
+pytest -c pytest.ini
+
+# From api/ directory
+pytest
 ```
 
-- Config: `api/pyproject.toml`
-- Default DB for tests: in-memory SQLite (`sqlite+aiosqlite:///:memory:`)
-- Rate limiting is disabled in tests via `limiter.enabled = False`
-- Current coverage floor: **30%** (`fail_under = 30`)
-- Markers: `asyncio`, `integration`, `unit`
+- **Config files:** `pytest.ini` (root, API only) and `api/pyproject.toml`
+- **Default DB for tests:** In-memory SQLite (`sqlite+aiosqlite:///:memory:`) via test overrides; CI uses PostgreSQL via service container
+- **Rate limiting:** Disabled in tests via `limiter.enabled = False`
+- **Coverage floor:** **30%** (`fail_under = 30` in `api/pyproject.toml`)
+- **Markers:** `asyncio`, `integration`, `unit`
+- **Eval harness:** Located in `api/tests/eval/`; skipped by default unless `RUN_EVAL=1` is set
+- **Flaky tests:** Some admin/worker and classifier tests are excluded from CI runs (see `.github/workflows/test-coverage.yml`)
 
 ### Worker Tests
 
 ```bash
-# From repo root (uses pytest-worker.ini)
+# From repo root — API + worker combined
 pytest -c pytest-worker.ini
 ```
 
@@ -190,10 +211,10 @@ npm run test        # Vitest run with coverage
 npm run test:watch  # Vitest watch mode
 ```
 
-- Config: `vitest.config.ts`
-- Environment: `jsdom`
-- Coverage thresholds: lines 50%, functions 50%, branches 40%, statements 50%
-- Setup file: `src/test/setup.ts` (extends `@testing-library/jest-dom`, stubs `matchMedia`)
+- **Config:** `vitest.config.ts`
+- **Environment:** `jsdom`
+- **Coverage thresholds:** lines 20%, functions 35%, branches 30%, statements 20%
+- **Setup file:** `src/test/setup.ts` (extends `@testing-library/jest-dom`, stubs `matchMedia`, `indexedDB`, and `URL.createObjectURL`)
 
 ### Frontend E2E Tests
 
@@ -203,9 +224,20 @@ npm run test:e2e            # Headless Playwright run
 npx playwright test --ui    # Interactive UI mode
 ```
 
-- Config: `playwright.config.ts`
-- Browsers: Chromium, Firefox, WebKit
-- Base URL: `http://localhost:3000`
+- **Config:** `playwright.config.ts`
+- **Browsers:** Chromium (primary), with global setup for auth state
+- **Base URL:** `http://localhost:3200`
+
+### CI Workflows
+
+GitHub Actions in `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `test-coverage.yml` | push/PR to `main` | API pytest with coverage (PostgreSQL service), frontend vitest + type-check |
+| `playwright.yml` | push/PR to `main` | Full E2E suite against running stack |
+| `lighthouse.yml` | push/PR to `main` | Lighthouse CI performance audit |
+| `qa-bot.yml` | PR events | Automated QA commentary |
 
 ---
 
@@ -213,19 +245,21 @@ npx playwright test --ui    # Interactive UI mode
 
 ### Python
 
-- **Formatter / Linter**: `ruff check .` and `ruff format .`
-- **Type checker**: `mypy app/`
-- **Async-first**: All database access uses SQLAlchemy async sessions (`AsyncSession`) and `asyncpg`. Endpoints and services should be `async def` unless there is a clear reason not to.
-- **Structured logging**: Use `structlog.get_logger()`; do not use raw `print()` or standard `logging` directly.
-- **Import style**: Absolute imports from `app.*` inside `api/`; relative imports inside `worker/`.
+- **Formatter / Linter:** `ruff check .` and `ruff format .`
+- **Type checker:** `mypy app/`
+- **Async-first:** All database access uses SQLAlchemy async sessions (`AsyncSession`) and `asyncpg`. Endpoints and services should be `async def` unless there is a clear reason not to.
+- **Structured logging:** Use `structlog.get_logger()`; do not use raw `print()` or standard `logging` directly.
+- **Import style:** Absolute imports from `app.*` inside `api/`; relative imports inside `worker/`.
+- **Config:** All env-driven settings live in `app.config.settings` (Pydantic `BaseSettings`).
 
 ### TypeScript / React
 
-- **Linter**: `eslint` with `next/core-web-vitals` and `next/typescript` (config in `eslint.config.mjs`)
-- **Strict mode**: Enabled in `tsconfig.json` (`strict: true`, `noImplicitOverride: true`)
-- **Path alias**: `@/*` maps to `src/*`
-- **React patterns**: Prefer functional components with hooks. Use `React.memo` for stable UI primitives. Lazy-load heavy components with `next/dynamic` where appropriate.
-- **Data fetching**: Use `@tanstack/react-query` for server state; use `axios` for raw HTTP calls.
+- **Linter:** `eslint` with `next/core-web-vitals`, `next/typescript`, `jsx-a11y`, and `react-hooks` (config in `eslint.config.mjs`)
+- **Strict mode:** Enabled in `tsconfig.json` (`strict: true`, `noImplicitOverride: true`)
+- **Path alias:** `@/*` maps to `src/*`
+- **React patterns:** Prefer functional components with hooks. Use `React.memo` for stable UI primitives. Lazy-load heavy components with `next/dynamic` where appropriate.
+- **Data fetching:** Use `@tanstack/react-query` for server state; use `axios` for raw HTTP calls.
+- **Offline support:** The `/field/*` routes use service worker pre-caching and `outbox.ts` (Dexie/IndexedDB) for offline estimate creation and background sync.
 
 ---
 
@@ -234,30 +268,38 @@ npx playwright test --ui    # Interactive UI mode
 ### Service Architecture
 
 ```
-Browser (Next.js 15, port 3000)
+Browser (Next.js 15, port 3000 / 3200)
     │ HTTPS / REST
     ▼
-FastAPI (port 8000) — /api/v1/* and /api/v3/*
+Nginx (reverse proxy, TLS termination by Cloudflare)
+    │ /api/*  →  FastAPI (port 8000 / 8200 / 8201)
+    │ /       →  Next.js standalone (port 3000 / 3200 / 3201)
+    ▼
+FastAPI — /api/v1/* (deprecated, maintenance mode) and /api/v3/* (active)
     │ async DB queries           │ enqueue tasks
     ▼                            ▼
 PostgreSQL + pgvector      Redis (broker + cache)
                                 │
                                 ▼
-                         Celery Worker (default queue)
+                         Celery Worker — default queue
                          - supplier_refresh (daily beat)
                          - document_processing
                          - blueprint_analysis
                          - privacy.purge_expired_uploads
-                         - price_forecast (weekly beat)  ← v4.1
                                 │
-                         Celery Worker ML (ml queue)    ← v4.1
+                         Celery Worker — ml queue (concurrency=1)
                          - finetune.run_finetune
-                         - finetune.poll_finetune_job
+                         - price_forecast.compute_price_trends (weekly beat)
                                 │
                                 ▼
                          MinIO (object storage)
                          blueprints / documents / proposals / photos
 ```
+
+### API Versioning
+
+- **v1:** In maintenance mode. Deprecated with `Deprecation: true` and `Sunset: Sat, 01 Sep 2026 00:00:00 GMT` headers on non-auth responses. New consumers should use v3.
+- **v3:** Active development. All new features land here first.
 
 ### Key Design Decisions
 
@@ -266,19 +308,23 @@ PostgreSQL + pgvector      Redis (broker + cache)
 3. **Confidence transparency** — Estimates surface a 0.0–1.0 confidence score and a human-readable label (High / Medium / Low / Estimate-Only).
 4. **Async-first API** — SQLAlchemy async sessions + asyncpg for I/O-bound endpoints.
 5. **Background tasks via Celery** — Slow operations (AI inference, PDF rendering, file processing) are pushed to the worker. The API returns task IDs for polling when needed.
-6. **pgvector for semantic search** — Document embeddings are stored as vectors in PostgreSQL for similarity search (HNSW index added in v4.1 for O(log n) ANN queries).
+6. **pgvector for semantic search** — Document embeddings are stored as vectors in PostgreSQL for similarity search (HNSW index for O(log n) ANN queries).
 7. **MinIO for file storage** — S3-compatible; production can swap to AWS S3 with a config change.
 8. **Fine-tuned models shadow-deploy first** — `ml_models` table tracks model versions. Shadow mode routes 10% of traffic; promotion requires ≥100 calls and >5pp match-rate improvement. See `api/app/services/model_ab.py`.
 9. **Variance closes the loop** — Actual job costs (`EstimateOutcome.actual_total`) feed the `pricing_corrections.py` engine, which emits advisory `PricingRecommendation` records. Admin approval required before any correction is applied.
 10. **Offline-first for field** — `/field/*` routes use service worker pre-caching and `outbox.ts` IndexedDB queue for offline estimate creation and background sync.
+11. **Auto-seeding** — The API seeds canonical suppliers, products, labor templates, markup rules, tax rates, permit costs, and city zone multipliers on first startup if the database is empty.
+12. **Price enrichment cache** — Background warming at startup + periodic refresh every `price_cache_ttl_hours` (default 24h). Exposed via `/health` and admin refresh endpoint.
 
-### Database Migrations
+---
 
-- **Tool**: Alembic
-- **Source of truth**: `api/alembic/versions/`
-- **Run after every schema change**: `alembic upgrade head`
-- **Models registration**: `api/alembic/env.py` imports `app.models.*` to register metadata
-- **Sync DSN override**: Alembic uses `DATABASE_URL_SYNC` (falls back to `DATABASE_URL` with `asyncpg` → `psycopg2` replacement)
+## Database Migrations
+
+- **Tool:** Alembic
+- **Source of truth:** `api/alembic/versions/`
+- **Run after every schema change:** `alembic upgrade head`
+- **Models registration:** `api/alembic/env.py` imports `app.models.*` to register metadata
+- **Sync DSN override:** Alembic uses `DATABASE_URL_SYNC` (falls back to `DATABASE_URL` with `asyncpg` → `psycopg2` replacement)
 
 ---
 
@@ -286,11 +332,12 @@ PostgreSQL + pgvector      Redis (broker + cache)
 
 ### Production Stack
 
-- Host OS: Ubuntu 22.04 LTS recommended
+- Host OS: Ubuntu 22.04 LTS
 - Orchestration: Docker Compose with `docker-compose.yml` + `docker-compose.prod.yml`
 - Reverse proxy: Nginx (`deploy/nginx-ctlplumbingllc.conf`)
 - TLS: Cloudflare terminates public SSL; origin handles Cloudflare→origin SSL on 443
 - Domain: `app.ctlplumbingllc.com`
+- Failover: Nginx upstream includes a backup server at `192.168.1.71` (ASUS Docker) for LAN/Tailscale resilience
 
 ### Environment Files
 
@@ -347,6 +394,8 @@ PostgreSQL + pgvector      Redis (broker + cache)
 
 - CORS origins are explicitly listed in `.env` (`CORS_ORIGINS`).
 - Next.js frontend sends cache-control headers for Cloudflare edge caching; HTML pages get `s-maxage=86400`.
+- Content-Security-Policy is set report-only via `next.config.ts` headers.
+- Nginx adds `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, and `Referrer-Policy`.
 - `client_max_body_size 100M` in nginx for blueprint uploads.
 
 ---
@@ -362,7 +411,7 @@ PostgreSQL + pgvector      Redis (broker + cache)
 | `REDIS_URL` | Redis connection string |
 | `MINIO_ENDPOINT` | MinIO host:port |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | MinIO credentials |
-| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `DEEPSEEK_API_KEY` | At least one AI provider key |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `DEEPSEEK_API_KEY` | At least one AI provider key for cloud fallback |
 
 ### Optional / Important
 
@@ -376,32 +425,28 @@ PostgreSQL + pgvector      Redis (broker + cache)
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | JWT refresh token lifetime |
 | `CORS_ORIGINS` | `http://localhost:3000` | JSON array of allowed origins |
 | `HERMES_ENDPOINT_URL` | `http://localhost:11434/v1` | Local Ollama endpoint |
+| `LLM_PRIMARY_MODEL` | `qwen3:8b` | Primary local LLM |
+| `LLM_SECONDARY_MODEL` | `hermes3:3b` | Fast fallback local LLM |
 | `SENTRY_DSN` | — | Error telemetry |
 | `RESEND_API_KEY` | — | Email delivery for proposals |
 | `DATA_RETENTION_DAYS` | `90` | Max age of uploaded files |
 | `SOFT_DELETE_GRACE_DAYS` | `7` | Grace period before hard deletion |
+| `FERGUSON_CLIENT_ID` / `FERGUSON_CLIENT_SECRET` | — | Ferguson Trade API OAuth2 |
+| `FERGUSON_API_VERIFY_MODE` | `off` | `strict`, `lenient`, or `off` |
+| `ADOBE_CLIENT_ID` / `ADOBE_CLIENT_SECRET` | — | Adobe Document Cloud OAuth2 |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | — | Web Push VAPID keys |
+| `ML_FINETUNE_ENABLED` | `False` | Master switch for LLM fine-tuning |
 
 ---
 
 ## Conventions & Patterns
 
-### Pricing Engine (v5.8.0 Expansion)
-
-The pricing engine now supports **500+ SKUs** across 7 categories and **150+ labor templates**:
-
-- **Categories**: commercial_fixture, smart_plumbing, medical_healthcare, restaurant_kitchen, industrial, outdoor_irrigation, piping_fittings
-- **Bulk Import**: Admins can upload CSVs via `POST /admin/pricing/bulk-import/products` and `/labor` with dry-run preview
-- **Price Feeds**: Generic `PriceFeedAdapter` framework with Ferguson (OAuth2/simulation), Kohler, Moen, and AO Smith scrapers
-- **Feed Health**: `GET /admin/pricing/feeds/health` returns adapter status
-- **Catalog Browser**: `GET /admin/pricing/catalog` with search, filter by category/supplier
-- **Seed Scripts**: `api/scripts/seed_expanded_catalog.py` populates expanded catalog from JSON data files
-
 ### Adding a New API Endpoint
 
 1. Define Pydantic schemas in `api/app/schemas/`.
 2. Implement business logic in `api/app/services/`.
-3. Create a router in `api/app/routers/` (or extend an existing one).
-4. Register the router in `api/app/main.py` under `/api/v1`.
+3. Create a router in `api/app/routers/` (or extend an existing one). Use `api/app/routers/v3/` for new v3 endpoints.
+4. Register the router in `api/app/main.py` under the appropriate prefix.
 5. Add tests in `api/tests/` (flat or under `routers/` / `services/`).
 6. Run `pytest` and `ruff check .` before committing.
 
@@ -409,8 +454,9 @@ The pricing engine now supports **500+ SKUs** across 7 categories and **150+ lab
 
 1. Create or edit a module in `worker/tasks/`.
 2. Import the task module in `worker/worker.py` (`include` list).
-3. Add tests in `worker/tests/`.
-4. Run `pytest -c pytest-worker.ini`.
+3. Add route in `worker/worker.py` `task_routes` if it should go to a specific queue (`default`, `high`, `ml`).
+4. Add tests in `worker/tests/`.
+5. Run `pytest -c pytest-worker.ini`.
 
 ### Adding a Frontend Page
 
@@ -419,6 +465,16 @@ The pricing engine now supports **500+ SKUs** across 7 categories and **150+ lab
 3. Use `@tanstack/react-query` for data fetching.
 4. Add unit tests next to the component (`*.test.tsx`) if logic is non-trivial.
 5. Run `npm run lint` and `npm run test` before committing.
+
+### Adding or Modifying a Form
+
+1. Use `react-hook-form` for any non-trivial form (more than one field or with validation).
+2. Define the zod schema in `web/src/lib/forms/schemas.ts` (or a domain-specific file under `web/src/lib/forms/` if it is not reusable).
+3. Resolve the schema with `@hookform/resolvers/zod`.
+4. Use shared primitives (`Input`, `Select`, `Button`, `FormLayout`, `FormSection`) and wire `aria-invalid`/`aria-describedby` via the `error` prop.
+5. Keep validation logic out of component state; derive submit disabled state from `formState.isValid`/`isSubmitting` when appropriate.
+6. Add schema unit tests in `web/src/lib/forms/*.test.ts`.
+7. Run `npm run lint`, `npx tsc --noEmit`, and `npm run test` before committing.
 
 ### Database Changes
 
@@ -430,7 +486,7 @@ The pricing engine now supports **500+ SKUs** across 7 categories and **150+ lab
 
 ### Performance Budget
 
-The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`. Each route has a First Load JS ceiling (roughly +10% over the 2.5.1 baseline). PRs that exceed a route budget must justify the increase or land an offsetting reduction. Refresh the baseline with `cd web && npm run build:prod`.
+The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`. Each route has a First Load JS ceiling. PRs that exceed a route budget must justify the increase or land an offsetting reduction. Refresh the baseline with `cd web && npm run build:prod`. The `npm run perf:budget` script enforces bundle-size limits.
 
 ---
 
@@ -444,6 +500,10 @@ The frontend has a documented performance budget in `docs/PERFORMANCE_BUDGET.md`
 - `docs/PERFORMANCE_BUDGET.md` — Per-route First Load JS baseline and budget table
 - `docs/PRIVACY.md` — Data retention policy and audit logging
 - `CHANGELOG.md` — Release notes and recent changes
+- `plan-enhance-pricing-ai-chat.md` — v6.0 chat AI enhancement plan
+- `docs/plans/2026-06-10-chat-ai-phases-9-14.md` — Phases 9–14 chat implementation plan
+- `docs/plans/2026-06-11-pricing-chat-v7-roadmap.md` — v7.0 pricing-chat roadmap
+- `docs/adr/` — Architecture Decision Records (finetune pipeline, PWA offline)
 
 ---
 

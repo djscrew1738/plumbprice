@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 interface ChangeEntry {
-  category: 'Mobile / PWA' | 'Reliability' | 'AI / Pricing' | 'UX' | 'Platform'
+  category: 'Mobile / PWA' | 'Reliability' | 'AI / Pricing' | 'UX' | 'Platform' | 'Motion'
   text: string
 }
 
@@ -21,6 +21,55 @@ interface Release {
 }
 
 const RELEASES: Release[] = [
+  {
+    version: '5.2.0',
+    codename: 'Motion',
+    date: '2026-06-07',
+    highlights: [
+      { category: 'Motion', text: 'Centralized animation primitives in Motion.tsx: FadeIn, BlurFade, SlideUp, ScaleIn, Reveal, Pressable, CountUp, StaggerContainer, StaggerItem, SlideIn, SmoothPresence, Pulse, HeightAuto, Shimmer.' },
+      { category: 'Motion', text: 'Every primitive respects prefers-reduced-motion; no motion is essential for comprehension.' },
+      { category: 'UX', text: 'Button spring whileTap feedback and loading cross-fade.' },
+      { category: 'UX', text: 'Tabs animated active indicator via layoutId spring.' },
+      { category: 'UX', text: 'Select dropdown enter/exit with AnimatePresence.' },
+      { category: 'UX', text: 'Toast standardized slide/fade spring transitions.' },
+      { category: 'UX', text: 'StatCard hover lift and CountUp value animation.' },
+      { category: 'UX', text: 'Public home and launcher home choreographed entrance animations.' },
+      { category: 'Platform', text: 'parseCurrencyValue() parses formatted currency strings back to numbers for CountUp animations.' },
+      { category: 'Platform', text: 'No new animation dependencies; reuses existing Framer Motion ^12.37.0.' },
+      { category: 'Platform', text: 'All routes remain within First Load JS budgets.' },
+    ],
+  },
+  {
+    version: '4.1.0',
+    codename: 'AI Intelligence Overhaul + Mobile PWA',
+    date: '2026-06-06',
+    highlights: [
+      { category: 'AI / Pricing', text: 'Ferguson OAuth2 client-credentials flow with Redis-cached tokens and legacy API key fallback.' },
+      { category: 'AI / Pricing', text: 'Supplier price change alerts when delta exceeds ±10%.' },
+      { category: 'AI / Pricing', text: 'Weekly price forecast model and price_trend labels on line items.' },
+      { category: 'Reliability', text: 'Actual cost capture with Close Job API and variance analytics dashboard.' },
+      { category: 'AI / Pricing', text: 'Pricing correction recommendations with admin approval workflow.' },
+      { category: 'AI / Pricing', text: 'LLM fine-tuning pipeline with shadow A/B testing and ML Model Registry.' },
+      { category: 'AI / Pricing', text: 'GPT-4V photo-to-estimate with multi-photo sessions and confidence review flags.' },
+      { category: 'AI / Pricing', text: 'Advanced blueprint takeoff with scale calibration and structured pipe run routing.' },
+      { category: 'Mobile / PWA', text: 'PWA manifest, service worker v4.1.0, and field tech mobile UI.' },
+      { category: 'Mobile / PWA', text: 'Field routes: /field, /field/photo, /field/voice, /field/jobs.' },
+      { category: 'Mobile / PWA', text: 'GPS county detection and Web Push notifications via VAPID.' },
+      { category: 'Platform', text: 'ML worker on dedicated Celery queue, HNSW pgvector index, and Prometheus metrics.' },
+    ],
+  },
+  {
+    version: '3.0.0',
+    codename: 'AI & Pricing Engine Overhaul',
+    date: '2026-05-17',
+    highlights: [
+      { category: 'AI / Pricing', text: 'Structured LLM outputs via Pydantic parsing with transparent chain-of-thought reasoning.' },
+      { category: 'AI / Pricing', text: 'Tool-calling agent v3 with parallel execution and clarification mode.' },
+      { category: 'AI / Pricing', text: 'Dynamic market pricing engine with Redis caching and admin CRUD.' },
+      { category: 'AI / Pricing', text: 'Blueprint Vision v3 with fixture/room/pipe run detection.' },
+      { category: 'Platform', text: 'API v3 router suite: chat, estimates, blueprints, market-pricing, suppliers.' },
+    ],
+  },
   {
     version: '2.1.1',
     codename: 'Field-First',

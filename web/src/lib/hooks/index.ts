@@ -36,6 +36,7 @@ export {
   useBulkImportLabor,
   useAdminCatalog,
   useAdminFeedHealth,
+  useAdminPriceAlerts,
   adminKeys,
   type LaborTemplate,
   type MarkupRule,
@@ -43,6 +44,8 @@ export {
   type BulkImportResult,
   type AdminCatalogItem,
   type FeedHealthItem,
+  type PriceAlertItem,
+  type PriceAlertResponse,
 } from './useAdmin'
 
 export {

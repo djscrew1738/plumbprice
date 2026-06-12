@@ -1,9 +1,10 @@
 'use client'
 
 import {
-  ArrowLeft, Zap, Copy, Download, Printer, Mail, Trash2, RefreshCw, AlertTriangle,
+  ArrowLeft, Zap, Copy, Download, Printer, Mail, Trash2, AlertTriangle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import dynamic from 'next/dynamic'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -59,15 +60,17 @@ export function EstimateHeader({
   onDeleteCancel,
 }: EstimateHeaderProps) {
   return (
-    <div className="bg-[hsl(var(--background))]/80 backdrop-blur-xl border-b border-white/[0.06] px-4 py-3 sticky top-0 z-10">
+    <div className="bg-[color:var(--panel)]/80 backdrop-blur-xl border-b border-[color:var(--line)] px-4 py-3 sticky top-0 z-10">
       <div className="max-w-4xl mx-auto flex items-center gap-3">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onBack}
           aria-label="Go back"
-          className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+          className="shrink-0"
         >
           <ArrowLeft size={16} />
-        </button>
+        </Button>
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-bold text-[color:var(--ink)] truncate">{estimate.title || `Estimate #${estimate.id}`}</h1>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -84,7 +87,7 @@ export function EstimateHeader({
             )}
             <span className="text-[11px] text-[color:var(--muted-ink)]">{estimate.county} County</span>
             {estimate.is_expired && (
-              <span className="inline-flex items-center gap-0.5 text-[hsl(var(--warning))] text-[10px] font-semibold">
+              <span className="inline-flex items-center gap-0.5 text-[color:var(--warning)] text-[10px] font-semibold">
                 <AlertTriangle size={11} /> Expired
               </span>
             )}
@@ -92,54 +95,65 @@ export function EstimateHeader({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Tooltip content="Open in Estimator">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onOpenEstimator}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               aria-label="Open in Estimator"
+              className="shrink-0"
             >
               <Zap size={15} />
-            </button>
+            </Button>
           </Tooltip>
 
           <Tooltip content="Duplicate estimate">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onDuplicate}
               disabled={duplicating}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+              isLoading={duplicating}
               aria-label="Duplicate estimate"
+              className="shrink-0"
             >
-              {duplicating ? <RefreshCw size={15} className="animate-spin" /> : <Copy size={15} />}
-            </button>
+              <Copy size={15} />
+            </Button>
           </Tooltip>
 
           <Tooltip content="Export CSV">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onExportCSV}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               aria-label="Export as CSV"
+              className="shrink-0"
             >
               <Download size={16} />
-            </button>
+            </Button>
           </Tooltip>
 
           <Tooltip content="Print / Save as PDF">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onPrint}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               aria-label="Print or save as PDF"
+              className="shrink-0"
             >
               <Printer size={16} />
-            </button>
+            </Button>
           </Tooltip>
 
           <Tooltip content="Send proposal email">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onSendProposal}
-              className="p-2 rounded-xl hover:bg-white/[0.07] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
               aria-label="Send proposal"
+              className="shrink-0"
             >
               <Mail size={15} />
-            </button>
+            </Button>
           </Tooltip>
 
           <OutcomeButtons
@@ -149,13 +163,15 @@ export function EstimateHeader({
           />
 
           <Tooltip content="Delete estimate">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onDeleteClick}
-              className="p-2 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors"
               aria-label="Delete estimate"
+              className="shrink-0 hover:text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]"
             >
               <Trash2 size={15} />
-            </button>
+            </Button>
           </Tooltip>
 
           <div className="text-right ml-1">
@@ -191,38 +207,36 @@ function OutcomeButtons({
   outcomeSubmitting: boolean
   onRecordOutcome: (value: OutcomeValue) => void
 }) {
-  const OUTCOMES: { value: OutcomeValue, label: string, color: string }[] = [
-    { value: 'won', label: 'Won', color: 'emerald-600' },
-    { value: 'lost', label: 'Lost', color: 'red-600' },
-    { value: 'no_bid', label: 'No Bid', color: 'zinc-500' },
-    { value: 'pending', label: 'Pending', color: 'yellow-600' },
+  const OUTCOMES: { value: OutcomeValue; label: string; variant: 'success' | 'danger' | 'neutral' | 'warning' }[] = [
+    { value: 'won', label: 'Won', variant: 'success' },
+    { value: 'lost', label: 'Lost', variant: 'danger' },
+    { value: 'no_bid', label: 'No Bid', variant: 'neutral' },
+    { value: 'pending', label: 'Pending', variant: 'warning' },
   ]
   return (
     <div className="flex items-center gap-1">
-      {OUTCOMES.map(({ value, label, color }) => (
-        <button
-          key={value}
-          onClick={() => onRecordOutcome(value)}
-          disabled={outcomeSubmitting || outcome === value}
-          aria-label={`Mark estimate as ${label.toLowerCase()}`}
-          className={cn(
-            'px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1 transition-colors',
-            value === 'won' && 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-            value === 'lost' && 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
-            value === 'no_bid' && 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100',
-            value === 'pending' && 'border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
-            outcome === value && 'ring-2 ring-inset ring-'+color+' font-bold',
-            outcomeSubmitting && outcome === value && 'opacity-60',
-            outcome === value ? '' : 'opacity-80',
-          )}
-        >
-          {outcomeSubmitting && outcome === value ? (
-            <span className="animate-spin mr-1 w-3 h-3 border-2 border-t-transparent border-current rounded-full" />
-          ) : null}
-          {label}
-        </button>
-      ))}
+      {OUTCOMES.map(({ value, label, variant }) => {
+        const isActive = outcome === value
+        return (
+          <Button
+            key={value}
+            variant={isActive ? variant : 'ghost'}
+            size="xs"
+            onClick={() => onRecordOutcome(value)}
+            disabled={outcomeSubmitting || isActive}
+            isLoading={outcomeSubmitting && isActive}
+            aria-label={`Mark estimate as ${label.toLowerCase()}`}
+            className={cn(
+              !isActive && variant === 'success' && 'text-[color:var(--success)] hover:text-[color:var(--success)] hover:bg-[color:var(--success-soft)]',
+              !isActive && variant === 'danger' && 'text-[color:var(--danger)] hover:text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]',
+              !isActive && variant === 'warning' && 'text-[color:var(--warning)] hover:text-[color:var(--warning)] hover:bg-[color:var(--warning-soft)]',
+              !isActive && variant === 'neutral' && 'text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)]',
+            )}
+          >
+            {label}
+          </Button>
+        )
+      })}
     </div>
   )
 }
-

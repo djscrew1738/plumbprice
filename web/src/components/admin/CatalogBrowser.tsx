@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { Search, Package, Tag, Factory, ArrowUpDown, AlertCircle } from 'lucide-react'
+import { Search, Factory, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'

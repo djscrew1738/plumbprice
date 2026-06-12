@@ -43,6 +43,13 @@ class Estimate(Base):
     blueprint_pipe_run_ft = Column(Float, nullable=True)
     confidence_components = Column(JSON, default=dict)
 
+    # Phase 12 — Multi-estimate comparison variants
+    variant_group_id = Column(String(36), nullable=True, index=True)
+    variant_label = Column(String(50), nullable=True)
+
+    # Phase 14 — Estimate versioning & branching
+    branch_id = Column(String(36), nullable=True, index=True)
+
     # Metadata
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
@@ -134,3 +141,32 @@ class Proposal(Base):
     client_user_agent = Column(String(500), nullable=True)
 
     estimate = relationship("Estimate")
+
+
+class EstimateFeedback(Base):
+    """User feedback (thumbs up/down) on an estimate."""
+    __tablename__ = "estimate_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    estimate_id = Column(Integer, ForeignKey("estimates.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    vote = Column(String(10), nullable=False)  # 'up' | 'down'
+    reason = Column(Text, nullable=True)
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class EstimateComment(Base):
+    """Threaded comments on estimates for collaboration."""
+    __tablename__ = "estimate_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    estimate_id = Column(Integer, ForeignKey("estimates.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("estimate_comments.id", ondelete="CASCADE"), nullable=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    estimate = relationship("Estimate")
+    user = relationship("User")
+    replies = relationship("EstimateComment", backref="parent", remote_side=[id])

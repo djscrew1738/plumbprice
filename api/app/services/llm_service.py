@@ -153,6 +153,7 @@ class LLMService:
           - "openai":   api.openai.com using OPENAI_API_KEY
           - "anthropic": Anthropic API via the openai-compatible shim if
                         ANTHROPIC_API_KEY is set; falls back to local Hermes.
+          - "deepseek": DeepSeek API (OpenAI-compatible) using DEEPSEEK_API_KEY
           - "hermes" / "ollama" / anything else: local Ollama at
                         HERMES_ENDPOINT_URL using HERMES_API_KEY.
 
@@ -168,6 +169,12 @@ class LLMService:
                     return AsyncOpenAI(
                         base_url=getattr(settings, "anthropic_base_url", None) or "https://api.anthropic.com/v1",
                         api_key=settings.anthropic_api_key,
+                        timeout=timeout,
+                    )
+                if cloud_provider == "deepseek" and settings.deepseek_api_key:
+                    return AsyncOpenAI(
+                        base_url="https://api.deepseek.com/v1",
+                        api_key=settings.deepseek_api_key,
                         timeout=timeout,
                     )
                 if cloud_provider == "openai" and settings.openai_api_key:
@@ -198,6 +205,13 @@ class LLMService:
                     timeout=timeout,
                 )
 
+            if provider == "deepseek" and settings.deepseek_api_key:
+                return AsyncOpenAI(
+                    base_url="https://api.deepseek.com/v1",
+                    api_key=settings.deepseek_api_key,
+                    timeout=timeout,
+                )
+
             return AsyncOpenAI(
                 base_url=settings.hermes_endpoint_url,
                 api_key=settings.hermes_api_key,
@@ -225,6 +239,8 @@ class LLMService:
         if provider == "openai" and settings.openai_api_key:
             return settings.default_llm_model
         if provider == "anthropic" and settings.anthropic_api_key:
+            return settings.default_llm_model
+        if provider == "deepseek" and settings.deepseek_api_key:
             return settings.default_llm_model
         if self._active_tier == "secondary":
             return settings.llm_secondary_model
@@ -271,6 +287,7 @@ class LLMService:
                 and (
                     (settings.llm_cloud_fallback_provider == "openai" and settings.openai_api_key)
                     or (settings.llm_cloud_fallback_provider == "anthropic" and settings.anthropic_api_key)
+                    or (settings.llm_cloud_fallback_provider == "deepseek" and settings.deepseek_api_key)
                 )
             )
             if cloud_ok:

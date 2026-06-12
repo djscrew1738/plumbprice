@@ -10,8 +10,8 @@ const { estimateBreakdownMock } = vi.hoisted(() => ({
   estimateBreakdownMock: vi.fn(),
 }))
 
-vi.mock('../estimator/EstimateBreakdown', () => ({
-  EstimateBreakdown: (props: unknown) => {
+vi.mock('@/components/estimator-v3/EstimateBreakdownV3', () => ({
+  EstimateBreakdownV3: (props: unknown) => {
     estimateBreakdownMock(props)
     return <div data-testid="estimate-breakdown" />
   },

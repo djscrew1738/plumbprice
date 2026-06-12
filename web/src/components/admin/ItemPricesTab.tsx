@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Pencil, Save, RefreshCw, Plus } from 'lucide-react'
+import { Pencil, Save, Plus } from 'lucide-react'
 import { type CanonicalItem, type CanonicalItemSupplier } from '@/lib/api'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -148,13 +149,14 @@ export function ItemPricesTab({
       header: '',
       render: (item) => (
         <Tooltip content="Edit prices">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={(e) => { e.stopPropagation(); onOpenEditItem(item) }}
-            className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-colors"
             aria-label={`Edit prices for ${item.canonical_item}`}
           >
             <Pencil size={12} />
-          </button>
+          </Button>
         </Tooltip>
       ),
     },
@@ -174,14 +176,15 @@ export function ItemPricesTab({
           aria-label="Search canonical items"
           className="flex-1"
         />
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={onOpenAddItem}
-          className="btn-primary shrink-0 px-3 py-2 min-h-[40px] flex items-center gap-1.5 text-sm"
           aria-label="Add new canonical item"
         >
           <Plus size={14} />
           <span className="hidden sm:inline">Add Item</span>
-        </button>
+        </Button>
       </div>
 
       <DataTable
@@ -207,18 +210,18 @@ export function ItemPricesTab({
           ))}
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCloseEditItem} className="rounded-xl border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
+          <Button variant="secondary" size="sm" onClick={onCloseEditItem}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={onSaveEditItem}
-            disabled={editSaving}
-            className="btn-primary rounded-xl px-4 py-2 text-sm disabled:opacity-40 flex items-center gap-1.5"
-            aria-busy={editSaving}
+            isLoading={editSaving}
           >
-            {editSaving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+            <Save size={13} />
             Save
-          </button>
+          </Button>
         </div>
       </Modal>
 
@@ -244,18 +247,19 @@ export function ItemPricesTab({
           ))}
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCloseAddItem} className="rounded-xl border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors">
+          <Button variant="secondary" size="sm" onClick={onCloseAddItem}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={onSaveAddItem}
-            disabled={addItemSaving || addItemName.trim().length < 3}
-            className="btn-primary rounded-xl px-4 py-2 text-sm disabled:opacity-40 flex items-center gap-1.5"
-            aria-busy={addItemSaving}
+            isLoading={addItemSaving}
+            disabled={addItemName.trim().length < 3}
           >
-            {addItemSaving ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+            <Plus size={13} />
             Add Item
-          </button>
+          </Button>
         </div>
       </Modal>
     </>

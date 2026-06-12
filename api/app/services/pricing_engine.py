@@ -12,6 +12,7 @@ from app.services.labor_engine import (
     LaborTemplateData, get_template,
 )
 from app.services.pricing_config_service import pricing_config_service
+from app.services.pricing_adjustment_service import pricing_adjustment_service
 
 logger = structlog.get_logger()
 
@@ -248,8 +249,15 @@ class PricingEngine:
 
         job_type = template.category
 
+        # 0. Pricing adjustments (admin-approved corrections)
+        labor_adj_mult = pricing_adjustment_service.get_labor_multiplier(task_code, job_type)
+        markup_override = pricing_adjustment_service.get_material_markup_override(job_type)
+        overhead_adder = pricing_adjustment_service.get_overhead_adder(task_code, job_type)
+
         # 1. Labor calculation
-        labor_data = template.calculate_labor_cost(access=access, urgency=urgency)
+        labor_data = template.calculate_labor_cost(
+            access=access, urgency=urgency, adjustment_multiplier=labor_adj_mult
+        )
         labor_cost = labor_data["total_labor_cost"]
 
         # 2. Materials cost
@@ -259,10 +267,11 @@ class PricingEngine:
         tax_rate = pricing_config_service.get_tax_rate(county)
         tax_amount = round(materials_cost * tax_rate, 2)
 
-        # 4. Markup
+        # 4. Markup (with optional admin override)
         markup_rules = pricing_config_service.get_markup_rule(job_type)
-        materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
-        misc_flat = markup_rules["misc_flat"]
+        effective_markup_pct = markup_override if markup_override is not None else markup_rules["materials_markup_pct"]
+        materials_markup = round(materials_cost * effective_markup_pct, 2)
+        misc_flat = markup_rules["misc_flat"] + overhead_adder
 
         # 5. Trip charge (first-visit service call)
         trip_cost = get_trip_charge(county) if include_trip_charge and job_type == "service" else 0.0
@@ -477,6 +486,12 @@ class PricingEngine:
         final_template = get_template("FINAL_SET_PER_FIXTURE")
         underground_template = get_template("UNDERGROUND_PER_LF")
 
+        # Pricing adjustments (admin-approved corrections)
+        job_type = "construction"
+        labor_adj_mult = pricing_adjustment_service.get_labor_multiplier("ROUGH_IN_PER_BATH_GROUP", job_type)
+        markup_override = pricing_adjustment_service.get_material_markup_override(job_type)
+        overhead_adder = pricing_adjustment_service.get_overhead_adder("ROUGH_IN_PER_BATH_GROUP", job_type)
+
         line_items = []
         labor_total = 0.0
 
@@ -495,7 +510,7 @@ class PricingEngine:
 
         # Rough-in
         if rough_template:
-            rough_data = rough_template.calculate_labor_cost()
+            rough_data = rough_template.calculate_labor_cost(adjustment_multiplier=labor_adj_mult)
             rough_cost = round(rough_data["total_labor_cost"] * bath_groups, 2)
             labor_total += rough_cost
             line_items.append(LineItem(
@@ -510,7 +525,7 @@ class PricingEngine:
 
         # Top-out
         if topout_template:
-            topout_data = topout_template.calculate_labor_cost()
+            topout_data = topout_template.calculate_labor_cost(adjustment_multiplier=labor_adj_mult)
             topout_cost = round(topout_data["total_labor_cost"] * fixture_count, 2)
             labor_total += topout_cost
             line_items.append(LineItem(
@@ -525,7 +540,7 @@ class PricingEngine:
 
         # Final set
         if final_template:
-            final_data = final_template.calculate_labor_cost()
+            final_data = final_template.calculate_labor_cost(adjustment_multiplier=labor_adj_mult)
             final_cost = round(final_data["total_labor_cost"] * fixture_count, 2)
             labor_total += final_cost
             line_items.append(LineItem(
@@ -539,7 +554,7 @@ class PricingEngine:
 
         # Underground
         if underground_lf > 0 and underground_template:
-            ug_data = underground_template.calculate_labor_cost()
+            ug_data = underground_template.calculate_labor_cost(adjustment_multiplier=labor_adj_mult)
             ug_cost = round(ug_data["total_labor_cost"] * underground_lf, 2)
             labor_total += ug_cost
             line_items.append(LineItem(
@@ -557,8 +572,9 @@ class PricingEngine:
         tax_rate = pricing_config_service.get_tax_rate(county)
         tax_amount = round(materials_cost * tax_rate, 2)
         markup_rules = pricing_config_service.get_markup_rule("construction")
-        materials_markup = round(materials_cost * markup_rules["materials_markup_pct"], 2)
-        misc_flat = markup_rules["misc_flat"]
+        effective_markup_pct = markup_override if markup_override is not None else markup_rules["materials_markup_pct"]
+        materials_markup = round(materials_cost * effective_markup_pct, 2)
+        misc_flat = markup_rules["misc_flat"] + overhead_adder
 
         # Permit cost (construction typically requires a plumbing permit)
         permit_cost = get_permit_cost("WHOLE_HOUSE_REPIPE_PEX", county)
@@ -805,6 +821,41 @@ class PricingEngine:
             assumptions=result.assumptions + [f"Quantity: {q} units — trip charge & permit billed once"],
             sources=result.sources,
             pricing_trace={**result.pricing_trace, "quantity": q},
+        )
+
+    def recompute_totals(self, result: EstimateResult) -> EstimateResult:
+        """Recalculate all monetary totals from line items using engine logic.
+
+        Tax is computed on materials only (Texas rule). Subtotal includes labor,
+        materials, markup, misc, trip, permit and city premium.
+        """
+        from dataclasses import replace
+
+        labor_total = sum(li.total_cost for li in result.line_items if li.line_type == "labor")
+        materials_total = sum(li.total_cost for li in result.line_items if li.line_type == "material")
+        markup_total = sum(li.total_cost for li in result.line_items if li.line_type == "markup")
+        misc_total = sum(li.total_cost for li in result.line_items if li.line_type == "misc")
+        trip_total = sum(li.total_cost for li in result.line_items if li.line_type == "trip")
+        permit_total = sum(li.total_cost for li in result.line_items if li.line_type == "permit")
+
+        city_premium = getattr(result, "city_premium", 0.0)
+        subtotal = round(
+            labor_total + materials_total + markup_total + misc_total + trip_total + permit_total + city_premium, 2
+        )
+        tax_total = round(materials_total * result.tax_rate, 2)
+        grand_total = round(subtotal + tax_total, 2)
+
+        return replace(
+            result,
+            labor_total=labor_total,
+            materials_total=materials_total,
+            markup_total=markup_total,
+            misc_total=misc_total,
+            trip_total=trip_total,
+            permit_total=permit_total,
+            subtotal=subtotal,
+            tax_total=tax_total,
+            grand_total=grand_total,
         )
 
     def _get_tax_rate(self, county: str) -> float:

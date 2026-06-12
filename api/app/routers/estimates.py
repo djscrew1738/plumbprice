@@ -557,3 +557,162 @@ async def delete_estimate(
     estimate = await _get_owned_estimate(estimate_id, db, current_user)
     await db.delete(estimate)
     await db.commit()
+
+
+# ── Estimate Feedback ─────────────────────────────────────────────────────────
+
+from app.models.estimates import EstimateFeedback
+
+
+class EstimateFeedbackRequest(BaseModel):
+    vote: Literal["up", "down"]
+    reason: Optional[str] = None
+
+
+class EstimateFeedbackResponse(BaseModel):
+    id: int
+    estimate_id: int
+    vote: str
+    reason: Optional[str]
+    created_at: Optional[datetime]
+
+
+@router.post("/{estimate_id}/feedback", response_model=EstimateFeedbackResponse)
+async def create_estimate_feedback(
+    estimate_id: int,
+    req: EstimateFeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Submit thumbs-up/down feedback on an estimate."""
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
+
+    # Upsert: delete existing feedback from this user on this estimate, then insert new.
+    from sqlalchemy import delete
+    await db.execute(
+        delete(EstimateFeedback).where(
+            EstimateFeedback.estimate_id == estimate_id,
+            EstimateFeedback.user_id == current_user.id,
+        )
+    )
+
+    feedback = EstimateFeedback(
+        estimate_id=estimate_id,
+        user_id=current_user.id,
+        vote=req.vote,
+        reason=req.reason,
+    )
+    db.add(feedback)
+    await db.commit()
+    await db.refresh(feedback)
+
+    # Trigger feedback-driven correction analysis on thumbs-down
+    if req.vote == "down":
+        try:
+            from app.services.feedback_corrections import (
+                generate_recommendation_from_feedback,
+                _get_primary_task_code,
+            )
+            task_code = await _get_primary_task_code(db, estimate_id)
+            if task_code:
+                await generate_recommendation_from_feedback(
+                    db, task_code, organization_id=current_user.organization_id
+                )
+        except Exception as exc:
+            logger.warning("feedback_corrections.trigger_failed", error=str(exc))
+
+    logger.info("estimate_feedback.created", estimate_id=estimate_id, vote=req.vote, user_id=current_user.id)
+    return EstimateFeedbackResponse(
+        id=feedback.id,
+        estimate_id=feedback.estimate_id,
+        vote=feedback.vote,
+        reason=feedback.reason,
+        created_at=feedback.created_at,
+    )
+
+
+@router.get("/{estimate_id}/feedback", response_model=EstimateFeedbackResponse)
+async def get_estimate_feedback(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the current user's feedback on an estimate."""
+    await _get_owned_estimate(estimate_id, db, current_user)
+    result = await db.execute(
+        select(EstimateFeedback).where(
+            EstimateFeedback.estimate_id == estimate_id,
+            EstimateFeedback.user_id == current_user.id,
+        )
+    )
+    feedback = result.scalar_one_or_none()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="No feedback found")
+    return EstimateFeedbackResponse(
+        id=feedback.id,
+        estimate_id=feedback.estimate_id,
+        vote=feedback.vote,
+        reason=feedback.reason,
+        created_at=feedback.created_at,
+    )
+
+
+@router.delete("/{estimate_id}/feedback", status_code=http_status.HTTP_204_NO_CONTENT)
+async def delete_estimate_feedback(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove feedback from an estimate."""
+    from sqlalchemy import delete
+    await _get_owned_estimate(estimate_id, db, current_user)
+    await db.execute(
+        delete(EstimateFeedback).where(
+            EstimateFeedback.estimate_id == estimate_id,
+            EstimateFeedback.user_id == current_user.id,
+        )
+    )
+    await db.commit()
+
+
+@router.get("/{estimate_id}/recommendations")
+async def get_estimate_recommendations(
+    estimate_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return any pending pricing recommendations for the estimate's primary task_code."""
+    estimate = await _get_owned_estimate(estimate_id, db, current_user)
+
+    from app.services.feedback_corrections import _get_primary_task_code
+    from app.models.pricing_intelligence import PricingRecommendation
+
+    task_code = await _get_primary_task_code(db, estimate_id)
+    if not task_code:
+        return {"task_code": None, "recommendations": []}
+
+    result = await db.execute(
+        select(PricingRecommendation)
+        .where(
+            PricingRecommendation.task_code == task_code,
+            PricingRecommendation.status == "pending",
+        )
+        .order_by(PricingRecommendation.created_at.desc())
+    )
+    recs = result.scalars().all()
+    return {
+        "task_code": task_code,
+        "recommendations": [
+            {
+                "id": r.id,
+                "recommendation_type": r.recommendation_type,
+                "avg_variance_pct": r.avg_variance_pct,
+                "sample_count": r.sample_count,
+                "suggested_adjustment": r.suggested_adjustment,
+                "rationale": r.rationale,
+                "source": r.source,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in recs
+        ],
+    }

@@ -11,9 +11,45 @@ from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
 
+from app.core.auth import get_current_user
+from app.main import app
+from app.models.projects import Project
+from app.models.users import User
 from app.services.pricing_engine import EstimateResult, LineItem
 
 pytestmark = pytest.mark.asyncio
+
+TEST_USER_ID = 9901
+
+
+def _test_user() -> User:
+    return User(
+        id=TEST_USER_ID,
+        email="capture@x.com",
+        full_name="Capture Test",
+        is_active=True,
+        is_admin=False,
+        organization_id=None,
+        role="estimator",
+    )
+
+
+@pytest.fixture(autouse=True)
+async def _isolate_capture_tests(db_session):
+    """Scope auth to a dedicated test user and scrub their projects between tests."""
+    original = app.dependency_overrides.get(get_current_user)
+    app.dependency_overrides[get_current_user] = _test_user
+    yield
+    # Clean up projects created by this test user
+    from sqlalchemy import delete
+    await db_session.execute(
+        delete(Project).where(Project.created_by == TEST_USER_ID)
+    )
+    await db_session.commit()
+    if original is not None:
+        app.dependency_overrides[get_current_user] = original
+    else:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def _make_result() -> EstimateResult:

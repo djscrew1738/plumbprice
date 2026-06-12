@@ -1,8 +1,9 @@
 'use client'
 
-import { Copy, Download, Printer, Trash2, RefreshCw } from 'lucide-react'
+import { Copy, Download, Printer, Trash2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { Tooltip } from '@/components/ui/Tooltip'
+import { Button } from '@/components/ui/Button'
+import { ActionBar, ActionBarGroup, ActionBarDivider } from '@/components/ui/ActionBar'
 
 const ConfirmDialog = dynamic(() => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })), { ssr: false })
 
@@ -34,53 +35,54 @@ export function EstimateActionsBar({
   onDeleteCancel,
 }: EstimateActionsBarProps) {
   return (
-    <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-3 bg-[color:var(--panel)]">
-      <Tooltip content="Duplicate estimate">
-        <button
+    <ActionBar className="border-t border-[color:var(--line)] px-4 py-3 bg-[color:var(--panel)]">
+      <ActionBarGroup>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onDuplicate}
           disabled={duplicating}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-white/[0.07] transition-colors disabled:opacity-40"
+          isLoading={duplicating}
           aria-label="Duplicate estimate"
         >
-          {duplicating ? <RefreshCw size={14} className="animate-spin" /> : <Copy size={14} />}
+          <Copy size={14} />
           Duplicate
-        </button>
-      </Tooltip>
+        </Button>
 
-      <Tooltip content="Export as CSV">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onExportCSV}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-white/[0.07] transition-colors"
           aria-label="Export as CSV"
         >
           <Download size={14} />
           Export CSV
-        </button>
-      </Tooltip>
+        </Button>
 
-      <Tooltip content="Print or save as PDF">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onPrint}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-white/[0.07] transition-colors"
           aria-label="Print or save as PDF"
         >
           <Printer size={14} />
           Print
-        </button>
-      </Tooltip>
+        </Button>
+      </ActionBarGroup>
 
-      <div className="flex-1" />
+      <ActionBarDivider />
 
-      <Tooltip content="Delete estimate">
-        <button
+      <ActionBarGroup align="right">
+        <Button
+          variant="danger"
+          size="sm"
           onClick={onDeleteClick}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/0.1)] transition-colors"
           aria-label="Delete estimate"
         >
           <Trash2 size={14} />
           Delete
-        </button>
-      </Tooltip>
+        </Button>
+      </ActionBarGroup>
 
       <ConfirmDialog
         open={confirmDelete}
@@ -93,6 +95,6 @@ export function EstimateActionsBar({
         variant="danger"
         isLoading={deleting}
       />
-    </div>
+    </ActionBar>
   )
 }

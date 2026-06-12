@@ -9,6 +9,7 @@ import {
 import { projectsApi } from '@/lib/api'
 import { formatCurrency, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { format, isValid } from 'date-fns'
@@ -101,14 +102,15 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
-      {/* Back button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+        className="text-[color:var(--muted-ink)] hover:text-[color:var(--ink)]"
       >
         <ArrowLeft size={16} />
         Back to Pipeline
-      </button>
+      </Button>
 
       {/* Project header */}
       <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-5 space-y-4">
@@ -193,7 +195,7 @@ export default function ProjectDetailPage() {
               <li key={est.id}>
                 <button
                   onClick={() => router.push(`/estimates/${est.id}`)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[color:var(--panel-strong)] transition-colors text-left group"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[color:var(--panel-strong)] transition-colors text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[color:var(--ink)] truncate group-hover:text-[color:var(--accent-strong)] transition-colors">

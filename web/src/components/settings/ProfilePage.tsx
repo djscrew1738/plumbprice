@@ -1,12 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { User, Lock, Camera, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { useProfile, useUpdateProfile, useChangePassword, useUploadAvatar } from '@/lib/hooks'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { useAnnouncer } from '@/components/layout/GlobalAnnouncer'
+import { profileSchema, passwordSchema, type ProfileFormValues, type PasswordFormValues } from '@/lib/forms/schemas'
 
 export function ProfilePage() {
   const { data: profile, isLoading, isError, refetch } = useProfile()
@@ -14,64 +18,58 @@ export function ProfilePage() {
   const changePassword = useChangePassword()
   const uploadAvatar = useUploadAvatar()
   const avatarInputRef = useRef<HTMLInputElement>(null)
-
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [passwordError, setPasswordError] = useState('')
-
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null)
+  const { announce } = useAnnouncer()
+
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { name: '', email: '', phone: '' },
+  })
+
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  })
 
   useEffect(() => {
     if (profile) {
-      setName(profile.full_name ?? '')
-      setEmail(profile.email ?? '')
-      setPhone(profile.phone ?? '')
+      profileForm.reset({
+        name: profile.full_name ?? '',
+        email: profile.email ?? '',
+        phone: profile.phone ?? '',
+      })
     }
-  }, [profile])
+  }, [profile, profileForm])
 
   const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    // Show local preview immediately
     const url = URL.createObjectURL(file)
     setLocalAvatarUrl(url)
     uploadAvatar.mutate(file, {
       onError: () => setLocalAvatarUrl(null),
     })
-    // Reset input so same file can be re-selected
     e.target.value = ''
   }, [uploadAvatar])
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault()
-    updateProfile.mutate({ name, email, phone })
-  }
-
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPasswordError('')
-
-    if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match')
-      return
-    }
-
-    changePassword.mutate(
-      { current_password: currentPassword, new_password: newPassword },
+  const onSubmitProfile = (values: ProfileFormValues) => {
+    updateProfile.mutate(
+      { name: values.name, email: values.email, phone: values.phone },
       {
         onSuccess: () => {
-          setCurrentPassword('')
-          setNewPassword('')
-          setConfirmPassword('')
+          announce('Profile saved successfully')
+        },
+      },
+    )
+  }
+
+  const onSubmitPassword = (values: PasswordFormValues) => {
+    changePassword.mutate(
+      { current_password: values.currentPassword, new_password: values.newPassword },
+      {
+        onSuccess: () => {
+          passwordForm.reset()
+          announce('Password updated successfully')
         },
       },
     )
@@ -103,7 +101,7 @@ export function ProfilePage() {
   return (
     <div className="space-y-6">
       {/* Profile Information */}
-      <form onSubmit={handleSaveProfile}>
+      <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} noValidate>
         <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-6">
           <div className="flex items-center gap-3 mb-6">
             <User size={18} className="text-[color:var(--accent-strong)]" aria-hidden="true" />
@@ -125,7 +123,7 @@ export function ProfilePage() {
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadAvatar.isPending}
-                className="absolute -bottom-1 -right-1 rounded-full bg-[color:var(--accent)] p-1.5 text-white shadow-md hover:bg-[color:var(--accent-strong)] transition-colors disabled:opacity-60"
+                className="absolute -bottom-1 -right-1 rounded-full bg-[color:var(--accent)] p-1.5 text-white shadow-md hover:bg-[color:var(--accent-strong)] transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                 aria-label="Change avatar"
               >
                 {uploadAvatar.isPending
@@ -153,23 +151,23 @@ export function ProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               placeholder="Enter your name"
+              error={profileForm.formState.errors.name?.message}
+              {...profileForm.register('name')}
             />
             <Input
               label="Email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
+              error={profileForm.formState.errors.email?.message}
+              {...profileForm.register('email')}
             />
             <Input
               label="Phone"
               type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
               placeholder="(555) 123-4567"
+              error={profileForm.formState.errors.phone?.message}
+              {...profileForm.register('phone')}
             />
           </div>
 
@@ -182,7 +180,7 @@ export function ProfilePage() {
       </form>
 
       {/* Change Password */}
-      <form onSubmit={handleChangePassword}>
+      <form onSubmit={passwordForm.handleSubmit(onSubmitPassword)} noValidate>
         <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] p-6">
           <div className="flex items-center gap-3 mb-6">
             <Lock size={18} className="text-[color:var(--accent-strong)]" aria-hidden="true" />
@@ -196,26 +194,25 @@ export function ProfilePage() {
               <Input
                 label="Current Password"
                 type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
+                error={passwordForm.formState.errors.currentPassword?.message}
+                {...passwordForm.register('currentPassword')}
               />
             </div>
             <Input
               label="New Password"
               type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Enter new password"
               helperText="Minimum 8 characters"
+              error={passwordForm.formState.errors.newPassword?.message}
+              {...passwordForm.register('newPassword')}
             />
             <Input
               label="Confirm New Password"
               type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm new password"
-              error={passwordError || undefined}
+              error={passwordForm.formState.errors.confirmPassword?.message}
+              {...passwordForm.register('confirmPassword')}
             />
           </div>
 
@@ -224,7 +221,6 @@ export function ProfilePage() {
               type="submit"
               variant="secondary"
               isLoading={changePassword.isPending}
-              disabled={!currentPassword || !newPassword || !confirmPassword}
             >
               Update Password
             </Button>

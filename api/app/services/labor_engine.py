@@ -62,11 +62,12 @@ class LaborTemplateData:
         self,
         access: str = "first_floor",
         urgency: str = "standard",
+        adjustment_multiplier: float = 1.0,
     ) -> dict:
         """Calculate total labor cost with multipliers applied."""
         access_mult = self.access_multipliers.get(access, 1.0)
         urgency_mult = self.urgency_multipliers.get(urgency, 1.0)
-        combined_mult = access_mult * urgency_mult
+        combined_mult = access_mult * urgency_mult * adjustment_multiplier
 
         adjusted_hours = self.base_hours * combined_mult
         lead_cost = adjusted_hours * self.lead_rate

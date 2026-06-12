@@ -25,13 +25,22 @@ async def revenue(
     db: AsyncSession = Depends(get_db),
 ):
     """Aggregate won revenue with monthly + job-type breakdowns."""
-    cache_key = f"analytics:revenue:{current_user.organization_id}:{period}"
+    org_id = getattr(current_user, "organization_id", None)
+    if org_id is None:
+        return {
+            "total_won": 0,
+            "deal_count": 0,
+            "avg_deal_size": 0,
+            "by_month": [],
+            "by_job_type": [],
+        }
+    cache_key = f"analytics:revenue:{org_id}:{period}"
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
     result = await analytics_service.compute_revenue(
         db=db,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         period=period,
     )
     await cache_set(cache_key, result, ttl=_ANALYTICS_TTL)
@@ -44,17 +53,35 @@ async def pipeline(
     db: AsyncSession = Depends(get_db),
 ):
     """Stage counts, avg residency, and conversion rates."""
-    cache_key = f"analytics:pipeline:{current_user.organization_id}"
+    org_id = getattr(current_user, "organization_id", None)
+    if org_id is None:
+        return {
+            "stage_counts": {
+                "lead": 0, "qualified": 0, "estimate_sent": 0,
+                "negotiation": 0, "won": 0, "lost": 0,
+            },
+            "avg_time_in_stage_hours": {
+                "lead": 0.0, "qualified": 0.0, "estimate_sent": 0.0,
+                "negotiation": 0.0,
+            },
+            "conversion": {
+                "lead_to_quoted": 0.0,
+                "quoted_to_won": 0.0,
+                "overall": 0.0,
+            },
+            "active_pipeline_value": 0.0,
+        }
+    cache_key = f"analytics:pipeline:{org_id}"
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
     base = await analytics_service.compute_pipeline(
         db=db,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
     )
     base["active_pipeline_value"] = round(
         await analytics_service.compute_active_pipeline_value(
-            db=db, organization_id=current_user.organization_id
+            db=db, organization_id=org_id
         ),
         2,
     )
@@ -69,13 +96,16 @@ async def rep_performance(
     db: AsyncSession = Depends(get_db),
 ):
     """Per-rep quotes/won/revenue. Admin only."""
-    cache_key = f"analytics:rep-performance:{current_user.organization_id}:{period}"
+    org_id = getattr(current_user, "organization_id", None)
+    if org_id is None:
+        return {"period": period, "reps": []}
+    cache_key = f"analytics:rep-performance:{org_id}:{period}"
     cached = await cache_get(cache_key)
     if cached is not None:
         return cached
     rows = await analytics_service.compute_rep_performance(
         db=db,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         period=period,
     )
     result = {"period": period, "reps": rows}

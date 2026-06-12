@@ -39,6 +39,7 @@ class PricingRecommendation(Base):
     suggested_adjustment = Column(Float, nullable=False)
     rationale = Column(Text, nullable=True)
     status = Column(String(20), nullable=False, server_default="pending")  # pending | approved | rejected
+    source = Column(String(20), nullable=False, server_default="outcome")  # outcome | feedback
     reviewed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -46,6 +47,7 @@ class PricingRecommendation(Base):
     __table_args__ = (
         Index("ix_pricing_recs_org_status", "organization_id", "status"),
         Index("ix_pricing_recs_task_code", "task_code"),
+        Index("ix_pricing_recs_source_status", "source", "status"),
     )
 
 

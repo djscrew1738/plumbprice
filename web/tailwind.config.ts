@@ -116,10 +116,6 @@ const config: Config = {
         'elev-3': 'var(--shadow-lg)',
         'elev-4': 'var(--shadow-xl)',
         'glow': 'var(--shadow-glow)',
-        'legacy-1': 'var(--shadow-sm-legacy)',
-        'legacy-2': 'var(--shadow-md-legacy)',
-        'legacy-3': 'var(--shadow-lg-legacy)',
-        'legacy-4': 'var(--shadow-xl-legacy)',
       },
       transitionDuration: {
         'instant': 'var(--duration-instant)',

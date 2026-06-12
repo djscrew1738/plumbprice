@@ -13,6 +13,7 @@ import { TrendingUp, TrendingDown, Minus, CheckCircle, XCircle, AlertCircle } fr
 import { apiV3 } from '@/lib/api-v3'
 import { formatCurrency } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Button } from '@/components/ui/Button'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,20 +147,24 @@ function RecommendationCard({
         {rec.avg_variance_pct.toFixed(1)}% over estimated
       </p>
       <div className="flex gap-2">
-        <button
+        <Button
+          variant="success"
+          size="sm"
           onClick={onApprove}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-medium hover:bg-green-100 transition-colors min-h-[36px]"
+          className="flex-1"
         >
           <CheckCircle className="h-3.5 w-3.5" />
           Approve
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
           onClick={onReject}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-medium hover:bg-red-100 transition-colors min-h-[36px]"
+          className="flex-1"
         >
           <XCircle className="h-3.5 w-3.5" />
           Reject
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -222,9 +227,14 @@ export default function VarianceDashboardPage() {
         <div className="rounded-xl bg-red-50 border border-red-200 p-6 text-center">
           <AlertCircle className="h-6 w-6 text-red-500 mx-auto mb-2" />
           <p className="text-sm text-red-700">Failed to load variance data</p>
-          <button onClick={() => void refetch()} className="mt-2 text-sm text-red-600 underline">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void refetch()}
+            className="mt-2"
+          >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 

@@ -9,7 +9,9 @@ from unittest.mock import patch, AsyncMock
 from app.models.sessions import ChatSession, ChatMessage as ChatMessageModel
 from app.services.agent_v3 import AgentV3Result
 from app.services.llm_structured import ClassifyResult
-from app.services.pricing_engine import EstimateResult
+from app.services.pricing_engine import EstimateResult, LineItem
+from app.services.intake_agent import IntakeResult as IntakeAgentResult
+from app.services.revision_suggestions import RevisionSuggestion
 
 pytestmark = pytest.mark.asyncio
 
@@ -303,3 +305,185 @@ async def test_chat_v3_stream_reuses_session(
 
     assert pricing_data is not None
     assert pricing_data["session_id"] == session_id
+
+
+@patch("app.routers.v3.chat.agent_v3.process_message", new_callable=AsyncMock)
+async def test_chat_v3_stream_includes_template_used(
+    mock_process: AsyncMock,
+    test_client: AsyncClient,
+    mock_agent_result: AgentV3Result,
+):
+    """The streaming pricing event surfaces the template code for revision context."""
+    mock_process.return_value = mock_agent_result
+
+    async with test_client.stream(
+        "POST",
+        "/api/v3/chat/price/stream",
+        json={"message": "how much to replace a toilet", "county": "Dallas"},
+    ) as response:
+        assert response.status_code == 200
+        lines = []
+        async for chunk in response.aiter_lines():
+            lines.append(chunk)
+
+    pricing_data = None
+    for i, line in enumerate(lines):
+        if line.startswith("data: ") and i > 0 and lines[i - 1] == "event: pricing":
+            import json
+            pricing_data = json.loads(line[6:])
+            break
+
+    assert pricing_data is not None
+    assert pricing_data.get("template_used") == "TOILET_REPLACE_STANDARD"
+
+
+# ---------------------------------------------------------------------------
+# Tests — v6.6.0 intake + proactive revision suggestions
+# ---------------------------------------------------------------------------
+
+@patch("app.routers.v3.chat.agent_v3.process_message", new_callable=AsyncMock)
+async def test_chat_v3_returns_intake_result(
+    mock_process: AsyncMock,
+    test_client: AsyncClient,
+    mock_agent_result: AgentV3Result,
+):
+    """First message returns inferred intake facts."""
+    mock_agent_result.intake_result = IntakeAgentResult(
+        intent="toilet_replace",
+        fixture_counts={"toilet": 2},
+        location="Plano",
+        urgency="same_day",
+        preferred_tier="standard",
+        confidence=0.85,
+    )
+    mock_process.return_value = mock_agent_result
+
+    response = await test_client.post(
+        "/api/v3/chat/price",
+        json={"message": "2 toilets in Plano same day", "county": "Dallas"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intake_result"] is not None
+    assert data["intake_result"]["fixture_counts"]["toilet"] == 2
+    assert data["intake_result"]["location"] == "Plano"
+
+
+@patch("app.routers.v3.chat.agent_v3.process_message", new_callable=AsyncMock)
+async def test_chat_v3_returns_revision_suggestions(
+    mock_process: AsyncMock,
+    test_client: AsyncClient,
+    mock_estimate_result: EstimateResult,
+):
+    """Estimate response includes proactive revision suggestions."""
+    mock_estimate_result.line_items = [
+        LineItem(
+            line_type="labor",
+            description="Water heater replacement",
+            quantity=1,
+            unit="ea",
+            unit_cost=100.0,
+            total_cost=100.0,
+            canonical_item="WH_50G_GAS_STANDARD",
+        )
+    ]
+    result = AgentV3Result(
+        classification=ClassifyResult(
+            task_code="WH_50G_GAS_STANDARD",
+            county="Dallas",
+            reasoning="Clear water heater request.",
+        ),
+        estimate=mock_estimate_result,
+        narrative="The estimated cost is $502.38.",
+        classified_by="llm",
+        tool_calls=[],
+        revision_suggestions=[
+            RevisionSuggestion(
+                id="abc123",
+                label="Upgrade to tankless water heater",
+                action="upgrade",
+                delta={"target": "water_heater", "to": "tankless"},
+                confidence=0.85,
+            )
+        ],
+    )
+    mock_process.return_value = result
+
+    response = await test_client.post(
+        "/api/v3/chat/price",
+        json={"message": "replace water heater", "county": "Dallas"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["revision_suggestions"]) == 1
+    assert data["revision_suggestions"][0]["label"] == "Upgrade to tankless water heater"
+
+
+@patch("app.routers.v3.chat.agent_v3.process_message", new_callable=AsyncMock)
+async def test_chat_v3_accepts_confirmed_intake(
+    mock_process: AsyncMock,
+    test_client: AsyncClient,
+    mock_agent_result: AgentV3Result,
+):
+    """Confirmed intake is forwarded to the agent."""
+    mock_process.return_value = mock_agent_result
+
+    response = await test_client.post(
+        "/api/v3/chat/price",
+        json={
+            "message": "replace toilet",
+            "county": "Dallas",
+            "confirmed_intake": {
+                "intent": "toilet_replace",
+                "fixture_counts": {"toilet": 3},
+                "location": "Frisco",
+                "urgency": "emergency",
+                "preferred_tier": "premium",
+                "confidence": 1.0,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    call_kwargs = mock_process.call_args.kwargs
+    assert call_kwargs["confirmed_intake"]["fixture_counts"]["toilet"] == 3
+
+
+@patch("app.routers.v3.chat.agent_v3.generate_variants", new_callable=AsyncMock)
+async def test_chat_v3_compare_forwards_confirmed_intake(
+    mock_generate: AsyncMock,
+    test_client: AsyncClient,
+    mock_agent_result: AgentV3Result,
+):
+    """The compare endpoint forwards a confirmed intake to variant generation."""
+    mock_generate.return_value = [
+        mock_agent_result,
+        mock_agent_result,
+        mock_agent_result,
+    ]
+
+    response = await test_client.post(
+        "/api/v3/chat/compare",
+        json={
+            "message": "replace toilet",
+            "county": "Dallas",
+            "variant_tiers": ["budget", "standard", "premium"],
+            "confirmed_intake": {
+                "intent": "toilet_replace",
+                "fixture_counts": {"toilet": 3},
+                "location": "Frisco",
+                "urgency": "emergency",
+                "preferred_tier": "premium",
+                "confidence": 1.0,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["variants"]) == 3
+    call_kwargs = mock_generate.call_args.kwargs
+    confirmed = call_kwargs["confirmed_intake"]
+    assert confirmed.fixture_counts["toilet"] == 3

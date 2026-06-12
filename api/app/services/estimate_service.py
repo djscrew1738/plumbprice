@@ -66,6 +66,8 @@ async def persist_estimate(
     source: str = "api",
     created_by: Optional[int] = None,
     organization_id: Optional[int] = None,
+    variant_group_id: Optional[str] = None,
+    variant_label: Optional[str] = None,
 ) -> Estimate:
     """
     Persist an EstimateResult to the database.
@@ -93,6 +95,8 @@ async def persist_estimate(
         chat_context=chat_context,
         created_by=created_by,
         organization_id=organization_id,
+        variant_group_id=variant_group_id,
+        variant_label=variant_label,
         updated_at=datetime.now(timezone.utc),
         valid_until=datetime.now(timezone.utc) + timedelta(days=30),
     )

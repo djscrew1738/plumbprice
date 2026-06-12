@@ -29,7 +29,7 @@ from app.database import init_db, AsyncSessionLocal, get_db
 from app.routers import chat, estimates, suppliers, blueprints, proposals, auth, admin, admin_pricing, projects, templates, health, documents, sessions, outcomes, public, notifications, analytics, memories, photos, voice, public_agent, feature_flags, addon_suggestions, jobcost, doc_generation, public_agent_audit, price_drift, adobe
 from app.routers.v3 import chat as chat_v3, estimates as estimates_v3, market_pricing as market_pricing_v3, suppliers as suppliers_v3, agent_trace as agent_trace_v3, blueprints as blueprints_v3
 from app.routers.v3 import geo as geo_v3, push_notifications as push_v3, photo_sessions as photo_sessions_v3
-from app.routers.v3 import variance_analytics as variance_analytics_v3, ml_models as ml_models_v3
+from app.routers.v3 import variance_analytics as variance_analytics_v3, ml_models as ml_models_v3, admin_price_alerts as admin_price_alerts_v3
 from app.core.exceptions import PricingError, SupplierError, BlueprintError, pricing_error_handler, supplier_error_handler, blueprint_error_handler
 from app.core.auth import get_current_user
 from app.models.users import User
@@ -457,6 +457,7 @@ app.include_router(push_v3.router,                  prefix="/api/v3",  tags=["pu
 app.include_router(photo_sessions_v3.router,        prefix="/api/v3",  tags=["photo-sessions"])
 app.include_router(variance_analytics_v3.router,    prefix="/api/v3",  tags=["variance"])
 app.include_router(ml_models_v3.router,             prefix="/api/v3",  tags=["ml-models"])
+app.include_router(admin_price_alerts_v3.router,     prefix="/api/v3",  tags=["admin"])
 
 
 @app.get("/health")

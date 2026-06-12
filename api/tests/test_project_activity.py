@@ -28,9 +28,16 @@ async def _cleanup(client: AsyncClient, pid: int) -> None:
     await client.delete(f"/api/v1/projects/{pid}")
 
 
-async def test_activity_empty_on_create(test_client: AsyncClient):
+async def test_activity_empty_on_create(test_client: AsyncClient, db_session):
     pid = await _create_project(test_client, name="Activity Empty")
     try:
+        # Guard against cross-test contamination: previous tests may have left
+        # activity rows for a reused project_id (session-scoped in-memory DB).
+        from sqlalchemy import delete
+        from app.models.projects import ProjectActivity
+        await db_session.execute(delete(ProjectActivity).where(ProjectActivity.project_id == pid))
+        await db_session.commit()
+
         resp = await test_client.get(f"/api/v1/projects/{pid}/activity")
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json() == []

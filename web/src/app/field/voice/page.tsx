@@ -14,6 +14,8 @@ import { api } from '@/lib/api'
 import { DFW_COUNTIES, DEFAULT_COUNTY } from '@/lib/constants'
 import { VOICE_TICK_MS, API_TIMEOUT_LONG_MS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/utils'
+import { haptic } from '@/lib/haptics'
+import { cn } from '@/lib/utils'
 
 type EstimateSummary = {
   task_code: string | null
@@ -56,6 +58,7 @@ export default function FieldVoicePage() {
   }, [])
 
   const start = async () => {
+    haptic('tap')
     setError(null)
     setQuote(null)
     setElapsed(0)
@@ -70,25 +73,21 @@ export default function FieldVoicePage() {
       recorder.start()
       recorderRef.current = recorder
       setRecording(true)
+      haptic('selection')
       tickRef.current = window.setInterval(
         () => setElapsed((s) => s + VOICE_TICK_MS / 1000),
         VOICE_TICK_MS
       )
     } catch {
       setError('Microphone access denied. Check browser permissions.')
+      haptic('error')
     }
   }
 
   const stop = async () => {
     if (!recorderRef.current || recorderRef.current.state === 'inactive') return
-    recorderRef.current.stop()
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    if (tickRef.current) {
-      window.clearInterval(tickRef.current)
-      tickRef.current = null
-    }
-    setRecording(false)
-    setBusy(true)
+    haptic('warning')
+    // Assign onstop BEFORE calling stop() to avoid missing the event
     recorderRef.current.onstop = async () => {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
       const form = new FormData()
@@ -100,12 +99,22 @@ export default function FieldVoicePage() {
           timeout: API_TIMEOUT_LONG_MS,
         })
         setQuote(resp.data)
+        haptic('success')
       } catch {
         setError('Voice processing failed. Please try again.')
+        haptic('error')
       } finally {
         setBusy(false)
       }
     }
+    recorderRef.current.stop()
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    if (tickRef.current) {
+      window.clearInterval(tickRef.current)
+      tickRef.current = null
+    }
+    setRecording(false)
+    setBusy(true)
   }
 
   return (
@@ -147,16 +156,18 @@ export default function FieldVoicePage() {
           <button
             onPointerDown={start}
             onPointerUp={stop}
+            onPointerCancel={stop}
+            onPointerLeave={stop}
             disabled={busy}
             aria-label={recording ? 'Release to send' : 'Hold to record'}
-            className={[
+            className={cn(
               'w-28 h-28 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95',
               recording
                 ? 'bg-red-500 text-white ring-4 ring-red-300 animate-pulse'
                 : busy
                   ? 'bg-surface-2 text-muted-foreground cursor-not-allowed'
                   : 'bg-brand text-white hover:bg-brand/90',
-            ].join(' ')}
+            )}
           >
             {recording ? (
               <MicOff className="h-10 w-10" />

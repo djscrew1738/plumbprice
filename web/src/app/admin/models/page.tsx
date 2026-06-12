@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Brain, CheckCircle, Clock, Archive, AlertCircle, ArrowUpCircle } from 'lucide-react'
 import { apiV3 } from '@/lib/api-v3'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Button } from '@/components/ui/Button'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -175,22 +176,24 @@ function ModelCard({
       {model.status !== 'retired' && (
         <div className="flex gap-2 pt-1">
           {model.status === 'shadow' && (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={onPromote}
               disabled={!canPromote}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand text-white text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand/90 transition-colors min-h-[36px]"
             >
               <ArrowUpCircle className="h-3.5 w-3.5" />
               Promote to Production
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onRetire}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-1 text-muted-foreground text-xs font-medium hover:text-foreground hover:bg-surface-2 transition-colors min-h-[36px]"
           >
             <Archive className="h-3.5 w-3.5" />
             Retire
-          </button>
+          </Button>
         </div>
       )}
 
@@ -239,9 +242,14 @@ export default function ModelRegistryPage() {
         <div className="rounded-xl bg-red-50 border border-red-200 p-6 text-center">
           <AlertCircle className="h-6 w-6 text-red-500 mx-auto mb-2" />
           <p className="text-sm text-red-700">Failed to load model registry</p>
-          <button onClick={() => void refetch()} className="mt-2 text-sm text-red-600 underline">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void refetch()}
+            className="mt-2"
+          >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 

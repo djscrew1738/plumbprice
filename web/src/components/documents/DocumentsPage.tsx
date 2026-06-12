@@ -10,7 +10,7 @@ import {
 } from '@/lib/api'
 import { formatRelativeTime } from '@/lib/utils'
 import { useDocuments, useUploadDocument, useDeleteDocument } from '@/lib/hooks'
-import { PageIntro } from '@/components/layout/PageIntro'
+import { PageShell, PageHeader } from '@/components/layout/shell'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { SearchInput } from '@/components/ui/SearchInput'
@@ -251,24 +251,23 @@ export function DocumentsPage() {
 
   // ── Render ──
   return (
-    <div className="min-h-full">
-      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
-        <PageIntro
-          eyebrow="Document Management"
-          title="Manage uploaded documents."
-          description="Upload, search, and manage supplier catalogs, price sheets, and specs."
-          actions={
-            <button
-              onClick={() => setUploadOpen(true)}
-              className="btn-primary flex items-center gap-2 px-4 py-2.5"
-            >
-              <Upload size={15} />
-              Upload Document
-            </button>
-          }
-        >
-          {/* Filter bar */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <PageShell width="default">
+      <PageHeader
+        eyebrow="Document Management"
+        title="Manage uploaded documents."
+        description="Upload, search, and manage supplier catalogs, price sheets, and specs."
+        actions={
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="btn-primary flex items-center gap-2 px-4 py-2.5"
+          >
+            <Upload size={15} />
+            Upload Document
+          </button>
+        }
+      />
+      {/* Filter bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <SearchInput
               value={search}
               onChange={setSearch}
@@ -297,9 +296,8 @@ export function DocumentsPage() {
               className="sm:w-40"
             />
           </div>
-        </PageIntro>
 
-        <div className="mt-4">
+      <div className="mt-4">
           {isError && !isLoading && (
             <ErrorState
               message="Could not load documents"
@@ -351,7 +349,6 @@ export function DocumentsPage() {
             />
           )}
         </div>
-      </div>
 
       {/* ── Upload Modal ── */}
       <Modal
@@ -478,6 +475,6 @@ export function DocumentsPage() {
         variant="danger"
         isLoading={deleteMutation.isPending}
       />
-    </div>
+    </PageShell>
   )
 }

@@ -86,6 +86,7 @@ async def upload_document(
         status="pending",
         supplier_id=supplier_id,
         organization_id=current_user.organization_id,
+        uploaded_by=current_user.id,
     )
     db.add(doc)
     await db.commit()
@@ -109,13 +110,22 @@ async def download_document(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Stream a document from storage. Organisation-scoped."""
-    result = await db.execute(
-        select(UploadedDocument).where(
-            UploadedDocument.id == doc_id,
-            UploadedDocument.organization_id == current_user.organization_id,
+    """Stream a document from storage. Organisation or user scoped."""
+    user_org = getattr(current_user, "organization_id", None)
+    if user_org is not None:
+        result = await db.execute(
+            select(UploadedDocument).where(
+                UploadedDocument.id == doc_id,
+                UploadedDocument.organization_id == user_org,
+            )
         )
-    )
+    else:
+        result = await db.execute(
+            select(UploadedDocument).where(
+                UploadedDocument.id == doc_id,
+                UploadedDocument.uploaded_by == current_user.id,
+            )
+        )
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -142,14 +152,24 @@ async def list_documents(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List documents belonging to the current user's organization."""
-    q = (
-        select(UploadedDocument)
-        .where(UploadedDocument.organization_id == current_user.organization_id)
-        .order_by(UploadedDocument.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-    )
+    """List documents belonging to the current user's organization or user."""
+    user_org = getattr(current_user, "organization_id", None)
+    if user_org is not None:
+        q = (
+            select(UploadedDocument)
+            .where(UploadedDocument.organization_id == user_org)
+            .order_by(UploadedDocument.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    else:
+        q = (
+            select(UploadedDocument)
+            .where(UploadedDocument.uploaded_by == current_user.id)
+            .order_by(UploadedDocument.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
     result = await db.execute(q)
     docs = result.scalars().all()
     return [
@@ -171,13 +191,22 @@ async def delete_document(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Remove a document (organization-scoped)."""
-    result = await db.execute(
-        select(UploadedDocument).where(
-            UploadedDocument.id == doc_id,
-            UploadedDocument.organization_id == current_user.organization_id,
+    """Remove a document (organization or user scoped)."""
+    user_org = getattr(current_user, "organization_id", None)
+    if user_org is not None:
+        result = await db.execute(
+            select(UploadedDocument).where(
+                UploadedDocument.id == doc_id,
+                UploadedDocument.organization_id == user_org,
+            )
         )
-    )
+    else:
+        result = await db.execute(
+            select(UploadedDocument).where(
+                UploadedDocument.id == doc_id,
+                UploadedDocument.uploaded_by == current_user.id,
+            )
+        )
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")

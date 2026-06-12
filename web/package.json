@@ -1,19 +1,21 @@
 {
   "name": "plumbprice-ai-web",
-  "version": "4.1.0",
+  "version": "5.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-${npm_package_version}} next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "build:prod": "API_URL=https://app.ctlplumbingllc.com NEXT_PUBLIC_API_URL=https://app.ctlplumbingllc.com NEXT_PUBLIC_APP_VERSION=4.1.0 next build",
+    "build:prod": "API_URL=https://app.ctlplumbingllc.com NEXT_PUBLIC_API_URL=https://app.ctlplumbingllc.com NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-${npm_package_version}} next build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lhci": "lhci autorun --config=./lighthouserc.json",
     "perf:budget": "node scripts/check-bundle-budget.mjs",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "audit:ui-patterns": "node scripts/audit-ui-patterns.mjs",
+    "audit:dead-code": "npx knip"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -29,6 +31,7 @@
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "dexie": "^4.4.2",
     "framer-motion": "^12.37.0",
@@ -38,6 +41,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.76.0",
     "react-markdown": "^9.0.1",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.4.3"

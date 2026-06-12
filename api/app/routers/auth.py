@@ -132,6 +132,7 @@ async def login(
     user_full_name = user.full_name
     user_role = user.role
     user_is_admin = user.is_admin
+    user_org_id = getattr(user, "organization_id", None)
     await db.commit()
 
     access_token = create_access_token(
@@ -149,6 +150,7 @@ async def login(
             "full_name": user_full_name,
             "role": user_role,
             "is_admin": user_is_admin,
+            "organization_id": user_org_id,
         },
     }
 

@@ -304,6 +304,42 @@ export interface FeedHealthItem {
   response_time_ms: number | null
 }
 
+export interface PriceAlertItem {
+  id: number
+  product_id: number
+  canonical_item: string
+  product_name: string
+  supplier_name: string
+  old_cost: number
+  new_cost: number
+  pct_change: number
+  source: string
+  recorded_at: string
+}
+
+export interface PriceAlertResponse {
+  alerts: PriceAlertItem[]
+  total: number
+  threshold_pct: number
+}
+
+export function useAdminPriceAlerts(
+  days: number = 7,
+  thresholdPct: number = 10,
+  options?: Partial<UseQueryOptions<PriceAlertResponse>>,
+) {
+  return useQuery({
+    queryKey: ['admin', 'price-alerts', days, thresholdPct],
+    queryFn: async () => {
+      const res = await api.get('/admin/price-alerts', {
+        params: { days, threshold_pct: thresholdPct },
+      })
+      return (res.data ?? { alerts: [], total: 0, threshold_pct: thresholdPct }) as PriceAlertResponse
+    },
+    ...options,
+  })
+}
+
 export function useBulkImportLabor() {
   const queryClient = useQueryClient()
   const toast = useToast()

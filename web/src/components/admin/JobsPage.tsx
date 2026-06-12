@@ -6,7 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
-import { PageIntro } from '@/components/layout/PageIntro'
+import { PageShell, PageHeader } from '@/components/layout/shell'
+import { Button } from '@/components/ui/Button'
 
 const ConfirmDialog = dynamic(
   () => import('@/components/ui/ConfirmDialog').then(m => ({ default: m.ConfirmDialog })),
@@ -77,8 +78,8 @@ export function JobsPage() {
   const items = data?.items ?? []
 
   return (
-    <div className="mx-auto max-w-6xl p-6 space-y-6">
-      <PageIntro
+    <PageShell width="default" className="space-y-6">
+      <PageHeader
         title="Failed Jobs"
         eyebrow="Worker observability"
         description="Review blueprint and document processing failures and re-enqueue them."
@@ -91,14 +92,14 @@ export function JobsPage() {
             : `${items.length} failed job${items.length === 1 ? '' : 's'}`}
           {isFetching && !isLoading ? ' · refreshing…' : ''}
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => refetch()}
-          className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-3 py-1.5 text-sm hover:bg-[color:var(--panel-hover)]"
         >
           <RefreshCw size={14} />
           Refresh
-        </button>
+        </Button>
       </div>
 
       {error ? (
@@ -136,14 +137,14 @@ export function JobsPage() {
                     {formatWhen(job.updated_at)}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      className="rounded-md border border-[color:var(--border)] px-2 py-1 text-xs hover:bg-[color:var(--panel-hover)] disabled:opacity-50"
+                    <Button
+                      variant="secondary"
+                      size="xs"
                       onClick={() => setRetryTarget(job)}
                       disabled={retryMutation.isPending}
                     >
                       Retry
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -167,6 +168,6 @@ export function JobsPage() {
         confirmLabel="Retry"
         isLoading={retryMutation.isPending}
       />
-    </div>
+    </PageShell>
   )
 }

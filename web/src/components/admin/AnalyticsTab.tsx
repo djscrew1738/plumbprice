@@ -7,6 +7,7 @@ import { useRevenue, usePipelineAnalytics, useRepPerformance, analyticsKeys } fr
 import { TrendingUp } from 'lucide-react'
 import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Button } from '@/components/ui/Button'
 
 const PERIOD_OPTIONS = [
   { value: '30d', label: 'Last 30 days' },
@@ -55,12 +56,13 @@ function RevenueSection() {
       {error && !isLoading && (
         <div className="rounded-xl border border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] p-4 text-sm text-[hsl(var(--danger))]">
           Failed to load revenue data.{' '}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => void queryClient.invalidateQueries({ queryKey: [...analyticsKeys.all, 'revenue', period] })}
-            className="underline"
           >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
@@ -164,12 +166,13 @@ function PipelineSection() {
       {error && !isLoading && (
         <div className="rounded-xl border border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] p-4 text-sm text-[hsl(var(--danger))]">
           Failed to load pipeline data.{' '}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => void queryClient.invalidateQueries({ queryKey: [...analyticsKeys.all, 'pipeline-analytics'] })}
-            className="underline"
           >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
@@ -246,12 +249,13 @@ function RepPerformanceSection() {
       {error && !isLoading && (
         <div className="rounded-xl border border-[hsl(var(--danger)/0.2)] bg-[hsl(var(--danger)/0.1)] p-4 text-sm text-[hsl(var(--danger))]">
           Failed to load rep performance data.{' '}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => void queryClient.invalidateQueries({ queryKey: [...analyticsKeys.all, 'rep-performance', period] })}
-            className="underline"
           >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 

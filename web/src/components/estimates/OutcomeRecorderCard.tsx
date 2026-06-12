@@ -2,8 +2,10 @@
 
 import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Send, Download, RefreshCw, FileOutput, Copy, Check } from 'lucide-react'
+import { Send, Download, FileOutput, Copy, Check } from 'lucide-react'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { proposalsApi } from '@/lib/api'
 import { downloadBlob } from '@/lib/utils'
@@ -145,38 +147,42 @@ export function OutcomeRecorderCard({
                   <div className="flex items-center gap-1 shrink-0">
                     {p.public_token && (
                       <Tooltip content={copiedId === p.id ? 'Copied!' : 'Copy public link'}>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => void handleCopyLink(p.public_token, p.id)}
-                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
                           aria-label="Copy public proposal link"
+                          className="h-7 w-7"
                         >
                           {copiedId === p.id ? <Check size={12} /> : <Copy size={12} />}
-                        </button>
+                        </Button>
                       </Tooltip>
                     )}
                     <Tooltip content="Resend proposal">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => void handleResend(p.id)}
                         disabled={resendingId === p.id}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                        isLoading={resendingId === p.id}
                         aria-label="Resend proposal"
+                        className="h-7 w-7"
                       >
-                        {resendingId === p.id
-                          ? <RefreshCw size={12} className="animate-spin" />
-                          : <Send size={12} />}
-                      </button>
+                        <Send size={12} />
+                      </Button>
                     </Tooltip>
                     <Tooltip content="Download PDF">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => void handleDownloadPdf(p.id)}
                         disabled={downloadingId === p.id}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
+                        isLoading={downloadingId === p.id}
                         aria-label="Download PDF"
+                        className="h-7 w-7"
                       >
-                        {downloadingId === p.id
-                          ? <RefreshCw size={12} className="animate-spin" />
-                          : <Download size={12} />}
-                      </button>
+                        <Download size={12} />
+                      </Button>
                     </Tooltip>
                   </div>
                 </li>
@@ -187,21 +193,22 @@ export function OutcomeRecorderCard({
           <div className="text-center py-4">
             <p className="text-xs text-[color:var(--muted-ink)] mb-3">No proposals sent yet</p>
             {onGenerateProposal ? (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={onGenerateProposal}
-                className="btn-primary text-xs px-4 py-2 inline-flex items-center gap-1.5"
               >
                 <FileOutput size={13} />
                 Generate Proposal
-              </button>
+              </Button>
             ) : estimateId ? (
-              <a
-                href={`/proposals`}
-                className="btn-primary text-xs px-4 py-2 inline-flex items-center gap-1.5"
+              <Link
+                href="/proposals"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-[color:var(--accent)] to-[color:var(--accent-strong)] px-4 py-2 text-xs font-semibold text-white shadow-[0_4px_12px_hsl(var(--accent-hsl)/0.28)] hover:shadow-[0_6px_18px_hsl(var(--accent-hsl)/0.36)] transition-all active:scale-[0.98]"
               >
                 <FileOutput size={13} />
                 Generate Proposal
-              </a>
+              </Link>
             ) : null}
           </div>
         )}

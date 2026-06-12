@@ -139,7 +139,7 @@ export const PipelineCard = memo(function PipelineCard({ project, delay, stageKe
           <div className="min-w-0">
             <button
               onClick={() => router.push(`/projects/${project.id}`)}
-              className="text-sm font-semibold text-[color:var(--ink)] truncate leading-snug hover:text-[color:var(--accent-strong)] transition-colors text-left block w-full"
+              className="text-sm font-semibold text-[color:var(--ink)] truncate leading-snug hover:text-[color:var(--accent-strong)] transition-colors text-left block w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel)] rounded-lg"
             >
               {project.name}
             </button>
@@ -227,7 +227,7 @@ export const PipelineCard = memo(function PipelineCard({ project, delay, stageKe
             {project.estimate_count > 0 ? (
               <button
                 onClick={() => router.push(`/projects/${project.id}`)}
-                className="flex items-center gap-1 hover:text-[color:var(--accent)] transition-colors"
+                className="flex items-center gap-1 hover:text-[color:var(--accent)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel)] rounded-lg px-1 -ml-1"
               >
                 <FileText size={9} />
                 <span>{project.estimate_count} {project.estimate_count === 1 ? 'estimate' : 'estimates'}</span>

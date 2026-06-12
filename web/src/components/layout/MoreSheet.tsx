@@ -7,6 +7,8 @@ import { MORE_LINKS } from './nav'
 import { useFocusTrap, useTrapFocusOutside } from '@/lib/useFocusTrap'
 import { useAuth } from '@/contexts/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
+import { haptic } from '@/lib/haptics'
+import { Button } from '@/components/ui/Button'
 
 type MoreSheetProps = {
   open: boolean
@@ -81,14 +83,15 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
                     More destinations
                   </h2>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={onClose}
-                  className="rounded-[1rem] p-2 text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)]"
                   aria-label="Close more destinations"
+                  className="rounded-[1rem]"
                 >
                   <X size={18} />
-                </button>
+                </Button>
               </div>
 
               {/* User profile */}
@@ -117,7 +120,10 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
                   <Link
                     key={href}
                     href={href}
-                    onClick={onClose}
+                    onClick={() => {
+                      haptic('tap')
+                      onClose()
+                    }}
                     className="flex items-center justify-between rounded-[1.25rem] border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 py-3 text-[color:var(--ink)] transition-all hover:bg-[color:var(--accent-soft)] hover:border-[color:var(--accent-soft)] active:scale-[0.99]"
                   >
                     <span className="flex items-center gap-3">
@@ -133,13 +139,14 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
 
               {/* Footer actions */}
               <div className="border-t border-[color:var(--line)] px-4 py-3">
-                <button
-                  onClick={() => { onClose(); logout(); }}
-                  className="flex w-full items-center gap-3 rounded-[1.25rem] px-4 py-3 text-sm font-medium text-[color:var(--danger)] transition-colors hover:bg-[color:var(--danger-soft)]"
+                <Button
+                  variant="ghost"
+                  onClick={() => { onClose(); haptic('warning'); logout(); }}
+                  className="flex w-full items-center justify-start gap-3 rounded-[1.25rem] px-4 py-3 text-sm font-medium text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] hover:text-[color:var(--danger)]"
                 >
                   <LogOut size={16} aria-hidden="true" />
                   <span>Sign out</span>
-                </button>
+                </Button>
               </div>
             </div>
           </motion.div>

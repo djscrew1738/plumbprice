@@ -10,7 +10,9 @@ import {
 } from 'react'
 import { ChevronDown, X, Search } from 'lucide-react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 /* ── Trigger variants ──────────────────────────────── */
 
@@ -75,6 +77,7 @@ export function Select({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [highlightIdx, setHighlightIdx] = useState(-1)
+  const reduce = useReducedMotion()
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -232,21 +235,23 @@ export function Select({
       </button>
 
       {/* Dropdown */}
-      <div
-        className={cn(
-          'relative z-50 transition-all duration-150',
-          open
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 pointer-events-none'
-        )}
-      >
-        <ul
-          ref={listRef}
-          id={listboxId}
-          role="listbox"
-          aria-label={label ?? 'Options'}
-          className="absolute left-0 right-0 top-1 max-h-60 overflow-auto rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] py-1 shadow-2xl"
-        >
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key={listboxId}
+            className="relative z-50"
+            initial={reduce ? { opacity: 0.9 } : { opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 0.9 } : { opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <ul
+              ref={listRef}
+              id={listboxId}
+              role="listbox"
+              aria-label={label ?? 'Options'}
+              className="absolute left-0 right-0 top-1 max-h-60 overflow-auto rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] py-1 shadow-2xl"
+            >
           {searchable && (
             <li className="sticky top-0 border-b border-[color:var(--line)] bg-[color:var(--panel)] px-2 py-1.5">
               <div className="relative">
@@ -296,7 +301,9 @@ export function Select({
             </li>
           ))}
         </ul>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {error && (
         <p id={`${id}-error`} className="text-xs text-[hsl(var(--danger))] mt-1" role="alert">

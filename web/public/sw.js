@@ -1,8 +1,9 @@
 /* global self, caches, fetch, Response, URL */
-// PlumbPrice service worker — v4.1 (PWA shell, runtime caching, field tech offline, background sync).
-// On every release, bump SW_VERSION to force-refresh clients.
+// PlumbPrice service worker — PWA shell, runtime caching, field tech offline, background sync.
+// IMPORTANT: Bump SW_VERSION to match package.json version on every release to force clients
+// to discard old shell/static caches and fetch the latest app.
 
-const SW_VERSION = '4.1.1';
+const SW_VERSION = '5.2.0';
 const SHELL_CACHE = `plumbprice-shell-${SW_VERSION}`;
 const STATIC_CACHE = `plumbprice-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `plumbprice-runtime-${SW_VERSION}`;
@@ -172,7 +173,7 @@ self.addEventListener('fetch', (event) => {
   // Everything else (e.g., third-party fonts already CDN-cached): default.
 });
 
-// ── Background Sync (v4.1: field tech outbox) ─────────────────────────────────
+// ── Background Sync (field tech outbox) ────────────────────────────────────
 // The outbox (Dexie/IndexedDB) enqueues offline estimate creates. When
 // connectivity is restored, the service worker fires 'sync' with tag
 // 'outbox-sync' and the app's sync handler flushes the queue.
@@ -189,7 +190,7 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// ── Push notification handler ─────────────────────────────────────────────────
+// ── Push notification handler ─────────────────────────────────────────────
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;

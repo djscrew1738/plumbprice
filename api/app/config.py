@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # App
     app_name: str = "PlumbPrice AI"
-    version: str = "4.1.0"
+    version: str = "5.9.0"
     environment: str = "development"
     log_level: str = "INFO"
     debug: bool = False
@@ -39,11 +39,12 @@ class Settings(BaseSettings):
     # AI — cloud providers
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
+    deepseek_api_key: Optional[str] = None
     default_llm_provider: str = "openai"
     default_llm_model: str = "gpt-4o-mini"
     # Cloud fallback (used when both local Ollama tiers circuit-break)
     llm_cloud_fallback_enabled: bool = True
-    llm_cloud_fallback_provider: str = "openai"  # openai | anthropic
+    llm_cloud_fallback_provider: str = "openai"  # openai | anthropic | deepseek
     llm_cloud_fallback_model: str = "gpt-4o-mini"
     # Cost ceiling: max USD spent on cloud calls per UTC day
     llm_cloud_daily_cap_usd: float = 5.0
@@ -64,6 +65,11 @@ class Settings(BaseSettings):
     llm_classify_threshold: float = 0.75
     llm_embedding_model: str = "mxbai-embed-large"
     llm_vision_model: str = "llama3.2-vision"
+
+    # v6.6.0 — Intake Agent & Proactive Revision Suggestions
+    intake_agent_enabled: bool = True
+    intake_llm_fallback_enabled: bool = True
+    revision_suggestions_enabled: bool = True
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3200", "https://app.ctlplumbingllc.com"]
@@ -143,6 +149,10 @@ class Settings(BaseSettings):
     ferguson_api_base_url: str = "https://api.ferguson.com/v1"
     ferguson_client_id: Optional[str] = None
     ferguson_client_secret: Optional[str] = None
+    # Verify mode: "strict" = fail hard on API errors; "lenient" = fallback to scraper/simulation; "off" = always simulation
+    ferguson_api_verify_mode: str = "off"
+    # Rate limit for Ferguson API calls (requests per second)
+    ferguson_rate_limit_rps: float = 2.0
     # Alert when live price deviates more than this fraction from stored cost
     price_change_alert_threshold: float = 0.10
 

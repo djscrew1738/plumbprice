@@ -30,4 +30,35 @@ class EstimateResponseV3(BaseModel):
     agent_trace: dict = {}
     created_at: datetime
 
+    variant_group_id: Optional[str] = None
+    variant_label: Optional[str] = None
+    branch_id: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class EstimateVersionItem(BaseModel):
+    """A single version snapshot in the estimate history."""
+    id: int
+    version_number: int
+    change_summary: Optional[str] = None
+    created_at: datetime
+    created_by: Optional[int] = None
+
+
+class EstimateVersionDiff(BaseModel):
+    """Diff between two estimate versions."""
+    from_version: int
+    to_version: int
+    from_total: float
+    to_total: float
+    total_delta: float
+    added_line_items: list[dict] = []
+    removed_line_items: list[dict] = []
+    modified_line_items: list[dict] = []
+
+
+class BranchEstimateRequest(BaseModel):
+    """Request to fork an estimate into a new branch."""
+    title: Optional[str] = None
+    notes: Optional[str] = None

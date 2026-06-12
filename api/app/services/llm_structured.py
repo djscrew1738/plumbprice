@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from typing import Optional, Literal
+from typing import Optional, Literal, cast
 import structlog
 
 from pydantic import BaseModel, Field, ValidationError
@@ -94,17 +94,30 @@ class ClarificationRequest(BaseModel):
     )
 
 
+class IntakeInference(BaseModel):
+    """Structured intake inference for v6.6.0 intake agent."""
+    intent: str = Field(default="general_plumbing", description="Short intent slug, e.g. toilet_replace")
+    fixture_counts: dict[str, int] = Field(default_factory=dict, description="Map of fixture key to count")
+    location: Optional[str] = Field(default=None, description="DFW city or county if mentioned")
+    urgency: Literal["standard", "same_day", "emergency"] = "standard"
+    preferred_tier: Literal["budget", "standard", "premium"] = "standard"
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-def _build_classify_system_prompt() -> str:
-    # Use curated common codes (~69) not all 314 — keeps prompt ~400 tokens for fast local inference
-    task_codes = ", ".join(sorted(_PROMPT_TASK_CODES))
+def _build_classify_system_prompt(task_codes: frozenset[str] | None = None) -> str:
+    # Use curated common codes (~69) not all 314 — keeps prompt ~400 tokens for fast local inference.
+    # When task_codes is provided (from semantic search), merge with the common set.
+    codes = task_codes if task_codes is not None else _PROMPT_TASK_CODES
+    codes = codes & _VALID_TASK_CODES
+    task_codes_str = ", ".join(sorted(codes))
     return f"""\
 /no_think
 You are a plumbing estimator AI for DFW (Dallas-Fort Worth) Texas contractors.
 Classify the plumbing request into structured JSON. Pick the best task_code or null.
 
-Common task codes: {task_codes}
+Relevant task codes: {task_codes_str}
 
 Rules:
 - "clogged/backed up/slow drain" → DRAIN_CLEAN_STANDARD (not a replacement)
@@ -147,6 +160,12 @@ class LLMStructuredService:
                     api_key=settings.anthropic_api_key,
                     timeout=timeout,
                 )
+            if provider == "deepseek" and settings.deepseek_api_key:
+                return AsyncOpenAI(
+                    base_url="https://api.deepseek.com/v1",
+                    api_key=settings.deepseek_api_key,
+                    timeout=timeout,
+                )
             # Fallback to local Ollama
             return AsyncOpenAI(
                 base_url=settings.hermes_endpoint_url,
@@ -160,7 +179,7 @@ class LLMStructuredService:
     def _active_model(self) -> str:
         """Return the model to use for structured output."""
         provider = (settings.default_llm_provider or "openai").lower()
-        if provider in ("openai", "anthropic"):
+        if provider in ("openai", "anthropic", "deepseek"):
             return settings.default_llm_model
         return settings.llm_primary_model
 
@@ -170,6 +189,8 @@ class LLMStructuredService:
         if provider == "openai" and settings.openai_api_key:
             return True
         if provider == "anthropic" and settings.anthropic_api_key:
+            return True
+        if provider == "deepseek" and settings.deepseek_api_key:
             return True
         return False
 
@@ -257,24 +278,33 @@ class LLMStructuredService:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
+    def make_structured_client(self, timeout: float = 30.0):
+        """Return an AsyncOpenAI client for structured LLM calls."""
+        return self._make_client(timeout=timeout)
+
     async def classify(
         self,
         message: str,
         history: list[dict] | None = None,
+        task_codes: frozenset[str] | None = None,
+        memory_context: str | None = None,
     ) -> Optional[ClassifyResult]:
         """Extract structured intent from a natural-language plumbing request.
 
         Returns a validated ClassifyResult on success, or None on total failure
         (caller should fall back to keyword classification).
         """
-        messages: list[dict] = [{"role": "system", "content": _build_classify_system_prompt()}]
+        messages: list[dict] = [{"role": "system", "content": _build_classify_system_prompt(task_codes)}]
         if history:
             for turn in history[-6:]:
                 role = turn.get("role", "user")
                 content = turn.get("content", "")
                 if role in ("user", "assistant") and content:
                     messages.append({"role": role, "content": content})
-        messages.append({"role": "user", "content": message})
+        user_content = message
+        if memory_context:
+            user_content = f"[Memory context]\n{memory_context}\n\n[User request]\n{message}"
+        messages.append({"role": "user", "content": user_content})
 
         result = await self._call_with_retry(messages, ClassifyResult, timeout=settings.llm_classify_timeout)
         if result is None:
@@ -304,6 +334,63 @@ class LLMStructuredService:
             confidence=result.confidence,
             reasoning=result.reasoning[:100],
         )
+        return result
+
+    async def infer_intake(
+        self,
+        message: str,
+        county: Optional[str] = None,
+    ) -> Optional[IntakeInference]:
+        """Infer job facts from a user's first message.
+
+        Lightweight structured call used as a fallback when regex heuristics are
+        uncertain. Returns None on failure so the caller can keep the heuristic.
+        """
+        system_prompt = """\
+You are a plumbing intake assistant for DFW Texas contractors.
+Read the user's message and extract structured job facts.
+
+Rules:
+- intent: short slug like "toilet_replace", "water_heater_upgrade", "whole_house_repipe".
+- fixture_counts: map fixture keys (toilet, sink, faucet, shower, bathtub, water_heater, garbage_disposal, dishwasher, hose_bib, angle_stop, prv, backflow, whole_house_filter) to integer counts.
+- location: DFW city or county if mentioned, otherwise null.
+- urgency: "emergency" for flooding/burst/no water, "same_day" for today/now, else "standard".
+- preferred_tier: "budget" for cheap/basic, "premium" for high-end/luxury, else "standard".
+- confidence: 0.0–1.0 based on how explicit the user was.
+
+Respond with valid JSON only."""
+        user_prompt = message
+        if county:
+            user_prompt = f"County hint: {county}\n\n{message}"
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        raw = await self._call_with_retry(messages, IntakeInference, timeout=10.0)
+        if raw is None:
+            return None
+
+        result = cast(IntakeInference, raw)
+
+        # Sanitize against allowlists
+        urgency = result.urgency if result.urgency in ("standard", "same_day", "emergency") else "standard"
+        tier = result.preferred_tier if result.preferred_tier in ("budget", "standard", "premium") else "standard"
+        location = result.location
+        if location:
+            location = location.strip().title()
+            if location.lower() not in _COUNTIES and location.lower() not in {
+                "dallas", "plano", "frisco", "mckinney", "allen", "richardson",
+                "garland", "irving", "arlington", "fort worth", "denton",
+                "lewisville", "carrollton", "mesquite", "rockwall",
+            }:
+                location = None
+
+        result.urgency = urgency
+        result.preferred_tier = tier
+        result.location = location
+        result.confidence = max(0.0, min(1.0, result.confidence))
         return result
 
     async def request_clarification(

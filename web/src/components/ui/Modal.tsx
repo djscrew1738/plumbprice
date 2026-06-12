@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -68,6 +69,7 @@ export function Modal({
 
   const panelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const reduceMotion = useReducedMotion()
 
   /* ---- focus trap: capture + restore ---- */
   useEffect(() => {
@@ -151,10 +153,10 @@ export function Modal({
           {/* Backdrop */}
           <motion.div
             key="modal-backdrop"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            exit={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.15 }}
             className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
             onClick={handleBackdropClick}
             aria-hidden="true"
@@ -168,10 +170,10 @@ export function Modal({
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={description ? descId : undefined}
-            initial={{ opacity: 0, scale: 0.95, y: -12 }}
+            initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: -12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -12 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
+            exit={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: -12 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
             className={cn(
               // mobile: fullscreen
               'fixed inset-0 z-50 flex flex-col',

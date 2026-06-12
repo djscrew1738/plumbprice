@@ -342,3 +342,62 @@ async def test_rep_performance_admin_gets_rows(test_client: AsyncClient, db_sess
     assert alice["won_amount"] == 1234.0
     assert alice["avg_deal_size"] == 1234.0
 
+
+# ── Null-org user safety ────────────────────────────────────────────────────
+
+
+async def test_revenue_null_org_returns_empty_shape(test_client: AsyncClient):
+    def null_org_user():
+        return User(
+            id=7002, email="null-org@x.com", full_name="Null Org",
+            is_active=True, is_admin=False, organization_id=None, role="estimator",
+        )
+
+    app.dependency_overrides[get_current_user] = null_org_user
+    try:
+        resp = await test_client.get("/api/v1/analytics/revenue")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total_won"] == 0
+        assert body["deal_count"] == 0
+        assert body["by_month"] == []
+        assert body["by_job_type"] == []
+    finally:
+        app.dependency_overrides[get_current_user] = _analytics_admin
+
+
+async def test_pipeline_null_org_returns_empty_shape(test_client: AsyncClient):
+    def null_org_user():
+        return User(
+            id=7003, email="null-org@x.com", full_name="Null Org",
+            is_active=True, is_admin=False, organization_id=None, role="estimator",
+        )
+
+    app.dependency_overrides[get_current_user] = null_org_user
+    try:
+        resp = await test_client.get("/api/v1/analytics/pipeline")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["stage_counts"]["lead"] == 0
+        assert body["active_pipeline_value"] == 0.0
+        assert body["conversion"]["overall"] == 0.0
+    finally:
+        app.dependency_overrides[get_current_user] = _analytics_admin
+
+
+async def test_rep_performance_null_org_returns_empty(test_client: AsyncClient):
+    def null_org_admin():
+        return User(
+            id=7004, email="null-org-admin@x.com", full_name="Null Org Admin",
+            is_active=True, is_admin=True, organization_id=None, role="admin",
+        )
+
+    app.dependency_overrides[get_current_user] = null_org_admin
+    try:
+        resp = await test_client.get("/api/v1/analytics/rep-performance")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["reps"] == []
+    finally:
+        app.dependency_overrides[get_current_user] = _analytics_admin
+

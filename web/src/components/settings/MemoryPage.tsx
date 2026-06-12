@@ -172,13 +172,14 @@ export function MemoryPage() {
                           </p>
                         ) : null}
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => deleteMut.mutate(m.id)}
-                        className="text-[color:var(--muted-ink)] hover:text-red-600 transition-colors"
                         aria-label="Delete memory"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>

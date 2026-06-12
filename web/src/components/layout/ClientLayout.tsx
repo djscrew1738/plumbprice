@@ -11,6 +11,7 @@ import { ErrorBoundary, ErrorFallback } from '@/components/ui/ErrorBoundary'
 import { RouteAnnouncer } from '@/components/layout/RouteAnnouncer'
 import { OfflineBanner } from '@/components/layout/OfflineBanner'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
+import { GlobalAnnouncer } from '@/components/layout/GlobalAnnouncer'
 
 // Lazy-load dialogs/banners that are off-screen until activated by a
 // keyboard shortcut or first-paint logic — keeps them out of the initial
@@ -36,6 +37,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts'
 import { registerServiceWorker } from '@/lib/registerSW'
 import { useSessionExpiry } from '@/lib/hooks'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 export function ClientLayout({
   children,
@@ -48,6 +50,7 @@ export function ClientLayout({
   const [moreOpen, setMoreOpen] = useState(false)
   const pathname = usePathname()
   const { user, loading } = useAuth()
+  const reduceMotion = useReducedMotion()
 
   useKeyboardShortcuts()
 
@@ -79,13 +82,13 @@ export function ClientLayout({
 
   // Auth pages need AuthProvider (for useAuth()) but not app chrome —
   // they render their own full-screen layout.
-  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(pathname ?? '')
+  const isAuthPage = ['/login', '/forgot-password', '/reset-password', '/accept-invite'].includes(pathname ?? '')
   const isPublicHome = pathname === '/' && !user && (!loading || !initialHasSession)
   const renderBareMain = isPublicSurface || isAuthPage || isPublicHome
   const hideAppEnhancements = renderBareMain
 
   return (
-    <>
+    <GlobalAnnouncer>
       {!hideAppEnhancements && <OfflineBanner />}
       {!hideAppEnhancements && <UpdateBanner />}
       {!hideAppEnhancements && <InstallPrompt />}
@@ -131,9 +134,9 @@ export function ClientLayout({
               <AnimatePresence initial={false}>
                 <motion.div
                   key={pathname}
-                  initial={{ opacity: 0, y: 2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.12, ease: 'easeOut' }}
+                  initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 2, scale: 0.995 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <ErrorBoundary
                     fallback={
@@ -156,6 +159,6 @@ export function ClientLayout({
       {!hideAppEnhancements && <CommandPalette />}
       {!hideAppEnhancements && <WhatsNewBanner />}
       <RouteAnnouncer />
-    </>
+    </GlobalAnnouncer>
   )
 }

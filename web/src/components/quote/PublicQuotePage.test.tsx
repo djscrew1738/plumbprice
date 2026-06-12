@@ -140,8 +140,8 @@ describe('PublicQuotePage', () => {
     expect(await screen.findByText(/Typical DFW toilet replacement/i)).toBeInTheDocument()
     expect(screen.getByText('$750.00')).toBeInTheDocument()
     expect(screen.getByText(/Confidence: 88%/i)).toBeInTheDocument()
-    expect(screen.getByText('Toilet bowl')).toBeInTheDocument()
-    expect(screen.getByText('Labor')).toBeInTheDocument()
+    expect(screen.getAllByText('Toilet bowl').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Labor').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('First-floor access assumed')).toBeInTheDocument()
   })
 

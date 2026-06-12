@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronUp, DollarSign, X } from 'lucide-react'
-import { EstimateBreakdown } from '../estimator/EstimateBreakdown'
+import { EstimateBreakdownV3 } from '@/components/estimator-v3/EstimateBreakdownV3'
 import { formatCurrency } from '@/lib/utils'
 import type { ChatMessage } from '@/types'
 
@@ -20,19 +20,25 @@ export function WorkspaceSummaryRail({
   onSheetOpenChange,
 }: WorkspaceSummaryRailProps) {
   const estimate = selectedEstimate?.estimate
+    ? { ...selectedEstimate.estimate, market_adjustment_applied: (selectedEstimate.estimate as { market_adjustment_applied?: number }).market_adjustment_applied ?? 0 }
+    : null
+  const confidenceLabel = selectedEstimate?.confidence_label || 'HIGH'
+  const confidenceScore = selectedEstimate?.confidence || 0
+  const assumptions = selectedEstimate?.assumptions || []
+  const savedEstimateId = selectedEstimate?.estimate_id
 
   return (
     <>
       <aside className="hidden w-[360px] shrink-0 lg:flex">
         <div className="shell-panel flex min-h-0 w-full flex-col overflow-hidden">
           {estimate ? (
-            <EstimateBreakdown
+            <EstimateBreakdownV3
               estimate={estimate}
-              confidenceLabel={selectedEstimate.confidence_label || 'HIGH'}
-              confidenceScore={selectedEstimate.confidence || 0}
-              assumptions={selectedEstimate.assumptions || []}
+              confidenceLabel={confidenceLabel}
+              confidenceScore={confidenceScore}
+              assumptions={assumptions}
               county={county}
-              savedEstimateId={selectedEstimate.estimate_id}
+              savedEstimateId={savedEstimateId}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-7 text-center">
@@ -109,13 +115,13 @@ export function WorkspaceSummaryRail({
                   </button>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                  <EstimateBreakdown
+                  <EstimateBreakdownV3
                     estimate={estimate}
-                    confidenceLabel={selectedEstimate.confidence_label || 'HIGH'}
-                    confidenceScore={selectedEstimate.confidence || 0}
-                    assumptions={selectedEstimate.assumptions || []}
+                    confidenceLabel={confidenceLabel}
+                    confidenceScore={confidenceScore}
+                    assumptions={assumptions}
                     county={county}
-                    savedEstimateId={selectedEstimate.estimate_id}
+                    savedEstimateId={savedEstimateId}
                     compact
                   />
                 </div>

@@ -4,8 +4,9 @@ import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, Check, RotateCcw, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 import type { ChatMessage } from '@/types'
-import { ConfidenceBadge } from '@/components/estimator/ConfidenceBadge'
+import { ConfidenceBadge } from '@/components/ui/ConfidenceBadge'
 
 interface WorkspaceArtifactCardProps {
   message: ChatMessage
@@ -20,15 +21,17 @@ export const WorkspaceArtifactCard = memo(function WorkspaceArtifactCard({
   onCopy,
   onRetry,
 }: WorkspaceArtifactCardProps) {
+  const reduce = useReducedMotion()
   const isUser = message.role === 'user'
   const isError = message.isError
   const hasEstimate = !!message.estimate
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={reduce ? { opacity: 0.8 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
+      whileHover={reduce ? undefined : { y: -1 }}
       className={cn(
         'group relative flex gap-3',
         isUser ? 'flex-row-reverse' : 'flex-row'

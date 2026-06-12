@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/app/**/{page,layout,loading,error,not-found,template}.tsx", "src/app/global-error.tsx", "src/middleware.ts"],
+  "project": ["src/**/*.ts", "src/**/*.tsx"],
+  "ignore": [".next/**", "coverage/**", "test-results/**", "playwright-report/**", "public/**"]
+}

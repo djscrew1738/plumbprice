@@ -12,7 +12,7 @@ export const supplierKeys = {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export interface SupplierPrice { name: string; sku: string; cost: number }
+export interface SupplierPrice { name: string; sku: string; cost: number; change_pct?: number }
 
 export interface CatalogItem {
   canonical_id: string

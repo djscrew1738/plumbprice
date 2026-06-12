@@ -69,7 +69,12 @@ export function TabsList({ children, className }: TabsListProps) {
     const tabs = Array.from(
       listRef.current.querySelectorAll<HTMLButtonElement>('[role="tab"]:not([disabled])'),
     )
-    const currentIdx = tabs.findIndex(tab => tab === document.activeElement)
+    if (tabs.length === 0) return
+
+    // Find the index of the currently active tab as the starting point
+    const activeTab = listRef.current.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')
+    let currentIdx = activeTab ? tabs.indexOf(activeTab) : 0
+    if (currentIdx === -1) currentIdx = 0
 
     let nextIdx: number | null = null
 
@@ -102,7 +107,7 @@ export function TabsList({ children, className }: TabsListProps) {
     <div
       ref={listRef}
       role="tablist"
-      tabIndex={0}
+      tabIndex={-1}
       onKeyDown={handleKeyDown}
       className={cn(
         'relative flex border-b border-[color:var(--line)]',
@@ -152,6 +157,7 @@ export function TabsTrigger({
       className={cn(
         'relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors outline-none',
         'disabled:pointer-events-none disabled:opacity-40',
+        'focus-visible:ring-2 focus-visible:ring-[color:var(--ring-focus)] focus-visible:ring-offset-1',
         isActive
           ? 'text-[color:var(--accent-strong)]'
           : 'text-[color:var(--muted-ink)] hover:text-[color:var(--ink)]',

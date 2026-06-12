@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { agentTraceApiV3 } from '@/lib/api-v3'
 import { Search, Clock, Wrench } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 
 export default function AgentTracesAdminPage() {
@@ -53,14 +54,15 @@ export default function AgentTracesAdminPage() {
           placeholder="Enter estimate ID"
           className="flex-1 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--muted-ink)]"
         />
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={handleSearch}
-          disabled={loading}
-          className="rounded-lg bg-[color:var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5"
+          isLoading={loading}
         >
           <Search size={16} />
-          {loading ? 'Loading...' : 'Inspect'}
-        </button>
+          Inspect
+        </Button>
       </div>
 
       {error && (

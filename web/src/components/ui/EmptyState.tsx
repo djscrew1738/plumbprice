@@ -3,6 +3,7 @@
 import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 export interface EmptyStateProps {
   icon: ReactNode
@@ -19,6 +20,7 @@ export function EmptyState({
   action,
   className,
 }: EmptyStateProps) {
+  const reduce = useReducedMotion()
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -29,9 +31,14 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="flex size-12 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]" aria-hidden="true">
+      <motion.div
+        animate={reduce ? {} : { y: [0, -3, 0] }}
+        transition={reduce ? {} : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        className="flex size-12 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]"
+        aria-hidden="true"
+      >
         {icon}
-      </div>
+      </motion.div>
 
       <h3 className="mt-4 text-base font-semibold text-[color:var(--ink)]">
         {title}

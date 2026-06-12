@@ -8,7 +8,7 @@
  * future native iOS PWA wrapper, route these through Capacitor Haptics.
  */
 
-type HapticPattern = 'tap' | 'success' | 'warning' | 'error' | 'selection'
+type HapticPattern = 'tap' | 'success' | 'warning' | 'error' | 'selection' | 'message' | 'estimate' | 'sheet'
 
 const PATTERNS: Record<HapticPattern, number | number[]> = {
   tap: 10,
@@ -16,6 +16,9 @@ const PATTERNS: Record<HapticPattern, number | number[]> = {
   success: [12, 40, 12],
   warning: [25, 60, 25],
   error: [40, 80, 40, 80, 40],
+  message: 15,
+  estimate: [20, 50, 20],
+  sheet: 12,
 }
 
 let userOptedOut = false

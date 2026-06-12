@@ -1,136 +1,35 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Trash2, FileText, Calendar, MapPin, RefreshCw,
-  TrendingUp, Search, ChevronDown, ArrowUpDown, Check, Download, Copy, AlertTriangle,
+  Plus, Trash2, FileText, Calendar, MapPin,
+  RefreshCw, Copy, AlertTriangle, Search,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
-import { api } from '@/lib/api'
 import { useEstimates, useDeleteEstimate, useDuplicateEstimate, estimateKeys } from '@/lib/hooks'
 import { useToast } from '@/components/ui/Toast'
-import { SearchInput } from '@/components/ui/SearchInput'
-import { badgeVariants } from '@/components/ui/Badge'
+import { haptic } from '@/lib/haptics'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatDateShort } from '@/lib/formatters'
-import { JOB_TYPE_CLASS, ESTIMATE_STATUS_VARIANT } from '@/lib/badgeConfig'
-import { PageIntro } from '@/components/layout/PageIntro'
+import { JOB_TYPE_CLASS } from '@/lib/badgeConfig'
+import { PageShell, PageHeader } from '@/components/layout/shell'
+import { downloadCsv } from '@/lib/download-csv'
+import { useCommandPaletteEvent } from '@/lib/hooks/useCommandPaletteEvent'
+import { EstimateStatusDropdown } from './EstimateStatusDropdown'
+import { EstimateOutcomeBadge } from './EstimateOutcomeBadge'
+import { EstimateListFilters, type SortKey } from './EstimateListFilters'
+import { EstimateSummaryStats } from './EstimateSummaryStats'
 
 interface Estimate {
   id: number; title: string; job_type: string; status: string
   grand_total: number; confidence_label: string; county: string; created_at: string
   outcome?: string | null; is_expired?: boolean | null; valid_until?: string | null
 }
-
-
-
-const STATUS_OPTIONS = [
-  { value: 'draft',    label: 'Draft'    },
-  { value: 'sent',     label: 'Sent'     },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'rejected', label: 'Rejected' },
-]
-
-function StatusDropdown({
-  estimateId,
-  current,
-  onChange,
-}: {
-  estimateId: number
-  current: string
-  onChange: (id: number, status: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const toast = useToast()
-
-  const handleSelect = async (status: string) => {
-    if (status === current) { setOpen(false); return }
-    setUpdating(true)
-    setOpen(false)
-    try {
-      await api.patch(`/estimates/${estimateId}/status`, { status })
-      onChange(estimateId, status)
-    } catch {
-      toast.error('Could not update status', 'Please try again.')
-    } finally {
-      setUpdating(false)
-    }
-  }
-
-  return (
-    <div className="relative" onClick={e => e.stopPropagation()} aria-hidden="true">
-      <button
-        onClick={() => setOpen(o => !o)}
-        disabled={updating}
-        className={cn(
-          badgeVariants({ variant: ESTIMATE_STATUS_VARIANT[current] ?? 'neutral', size: 'sm' }),
-          'cursor-pointer hover:opacity-80 transition-opacity gap-1',
-          updating && 'opacity-50 pointer-events-none',
-        )}
-      >
-        {current}
-        <ChevronDown size={9} className={cn('transition-transform', open && 'rotate-180')} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
-            <motion.div
-              initial={{ opacity: 0, y: -4, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0,  scale: 1    }}
-              exit={{   opacity: 0, y: -4,  scale: 0.96 }}
-              transition={{ duration: 0.1 }}
-              className="absolute top-full left-0 mt-1 bg-[color:var(--panel)] border border-[color:var(--line)] rounded-xl shadow-2xl z-20 overflow-hidden min-w-[110px]"
-            >
-              {STATUS_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleSelect(opt.value)}
-                  className={cn(
-                    'w-full flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors text-left',
-                    opt.value === current
-                      ? 'text-[color:var(--accent-strong)] bg-[color:var(--accent-soft)]'
-                      : 'text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)]',
-                  )}
-                >
-                  {opt.label}
-                  {opt.value === current && <Check size={10} />}
-                </button>
-              ))}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'service', label: 'Service' },
-  { value: 'construction', label: 'Construction' },
-  { value: 'commercial', label: 'Commercial' },
-]
-const STATUS_FILTERS = [
-  { value: 'all',      label: 'All statuses' },
-  { value: 'draft',    label: 'Draft'        },
-  { value: 'sent',     label: 'Sent'         },
-  { value: 'accepted', label: 'Accepted'     },
-  { value: 'rejected', label: 'Rejected'     },
-  { value: 'expired',  label: 'Expired'      },
-]
-type SortKey = 'newest' | 'oldest' | 'highest' | 'lowest'
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'newest',  label: 'Newest first' },
-  { value: 'oldest',  label: 'Oldest first' },
-  { value: 'highest', label: 'Highest value' },
-  { value: 'lowest',  label: 'Lowest value' },
-]
 
 export function EstimatesListPage() {
   const router  = useRouter()
@@ -139,7 +38,6 @@ export function EstimatesListPage() {
   const queryClient = useQueryClient()
 
   const initialStatus = searchParams.get('status') ?? 'all'
-  // 'expired' is a client-side filter (is_expired flag), not an API status value
   const [filter,        setFilter]        = useState('all')
   const [statusFilter,  setStatusFilter]  = useState(
     ['draft', 'sent', 'accepted', 'rejected'].includes(initialStatus) ? initialStatus : 'all'
@@ -147,10 +45,7 @@ export function EstimatesListPage() {
   const [expiredOnly,   setExpiredOnly]   = useState(initialStatus === 'expired')
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const [search,        setSearch]        = useState('')
-  const deferredSearch = useDeferredValue(search)
   const [sortBy,        setSortBy]        = useState<SortKey>('newest')
-  const [sortOpen,      setSortOpen]      = useState(false)
-  const sortRef = useRef<HTMLDivElement>(null)
 
   const { data: estimates = [], isLoading: loading, error: queryError, refetch: fetchEstimates } = useEstimates(
     { job_type: filter !== 'all' ? filter : undefined, status: statusFilter !== 'all' ? statusFilter : undefined },
@@ -162,18 +57,6 @@ export function EstimatesListPage() {
   const duplicating = duplicateMutation.isPending ? (duplicateMutation.variables ?? null) : null
 
   const error = queryError ? 'Could not load estimates' : null
-
-  // Close sort dropdown when clicking outside
-  useEffect(() => {
-    if (!sortOpen) return
-    const handler = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
-        setSortOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [sortOpen])
 
   const handleStatusChange = useCallback((id: number, status: string) => {
     queryClient.setQueriesData<Estimate[]>({ queryKey: estimateKeys.lists() }, prev =>
@@ -200,7 +83,7 @@ export function EstimatesListPage() {
   const visible = useMemo(() => {
     let list = estimates.filter(e => {
       if (expiredOnly && !e.is_expired) return false
-      const q = deferredSearch.toLowerCase()
+      const q = search.toLowerCase()
       return !q || (e.title ?? '').toLowerCase().includes(q) || e.county.toLowerCase().includes(q) || e.status.toLowerCase().includes(q)
     })
     switch (sortBy) {
@@ -210,212 +93,80 @@ export function EstimatesListPage() {
       case 'lowest':  list = [...list].sort((a, b) => a.grand_total - b.grand_total); break
     }
     return list
-  }, [estimates, deferredSearch, sortBy, expiredOnly])
+  }, [estimates, search, sortBy, expiredOnly])
 
   const { totalValue, avgValue } = useMemo(() => {
     const total = visible.reduce((s, e) => s + (e.grand_total || 0), 0)
     return { totalValue: total, avgValue: visible.length > 0 ? total / visible.length : 0 }
   }, [visible])
 
-  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Sort'
-
   const handleExportCsv = useCallback(() => {
-    const rows = [
-      ['ID', 'Title', 'Job Type', 'Status', 'County', 'Grand Total', 'Confidence', 'Created'],
-      ...visible.map(e => [
-        String(e.id), e.title, e.job_type, e.status, e.county,
-        String(e.grand_total), e.confidence_label,
-        new Date(e.created_at).toLocaleDateString(),
-      ]),
-    ]
-    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
-      download: 'estimates.csv',
-    })
-    a.click()
+    downloadCsv(
+      visible.map(e => ({
+        ID: e.id,
+        Title: e.title,
+        'Job Type': e.job_type,
+        Status: e.status,
+        County: e.county,
+        'Grand Total': e.grand_total,
+        Confidence: e.confidence_label,
+        Created: new Date(e.created_at).toLocaleDateString(),
+      })),
+      'estimates.csv'
+    )
   }, [visible])
 
-  // Listen for command-palette-triggered CSV export
-  useEffect(() => {
-    const handler = () => handleExportCsv()
-    window.addEventListener('trigger-csv-export', handler)
-    return () => window.removeEventListener('trigger-csv-export', handler)
-  }, [handleExportCsv])
+  useCommandPaletteEvent('trigger-csv-export', handleExportCsv)
+
+  const clearStatus = () => {
+    setStatusFilter('all')
+    setExpiredOnly(false)
+  }
 
   return (
-    <div className="min-h-full">
-      <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6">
-        <PageIntro
-          icon={FileText}
-          eyebrow="Saved Estimates"
-          title="Continue active bids"
-          description="Review finished pricing work, reopen drafts, and move back into the workspace with one tap."
-          variant="compact"
-          actions={
-            <Tooltip content="New estimate (N)">
-              <button onClick={() => router.push('/estimator')} className="shell-button-primary px-4 py-2.5" aria-label="New estimate">
-                <Plus size={15} /><span className="hidden sm:inline">New estimate</span>
-              </button>
-            </Tooltip>
-          }
-        />
+    <PageShell width="default">
+      <PageHeader
+        eyebrow="Saved Estimates"
+        title="Continue active bids"
+        description="Review finished pricing work, reopen drafts, and move back into the workspace with one tap."
+        actions={
+          <Tooltip content="New estimate (N)">
+            <button onClick={() => router.push('/estimator')} className="shell-button-primary px-4 py-2.5" aria-label="New estimate">
+              <Plus size={15} /><span className="hidden sm:inline">New estimate</span>
+            </button>
+          </Tooltip>
+        }
+      />
 
-        {/* ── Top bar ── */}
-        <div className="mt-4 bg-[color:var(--panel)]/80 backdrop-blur-xl border border-[color:var(--line)] rounded-[1.25rem] px-4 py-2.5 sticky top-[calc(var(--header-height)+0.5rem)] z-10">
-        <div className="max-w-5xl mx-auto space-y-2.5">
-          <div className="flex items-center justify-between gap-3">
-            {/* Filter pills — job type */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-              {FILTERS.map(f => (
-                <button
-                  key={f.value}
-                  onClick={() => setFilter(f.value)}
-                  aria-pressed={filter === f.value}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
-                    filter === f.value
-                      ? 'bg-[color:var(--accent)] text-white'
-                      : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] border border-[color:var(--line)]',
-                  )}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Tooltip content="Export visible estimates as CSV">
-                <button
-                  onClick={handleExportCsv}
-                  className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors"
-                  aria-label="Export CSV"
-                >
-                  <Download size={15} />
-                  <span className="hidden sm:inline text-xs font-medium">Export</span>
-                </button>
-              </Tooltip>
-              <button onClick={() => void fetchEstimates()} className="p-2 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors" aria-label="Refresh estimates">
-                <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-              </button>
-              <Tooltip content="New estimate (N)">
-                <button onClick={() => router.push('/estimator')} className="btn-primary px-3 py-2" aria-label="New estimate">
-                  <Plus size={15} /><span className="hidden sm:inline">New</span>
-                </button>
-              </Tooltip>
-            </div>
-          </div>
+      <EstimateListFilters
+        filter={filter}
+        onFilterChange={setFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        expiredOnly={expiredOnly}
+        onExpiredOnlyChange={setExpiredOnly}
+        search={search}
+        onSearchChange={setSearch}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        loading={loading}
+        onExport={handleExportCsv}
+        onRefresh={() => void fetchEstimates()}
+        onNew={() => router.push('/estimator')}
+      />
 
-          {/* Search + sort row */}
-          <div className="flex gap-2">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search by title, county, or status…"
-              className="flex-1"
-              aria-label="Search estimates"
-            />
-            {/* Sort dropdown */}
-            <div className="relative" ref={sortRef}>
-              <button
-                onClick={() => setSortOpen(o => !o)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[color:var(--panel-strong)] border border-[color:var(--line)] rounded-xl text-xs font-medium text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)] transition-all whitespace-nowrap"
-              >
-                <ArrowUpDown size={13} />
-                <span className="hidden sm:inline">{currentSortLabel}</span>
-                <ChevronDown size={11} className={cn('text-[color:var(--muted-ink)] transition-transform', sortOpen && 'rotate-180')} />
-              </button>
-              <AnimatePresence>
-                {sortOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0,  scale: 1    }}
-                    exit={{   opacity: 0, y: -6,  scale: 0.96 }}
-                    transition={{ duration: 0.12 }}
-                    className="absolute top-full right-0 mt-1.5 bg-[color:var(--panel)] border border-[color:var(--line)] rounded-xl shadow-2xl overflow-hidden z-20 min-w-[152px]"
-                  >
-                    {SORT_OPTIONS.map(o => (
-                      <button
-                        key={o.value}
-                        onClick={() => { setSortBy(o.value); setSortOpen(false) }}
-                        className={cn(
-                          'w-full text-left px-3.5 py-2 text-xs font-medium transition-colors',
-                          o.value === sortBy ? 'text-[color:var(--accent-strong)] bg-[color:var(--accent-soft)]' : 'text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] hover:bg-[color:var(--panel-strong)]',
-                        )}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Status filter chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-            {STATUS_FILTERS.map(s => {
-              const isActive = s.value === 'expired' ? expiredOnly : (!expiredOnly && statusFilter === s.value)
-              return (
-                <button
-                  key={s.value}
-                  onClick={() => {
-                    if (s.value === 'expired') {
-                      setExpiredOnly(true)
-                      setStatusFilter('all')
-                    } else {
-                      setExpiredOnly(false)
-                      setStatusFilter(s.value)
-                    }
-                  }}
-                  aria-pressed={isActive}
-                  className={cn(
-                    'px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all border',
-                    isActive
-                      ? s.value === 'draft'    ? 'bg-[color:var(--ink)] text-[color:var(--background)] border-[color:var(--ink)]'
-                        : s.value === 'sent'   ? 'bg-[hsl(var(--info))] text-[hsl(var(--info-foreground))] border-[hsl(var(--info))]'
-                        : s.value === 'accepted' ? 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-[hsl(var(--success))]'
-                        : s.value === 'rejected' ? 'bg-[hsl(var(--danger))] text-[hsl(var(--danger-foreground))] border-[hsl(var(--danger))]'
-                        : s.value === 'expired' ? 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] border-[hsl(var(--warning))]'
-                        : 'bg-[color:var(--accent)] text-white border-[color:var(--accent)]'
-                      : 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] border-[color:var(--line)]',
-                  )}
-                >
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-4">
+      <div className="mx-auto max-w-5xl px-4 py-4">
 
         {/* Summary stats */}
         {!loading && visible.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {[
-              { label: 'Showing',     value: visible.length.toString(), icon: FileText,   color: 'text-[hsl(var(--info))]',           bg: 'bg-[hsl(var(--info)/0.1)] border-[hsl(var(--info)/0.2)]' },
-              { label: 'Total Value', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-[hsl(var(--success))]',        bg: 'bg-[hsl(var(--success)/0.1)] border-[hsl(var(--success)/0.2)]' },
-              { label: 'Avg Value',   value: formatCurrency(avgValue),   icon: MapPin,     color: 'text-[color:var(--accent-strong)]', bg: 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]/20' },
-            ].map(({ label, value, icon: Icon, color, bg }) => (
-              <div key={label} className="card p-3.5 flex items-center gap-3">
-                <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center border shrink-0', bg)}>
-                  <Icon size={14} className={color} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] text-[color:var(--muted-ink)] font-bold tracking-tight">{label}</div>
-                  <div className="text-sm font-bold text-[color:var(--ink)] truncate">{value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <EstimateSummaryStats count={visible.length} totalValue={totalValue} avgValue={avgValue} />
         )}
 
         {/* Loading */}
         {loading && (
           <div className="space-y-2.5">
             {[1,2,3,4].map(i => (
-              <div key={i} className="card p-4 space-y-2.5">
+              <div key={i} className="card space-y-2.5 p-4">
                 <div className="skeleton h-3.5 w-2/3 rounded-lg" />
                 <div className="skeleton h-7 w-1/3 rounded-lg" />
                 <div className="skeleton h-3 w-1/2 rounded-lg" />
@@ -446,7 +197,7 @@ export function EstimatesListPage() {
               }
               action={
                 expiredOnly || statusFilter !== 'all' ? (
-                  <button onClick={() => { setStatusFilter('all'); setExpiredOnly(false) }} className="btn-ghost text-xs">
+                  <button onClick={clearStatus} className="btn-ghost text-xs">
                     Show all statuses
                   </button>
                 ) : (
@@ -474,7 +225,7 @@ export function EstimatesListPage() {
                     </button>
                   )}
                   {(statusFilter !== 'all' || expiredOnly) && (
-                    <button onClick={() => { setStatusFilter('all'); setExpiredOnly(false) }} className="btn-ghost text-xs">
+                    <button onClick={clearStatus} className="btn-ghost text-xs">
                       Clear status filter
                     </button>
                   )}
@@ -497,35 +248,22 @@ export function EstimatesListPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.18, delay: i * 0.02 }}
-                    className="card p-4 cursor-pointer hover:border-[color:var(--line)] hover:-translate-y-0.5 hover:shadow-md transition-all"
+                    className="card cursor-pointer p-4 transition-all hover:-translate-y-0.5 hover:border-[color:var(--line)] hover:shadow-md"
                     onClick={() => router.push(`/estimates/${est.id}`)}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-[color:var(--ink)] text-sm truncate mb-1.5 flex items-center gap-1.5">
-  {est.title || `Estimate #${est.id}`}
-  {est.outcome && (
-    <span
-      className={cn(
-        'ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold border',
-        est.outcome === 'won' && 'bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]',
-        est.outcome === 'lost' && 'bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.25)]',
-        est.outcome === 'no_bid' && 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border-[color:var(--line)]',
-        est.outcome === 'pending' && 'bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]',
-      )}
-      role="status"
-    >
-      {est.outcome === 'won' ? 'Won' : est.outcome === 'lost' ? 'Lost' : est.outcome === 'no_bid' ? 'No Bid' : 'Pending'}
-    </span>
-  )}
-</h3>
-<div className="flex items-center gap-1.5 flex-wrap">
-  <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span>
-  <StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} />
-  <span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span>
-</div>
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="mb-1.5 flex items-center gap-1.5 truncate text-sm font-semibold text-[color:var(--ink)]">
+                          {est.title || `Estimate #${est.id}`}
+                          {est.outcome && <EstimateOutcomeBadge outcome={est.outcome} />}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span>
+                          <EstimateStatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} />
+                          <span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span>
+                        </div>
                       </div>
-                      <div className="text-xl font-extrabold text-[color:var(--ink)] shrink-0 tabular-nums">{formatCurrency(est.grand_total)}</div>
+                      <div className="shrink-0 text-xl font-extrabold tabular-nums text-[color:var(--ink)]">{formatCurrency(est.grand_total)}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-[11px] text-[color:var(--muted-ink)]">
@@ -544,24 +282,27 @@ export function EstimatesListPage() {
                       <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                         {confirmDelete === est.id ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] text-[hsl(var(--danger))] font-medium">Delete?</span>
+                            <span className="text-[11px] font-medium text-[hsl(var(--danger))]">Delete?</span>
                             <button
                               onClick={() => void handleDeleteConfirm(est.id)}
                               disabled={deleting === est.id}
-                              className="px-2 py-1 rounded-lg bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] text-[11px] font-semibold hover:bg-[hsl(var(--danger)/0.25)] transition-colors disabled:opacity-40"
+                              className="rounded-lg bg-[hsl(var(--danger)/0.15)] px-2 py-1 text-[11px] font-semibold text-[hsl(var(--danger))] transition-colors hover:bg-[hsl(var(--danger)/0.25)] disabled:opacity-40"
                             >Yes</button>
                             <button
                               onClick={() => setConfirmDelete(null)}
-                              className="px-2 py-1 rounded-lg bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] text-[11px] font-semibold hover:bg-[color:var(--panel-strong)] transition-colors"
+                              className="rounded-lg bg-[color:var(--panel-strong)] px-2 py-1 text-[11px] font-semibold text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)]"
                             >No</button>
                           </div>
                         ) : (
                           <>
                             <Tooltip content="Duplicate">
                               <button
-                                onClick={e => handleDuplicate(est.id, e)}
+                                onClick={e => {
+                                  haptic('tap')
+                                  handleDuplicate(est.id, e)
+                                }}
                                 disabled={duplicating === est.id}
-                                className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40 flex items-center justify-center"
+                                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl p-2.5 text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] disabled:opacity-40"
                                 aria-label="Duplicate estimate"
                               >
                                 {duplicating === est.id ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
@@ -569,9 +310,13 @@ export function EstimatesListPage() {
                             </Tooltip>
                             <Tooltip content="Delete">
                               <button
-                                onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  haptic('error')
+                                  setConfirmDelete(est.id)
+                                }}
                                 disabled={deleting === est.id}
-                                className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40 flex items-center justify-center"
+                                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl p-2.5 text-[color:var(--muted-ink)] transition-colors hover:bg-[hsl(var(--danger)/0.1)] hover:text-[hsl(var(--danger))] disabled:opacity-40"
                                 aria-label="Delete estimate"
                               >
                                 <Trash2 size={14} />
@@ -605,37 +350,24 @@ export function EstimatesListPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.12, delay: i * 0.015 }}
-                        className="hover:bg-[color:var(--panel-strong)] hover:shadow-sm transition-all group cursor-pointer"
+                        className="group cursor-pointer transition-all hover:bg-[color:var(--panel-strong)] hover:shadow-sm"
                         role="row"
                         onClick={() => router.push(`/estimates/${est.id}`)}
                       >
-                        <td className="px-4 py-3 font-medium text-[color:var(--ink)] max-w-[180px] truncate flex items-center gap-1.5">
-  {est.title || `Estimate #${est.id}`}
-  {est.outcome && (
-    <span
-      className={cn(
-        'ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold border',
-        est.outcome === 'won' && 'bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]',
-        est.outcome === 'lost' && 'bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))] border-[hsl(var(--danger)/0.25)]',
-        est.outcome === 'no_bid' && 'bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] border-[color:var(--line)]',
-        est.outcome === 'pending' && 'bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]',
-      )}
-      role="status"
-    >
-      {est.outcome === 'won' ? 'Won' : est.outcome === 'lost' ? 'Lost' : est.outcome === 'no_bid' ? 'No Bid' : 'Pending'}
-    </span>
-  )}
-</td>
+                        <td className="flex max-w-[180px] items-center gap-1.5 truncate px-4 py-3 font-medium text-[color:var(--ink)]">
+                          {est.title || `Estimate #${est.id}`}
+                          {est.outcome && <EstimateOutcomeBadge outcome={est.outcome} />}
+                        </td>
                         <td className="px-4 py-3"><span className={cn('badge', JOB_TYPE_CLASS[est.job_type] ?? 'badge-service')}>{est.job_type}</span></td>
-                        <td className="px-4 py-3"><StatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} /></td>
+                        <td className="px-4 py-3"><EstimateStatusDropdown estimateId={est.id} current={est.status} onChange={handleStatusChange} /></td>
                         <td className="px-4 py-3"><span className={cn('badge', 'badge-' + (est.confidence_label?.toLowerCase() ?? 'high'))}>{est.confidence_label ?? 'HIGH'}</span></td>
-                        <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs">{est.county}</td>
-                        <td className="px-4 py-3 font-bold text-[color:var(--ink)] tabular-nums">{formatCurrency(est.grand_total)}</td>
-                        <td className="px-4 py-3 text-[color:var(--muted-ink)] text-xs whitespace-nowrap">
+                        <td className="px-4 py-3 text-xs text-[color:var(--muted-ink)]">{est.county}</td>
+                        <td className="px-4 py-3 font-bold tabular-nums text-[color:var(--ink)]">{formatCurrency(est.grand_total)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-[color:var(--muted-ink)]">
                           <span>{formatDateShort(est.created_at)}</span>
                           {est.is_expired && (
                             <Tooltip content="This estimate has expired">
-                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[hsl(var(--warning))] text-[10px] font-semibold">
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-semibold text-[hsl(var(--warning))]">
                                 <AlertTriangle size={10} />Expired
                               </span>
                             </Tooltip>
@@ -646,15 +378,15 @@ export function EstimatesListPage() {
                           <div className={cn('flex items-center gap-1 transition-opacity', confirmDelete === est.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')} onClick={e => e.stopPropagation()}>
                             {confirmDelete === est.id ? (
                               <>
-                                <span className="text-[11px] text-[hsl(var(--danger))] font-medium mr-1">Delete?</span>
+                                <span className="mr-1 text-[11px] font-medium text-[hsl(var(--danger))]">Delete?</span>
                                 <button
                                   onClick={() => void handleDeleteConfirm(est.id)}
                                   disabled={deleting === est.id}
-                                  className="px-2 py-1 rounded-lg bg-[hsl(var(--danger)/0.15)] text-[hsl(var(--danger))] text-[11px] font-semibold hover:bg-[hsl(var(--danger)/0.25)] transition-colors disabled:opacity-40"
+                                  className="rounded-lg bg-[hsl(var(--danger)/0.15)] px-2 py-1 text-[11px] font-semibold text-[hsl(var(--danger))] transition-colors hover:bg-[hsl(var(--danger)/0.25)] disabled:opacity-40"
                                 >Yes</button>
                                 <button
                                   onClick={() => setConfirmDelete(null)}
-                                  className="px-2 py-1 rounded-lg bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] text-[11px] font-semibold hover:bg-[color:var(--panel-strong)] transition-colors"
+                                  className="rounded-lg bg-[color:var(--panel-strong)] px-2 py-1 text-[11px] font-semibold text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)]"
                                 >No</button>
                               </>
                             ) : (
@@ -662,7 +394,7 @@ export function EstimatesListPage() {
                                 <button
                                   onClick={e => handleDuplicate(est.id, e)}
                                   disabled={duplicating === est.id}
-                                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-[color:var(--panel-strong)] text-[color:var(--muted-ink)] hover:text-[color:var(--ink)] transition-colors disabled:opacity-40"
+                                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] transition-colors hover:bg-[color:var(--panel-strong)] hover:text-[color:var(--ink)] disabled:opacity-40"
                                   aria-label="Duplicate estimate"
                                 >
                                   {duplicating === est.id ? <RefreshCw size={12} className="animate-spin" /> : <Copy size={12} />}
@@ -670,7 +402,7 @@ export function EstimatesListPage() {
                                 <button
                                   onClick={e => { e.stopPropagation(); setConfirmDelete(est.id) }}
                                   disabled={deleting === est.id}
-                                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 hover:bg-[hsl(var(--danger)/0.1)] text-[color:var(--muted-ink)] hover:text-[hsl(var(--danger))] transition-colors disabled:opacity-40"
+                                  className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg p-2 text-[color:var(--muted-ink)] transition-colors hover:bg-[hsl(var(--danger)/0.1)] hover:text-[hsl(var(--danger))] disabled:opacity-40"
                                   aria-label="Delete estimate"
                                 >
                                   <Trash2 size={13} />
@@ -688,7 +420,6 @@ export function EstimatesListPage() {
           </>
         )}
       </div>
-      </div>
-    </div>
+    </PageShell>
   )
 }
