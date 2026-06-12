@@ -26,8 +26,7 @@ def upgrade() -> None:
         sa.Column('created_by', sa.Integer(), sa.ForeignKey('users.id'), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index('ix_chat_session_shares_token', 'chat_session_shares', ['token'])
-    op.create_index('ix_chat_session_shares_session_id', 'chat_session_shares', ['session_id'])
+    # Note: indexes for token and session_id are created automatically by index=True on the columns above.
 
     # Estimate comments table
     op.create_table(
@@ -39,7 +38,7 @@ def upgrade() -> None:
         sa.Column('content', sa.Text(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index('ix_estimate_comments_estimate_id', 'estimate_comments', ['estimate_id'])
+    # Note: index for estimate_id is created automatically by index=True on the column above.
 
 
 def downgrade() -> None:
